@@ -23,4 +23,7 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
     - name: Build with Gradle
-      run: ./gradlew clean :VitalClient:testDebugUnitTest
+      run: ./gradlew :VitalClient:testDebugUnitTest
+    - name: Android Test Report
+      uses: asadmansr/android-test-report-action@v1.2.0
+      if: ${{ always() }}
