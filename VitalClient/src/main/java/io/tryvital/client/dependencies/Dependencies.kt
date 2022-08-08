@@ -10,9 +10,14 @@ import io.tryvital.client.Region
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Converter
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.lang.reflect.Type
+import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.*
+
 
 class Dependencies(
     context: Context,
@@ -56,6 +61,7 @@ class Dependencies(
             Retrofit.Builder()
                 .baseUrl(baseUrl)
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .addConverterFactory(QueryConverterFactory.create())
                 .addCallAdapterFactory(CoroutineCallAdapterFactory())
                 .client(okHttpClient)
                 .build()
@@ -79,6 +85,39 @@ class Dependencies(
                 )
             )
             return "${urls[region]!![environment]!!}/v2";
+        }
+    }
+
+    class QueryConverterFactory : Converter.Factory() {
+        override fun stringConverter(
+            type: Type,
+            annotations: Array<Annotation?>?,
+            retrofit: Retrofit?
+        ): Converter<*, String>? {
+            return if (type === Date::class.java) {
+                DateQueryConverter.INSTANCE
+            } else null
+        }
+
+        private class DateQueryConverter : Converter<Date, String> {
+            override fun convert(date: Date): String {
+                return DF.get()?.format(date) ?: "Error"
+            }
+
+            companion object {
+                val INSTANCE = DateQueryConverter()
+                private val DF: ThreadLocal<DateFormat> = object : ThreadLocal<DateFormat>() {
+                    public override fun initialValue(): DateFormat {
+                        return SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
+                    }
+                }
+            }
+        }
+
+        companion object {
+            fun create(): QueryConverterFactory {
+                return QueryConverterFactory()
+            }
         }
     }
 }
