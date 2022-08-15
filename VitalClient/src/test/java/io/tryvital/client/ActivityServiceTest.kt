@@ -22,7 +22,7 @@ class ActivityServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -52,8 +52,8 @@ class ActivityServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals(2, response.body()?.activity?.size)
-        val activity = response.body()!!.activity[0]
+        assertEquals(2, response.activity.size)
+        val activity = response.activity[0]
         assertEquals("id_1", activity.id)
         assertEquals(userId, activity.userId)
         assertEquals(0.0, activity.steps)

@@ -9,17 +9,17 @@ import retrofit2.http.Query
 
 interface ProfileService {
 
-    @GET("/summary/profile/{user_id}")
+    @GET("summary/profile/{user_id}")
     suspend fun getProfile(
         @Path("user_id") userId: String,
         @Query("provider") provider: String?,
-    ): Response<Profile>
+    ): Profile
 
-    @GET("/summary/profile/{user_id}/raw")
+    @GET("summary/profile/{user_id}/raw")
     suspend fun getProfileRaw(
         @Path("user_id") userId: String,
         @Query("provider") provider: String?,
-    ): Response<Any>
+    ): Any
 
     companion object {
         fun create(retrofit: Retrofit): ProfileService {

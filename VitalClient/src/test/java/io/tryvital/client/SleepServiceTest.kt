@@ -24,7 +24,7 @@ class SleepServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -54,8 +54,8 @@ class SleepServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals( 3, response.body()?.sleep?.size)
-        val sleep = response.body()!!.sleep[0]
+        assertEquals( 3, response.sleep.size)
+        val sleep = response.sleep[0]
         checkFirstSleep(sleep)
     }
 
@@ -79,8 +79,8 @@ class SleepServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals( 2, response.body()?.sleep?.size)
-        val sleep = response.body()!!.sleep[0]
+        assertEquals( 2, response.sleep.size)
+        val sleep = response.sleep[0]
         checkFirstSleep(sleep)
         checkFirstSleepStream(sleep.sleepStream!!)
     }
@@ -101,7 +101,7 @@ class SleepServiceTest {
             server.takeRequest().requestLine
         )
 
-        checkFirstSleepStream(response.body()!!)
+        checkFirstSleepStream(response)
     }
 
     private fun checkFirstSleep( sleep: SleepData) {

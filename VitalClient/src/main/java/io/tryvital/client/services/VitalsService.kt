@@ -16,7 +16,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null,
-    ): Response<List<Measurement>> {
+    ): List<Measurement> {
         return timeSeries.timeseriesRequest(
             userId = userId, resource = "glucose", startDate = startDate,
             endDate = endDate, provider = provider
@@ -29,7 +29,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null,
-    ): Response<List<Measurement>> {
+    ): List<Measurement> {
         return timeSeries.timeseriesRequest(
             userId = userId,
             resource = "cholesterol/${cholesterolType.name}",
@@ -44,7 +44,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null,
-    ): Response<List<Measurement>> {
+    ): List<Measurement> {
         return timeSeries.timeseriesRequest(
             userId = userId,
             resource = "ige",
@@ -59,7 +59,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null
-    ): Response<List<Measurement>> {
+    ): List<Measurement> {
         return timeSeries.timeseriesRequest(
             userId = userId,
             resource = "igg",
@@ -74,7 +74,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null,
-    ): Response<List<Measurement>> {
+    ): List<Measurement> {
         return timeSeries.timeseriesRequest(
             userId = userId,
             resource = "heartrate",
@@ -99,5 +99,5 @@ private interface TimeSeries {
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date? = null,
         @Query("provider") provider: String? = null,
-    ): Response<List<Measurement>>
+    ): List<Measurement>
 }

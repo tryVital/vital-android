@@ -17,7 +17,7 @@ interface SleepService {
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date?,
         @Query("provider") provider: String?,
-    ): Response<SleepResponse>
+    ): SleepResponse
 
 
     @GET("summary/sleep/{user_id}/stream")
@@ -26,7 +26,7 @@ interface SleepService {
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date?,
         @Query("provider") provider: String?,
-    ): Response<SleepResponse>
+    ): SleepResponse
 
     @GET("summary/sleep/{user_id}/raw")
     suspend fun getSleepDataRaw(
@@ -34,10 +34,10 @@ interface SleepService {
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date?,
         @Query("provider") provider: String?,
-    ): Response<Any>
+    ): Any
 
     @GET("timeseries/sleep/{sleep_id}/stream")
-    suspend fun getSleepStream(@Path("sleep_id") sleepId: String): Response<SleepStreamResponse>
+    suspend fun getSleepStream(@Path("sleep_id") sleepId: String): SleepStreamResponse
 
     companion object {
         fun create(retrofit: Retrofit): SleepService {

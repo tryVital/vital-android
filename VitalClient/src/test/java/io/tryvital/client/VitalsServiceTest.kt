@@ -26,7 +26,7 @@ class VitalsServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -58,7 +58,7 @@ class VitalsServiceTest {
                 "GET /timeseries/$userId/cholesterol/${type.name}?start_date=2022-07-01&end_date=2022-07-21 HTTP/1.1",
                 server.takeRequest().requestLine
             )
-            checkMeasurements(response.body()!!)
+            checkMeasurements(response)
         }
     }
 
@@ -81,7 +81,7 @@ class VitalsServiceTest {
             "GET /timeseries/$userId/glucose?start_date=2022-07-01&end_date=2022-07-21 HTTP/1.1",
             server.takeRequest().requestLine
         )
-        checkMeasurements(response.body()!!)
+        checkMeasurements(response)
     }
 
     fun checkMeasurements(measurements: List<Measurement>) {

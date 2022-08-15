@@ -23,7 +23,7 @@ class ProfileServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -41,7 +41,7 @@ class ProfileServiceTest {
                 .setBody(fakeProfileResponse)
         )
         val sut = ProfileService.create(retrofit)
-        val response = sut.getProfile(
+        val profile = sut.getProfile(
             userId = userId,
             provider = null
         )
@@ -49,7 +49,6 @@ class ProfileServiceTest {
             "GET /summary/profile/$userId HTTP/1.1",
             server.takeRequest().requestLine
         )
-        val profile = response.body()!!
         assertEquals(userId, profile.id)
         assertEquals(userId, profile.userId)
         assertEquals(180.0, profile.height)
@@ -65,7 +64,7 @@ class ProfileServiceTest {
                 .setBody(fakeProfileResponseNulls)
         )
         val sut = ProfileService.create(retrofit)
-        val response = sut.getProfile(
+        val profile = sut.getProfile(
             userId = userId,
             provider = null
         )
@@ -73,7 +72,6 @@ class ProfileServiceTest {
             "GET /summary/profile/$userId HTTP/1.1",
             server.takeRequest().requestLine
         )
-        val profile = response.body()!!
         assertEquals(userId, profile.id)
         assertEquals(userId, profile.userId)
         assertNull(profile.height)

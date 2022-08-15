@@ -23,7 +23,7 @@ class LinkServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -51,8 +51,7 @@ class LinkServiceTest {
         )
 
         assertEquals("POST /link/token HTTP/1.1", server.takeRequest().requestLine)
-        val body = response.body()!!
-        assertEquals(linkToken, body.linkToken)
+        assertEquals(linkToken, response.linkToken)
     }
 
     @Test
@@ -64,13 +63,12 @@ class LinkServiceTest {
         )
 
         val sut = LinkService.create(retrofit)
-        val response = sut.oauthProvider(
+        val oauthResponse = sut.oauthProvider(
             provider = "strava",
             linkToken = linkToken
         )
 
         assertEquals("GET /link/provider/oauth/strava HTTP/1.1", server.takeRequest().requestLine)
-        val oauthResponse = response.body()!!
         assertEquals("https://www.strava.com/oauth/", oauthResponse.oauthUrl)
         assertTrue(oauthResponse.isActive)
         assertEquals("oauth", oauthResponse.authType)
@@ -96,9 +94,8 @@ class LinkServiceTest {
         )
 
         assertEquals("POST /link/provider/email/strava HTTP/1.1", server.takeRequest().requestLine)
-        val body = response.body()!!
-        assertTrue(body.success)
-        assertEquals("callback://vital", body.redirectUrl)
+        assertTrue(response.success)
+        assertEquals("callback://vital", response.redirectUrl)
     }
 
     @Test
@@ -124,9 +121,8 @@ class LinkServiceTest {
             "POST /link/provider/password/strava HTTP/1.1",
             server.takeRequest().requestLine
         )
-        val body = response.body()!!
-        assertTrue(body.success)
-        assertEquals("callback://vital", body.redirectUrl)
+        assertTrue(response.success)
+        assertEquals("callback://vital", response.redirectUrl)
     }
 
     private lateinit var server: MockWebServer

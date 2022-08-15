@@ -29,7 +29,7 @@ class TestkitServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -57,8 +57,8 @@ class TestkitServiceTest {
             "GET /testkit/orders?start_date=2022-07-01&end_date=2022-07-21&page=1&size=50 HTTP/1.1",
             server.takeRequest().requestLine
         )
-        assertEquals(1, response.body()!!.orders.size)
-        val order = response.body()!!.orders[0]
+        assertEquals(1, response.orders.size)
+        val order = response.orders[0]
         checkOrder(order)
     }
 
@@ -75,8 +75,8 @@ class TestkitServiceTest {
             "GET /testkit/ HTTP/1.1",
             server.takeRequest().requestLine
         )
-        assertEquals(2, response.body()?.testkits?.size)
-        val testkit1 = response.body()!!.testkits[0]
+        assertEquals(2, response.testkits?.size)
+        val testkit1 = response.testkits[0]
         assertEquals("71d54fff-70e1-4f74-937e-5a185b925d0d", testkit1.id)
         assertEquals(2, testkit1.markers.size)
         assertEquals("ALLERGEN-Blomia tropicalis", testkit1.markers[0].name)
@@ -118,9 +118,9 @@ class TestkitServiceTest {
             "POST /testkit/orders HTTP/1.1",
             server.takeRequest().requestLine
         )
-        assertEquals(response.body()?.status, "success")
-        assertEquals(response.body()?.message, "order created")
-        val order = response.body()!!.order!!
+        assertEquals(response.status, "success")
+        assertEquals(response.message, "order created")
+        val order = response.order!!
         checkOrder(order)
     }
 
@@ -137,9 +137,9 @@ class TestkitServiceTest {
             "POST /testkit/orders/id_1/cancel HTTP/1.1",
             server.takeRequest().requestLine
         )
-        assertEquals(response.body()?.status, "success")
-        assertEquals(response.body()?.message, "order cancelled")
-        val order = response.body()!!.order!!
+        assertEquals(response.status, "success")
+        assertEquals(response.message, "order cancelled")
+        val order = response.order!!
         checkOrder(order, status = "cancelled")
     }
 

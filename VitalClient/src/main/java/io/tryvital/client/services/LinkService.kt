@@ -9,14 +9,14 @@ interface LinkService {
     @POST("link/token")
     suspend fun createLink(
         @Body request: CreateLinkRequest,
-    ): Response<CreateLinkResponse>
+    ): CreateLinkResponse
 
     @POST("link/provider/password/{provider}")
     suspend fun passwordProvider(
         @Path("provider") provider: String,
         @Body request: PasswordProviderRequest,
         @Header("LinkToken") linkToken: String,
-    ): Response<EmailProviderResponse>
+    ): EmailProviderResponse
 
 
     @POST("link/provider/email/{provider}")
@@ -24,13 +24,13 @@ interface LinkService {
         @Path("provider") provider: String,
         @Body request: EmailProviderRequest,
         @Header("x-vital-link-token") linkToken: String,
-    ): Response<EmailProviderResponse>
+    ): EmailProviderResponse
 
     @GET("link/provider/oauth/{provider}")
     suspend fun oauthProvider(
         @Path("provider") provider: String,
         @Header("LinkToken") linkToken: String,
-    ): Response<OauthLinkResponse>
+    ): OauthLinkResponse
 
     companion object {
         fun create(retrofit: Retrofit): LinkService {

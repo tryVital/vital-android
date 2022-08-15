@@ -4,42 +4,43 @@ import android.content.Context
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.*
 
+
 class VitalClient(
     context: Context,
     region: Region,
-    environment: Environment = Environment.sandbox
+    environment: Environment = Environment.sandbox,
+    apiKey: String,
 ) {
 
     private val dependencies: Dependencies by lazy {
-        Dependencies(context, region, environment)
+        Dependencies(context, region, environment, apiKey)
     }
 
-    private val activityService by lazy {
+    val activityService by lazy {
         ActivityService.create(dependencies.retrofit)
     }
 
-    private val bodyService by lazy {
+    val bodyService by lazy {
         BodyService.create(dependencies.retrofit)
     }
 
-    private val linkService by lazy {
+    val linkService by lazy {
         LinkService.create(dependencies.retrofit)
     }
 
-    private val profileService by lazy {
+    val profileService by lazy {
         ProfileService.create(dependencies.retrofit)
     }
 
-    private val sleepService by lazy {
+    val sleepService by lazy {
         SleepService.create(dependencies.retrofit)
     }
 
-    private val testKitService by lazy {
+    val testKitService by lazy {
         TestkitService.create(dependencies.retrofit)
     }
 
-    private val userService by lazy {
+    val userService by lazy {
         UserService.create(dependencies.retrofit)
     }
-
 }

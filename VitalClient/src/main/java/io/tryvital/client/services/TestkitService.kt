@@ -12,17 +12,17 @@ interface TestkitService {
     suspend fun createOrder(
         @Body request: CreateOrderRequest,
         @Header("skip-address-validation") skipAddressValidation: Boolean = false,
-    ): Response<OrderResponse>
+    ): OrderResponse
 
     @GET("testkit/")
-    suspend fun getAllTestkits(): Response<TestkitsResponse>
+    suspend fun getAllTestkits(): TestkitsResponse
 
     @GET("testkit/orders/{order_id}")
     @Deprecated("For backwards compatibility, use getOrder")
-    suspend fun getOrderStatus(@Path("order_id")  orderId:String): Response<OrderData>
+    suspend fun getOrderStatus(@Path("order_id")  orderId:String): OrderData
 
     @GET("testkit/orders/{order_id}")
-    suspend fun getOrder(@Path("order_id")  orderId:String): Response<OrderData>
+    suspend fun getOrder(@Path("order_id")  orderId:String): OrderData
 
     @GET("testkit/orders")
     suspend fun getAllOrders(
@@ -31,10 +31,10 @@ interface TestkitService {
         @Query("status") status: List<String>?,
         @Query("page") page: Int = 1,
         @Query("size") size: Int = 50,
-    ): Response<OrdersResponse>
+    ): OrdersResponse
 
     @POST("testkit/orders/{order_id}/cancel")
-    suspend fun cancelOrder(@Path("order_id") orderId: String): Response<OrderResponse>
+    suspend fun cancelOrder(@Path("order_id") orderId: String): OrderResponse
 
     companion object {
         fun create(retrofit: Retrofit): TestkitService {

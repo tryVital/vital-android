@@ -7,6 +7,7 @@ import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
+import io.tryvital.client.dependencies.utils.ApiKeyInterceptor
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -22,11 +23,12 @@ import java.util.*
 class Dependencies(
     context: Context,
     region: Region,
-    environment: Environment
+    environment: Environment,
+    apiKey: String
 ) {
 
     private val httpClient: OkHttpClient by lazy {
-        createHttpClient(context)
+        createHttpClient(context, apiKey)
     }
     private val moshi: Moshi by lazy {
         createMoshi()
@@ -37,7 +39,7 @@ class Dependencies(
     }
 
     companion object {
-        fun createHttpClient(context: Context? = null): OkHttpClient {
+        fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
             val cacheSizeInMB: Long = 2 * 1024 * 1024
 
             val loggingInterceptor = HttpLoggingInterceptor()
@@ -50,6 +52,7 @@ class Dependencies(
                     }
                 }
                 .addInterceptor(loggingInterceptor)
+                .addNetworkInterceptor(ApiKeyInterceptor(apiKey))
                 .build()
         }
 
@@ -84,7 +87,7 @@ class Dependencies(
                     Environment.sandbox to "https://api.sandbox.tryvital.io"
                 )
             )
-            return "${urls[region]!![environment]!!}/v2";
+            return "${urls[region]!![environment]!!}/v2/";
         }
     }
 

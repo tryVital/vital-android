@@ -8,7 +8,7 @@ import java.util.*
 
 interface ActivityService {
     @GET("user/")
-    suspend fun getAll(): Response<List<User>>
+    suspend fun getAll(): List<User>
 
     @GET("summary/activity/{user_id}")
     suspend fun getActivity(
@@ -16,7 +16,7 @@ interface ActivityService {
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date?,
         @Query("provider") provider: String?,
-    ): Response<ActivitiesResponse>
+    ): ActivitiesResponse
 
     @GET("summary/activity/{user_id}/raw")
     suspend fun getActivityRaw(
@@ -24,7 +24,7 @@ interface ActivityService {
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date?,
         @Query("provider") provider: String?,
-    ): Response<Any>
+    ): Any
 
     companion object {
         fun create(retrofit: Retrofit): ActivityService {

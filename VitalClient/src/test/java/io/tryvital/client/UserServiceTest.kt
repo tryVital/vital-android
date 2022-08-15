@@ -25,7 +25,7 @@ class UserServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -44,10 +44,9 @@ class UserServiceTest {
         )
 
         val sut = UserService.create(retrofit)
-        val response = sut.getAll()
+        val users = sut.getAll()
 
         assertEquals("GET /user/ HTTP/1.1", server.takeRequest().requestLine)
-        val users = response.body()!!
         assertEquals(2, users.size)
         val user = users[0]
         validateFirstUser(user)
@@ -68,7 +67,7 @@ class UserServiceTest {
 
         assertEquals("GET /user/$userId HTTP/1.1", server.takeRequest().requestLine)
 
-        validateFirstUser(response.body()!!)
+        validateFirstUser(response)
     }
 
     @Test
@@ -83,7 +82,7 @@ class UserServiceTest {
         val response = sut.resolveUser(userName)
         assertEquals("GET /user/key/User%20Name HTTP/1.1", server.takeRequest().requestLine)
 
-        validateFirstUser(response.body()!!)
+        validateFirstUser(response)
     }
 
     @Test
@@ -98,7 +97,7 @@ class UserServiceTest {
         val response = sut.getProviders(userId)
         assertEquals("GET /user/providers/$userId HTTP/1.1", server.takeRequest().requestLine)
 
-        val provider = response.body()!!.providers[0]
+        val provider = response.providers[0]
         assertEquals(provider.name, "Fitbit")
         assertEquals(provider.slug, "fitbit")
     }
@@ -115,8 +114,8 @@ class UserServiceTest {
         val response = sut.refreshUser(userId)
         assertEquals("POST /user/refresh/$userId HTTP/1.1", server.takeRequest().requestLine)
 
-        assertEquals(response.body()!!.refreshedSources.size, 5)
-        assertEquals(response.body()!!.failedSources.size, 3)
+        assertEquals(response.refreshedSources.size, 5)
+        assertEquals(response.failedSources.size, 3)
     }
 
     @Test
@@ -128,10 +127,9 @@ class UserServiceTest {
         )
 
         val sut = UserService.create(retrofit)
-        val response = sut.createUser(CreateUserRequest(userName))
+        val user = sut.createUser(CreateUserRequest(userName))
         assertEquals("POST /user/key HTTP/1.1", server.takeRequest().requestLine)
 
-        val user = response.body()!!
         assertEquals(user.userId, userId)
         assertEquals(user.userKey, userKey)
         assertEquals(user.clientUserId, clientUserId)
@@ -149,7 +147,7 @@ class UserServiceTest {
         val response = sut.deleteUser(userId)
         assertEquals("DELETE /user/$userId HTTP/1.1", server.takeRequest().requestLine)
 
-        assertEquals(response.body()!!.success, true)
+        assertEquals(response.success, true)
     }
 
     @Test
@@ -164,7 +162,7 @@ class UserServiceTest {
         val response = sut.deregisterProvider(userId, "strava")
         assertEquals("DELETE /user/$userId/strava HTTP/1.1", server.takeRequest().requestLine)
 
-        assertEquals(response.body()!!.success, true)
+        assertEquals(response.success, true)
     }
 
     private fun validateFirstUser(user: User) {
@@ -179,6 +177,7 @@ class UserServiceTest {
 
     private lateinit var server: MockWebServer
     private lateinit var retrofit: Retrofit
+    private val apiKey = "apiKey"
     private val userId = "user_id_1"
     private val userKey = "user_key_1"
     private val teamId = "team_id_1"

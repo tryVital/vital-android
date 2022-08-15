@@ -18,7 +18,7 @@ interface WorkoutService {
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date?,
         @Query("provider") provider: String?,
-    ): Response<WorkoutsResponse>
+    ): WorkoutsResponse
 
     @GET("summary/workouts/{user_id}/raw")
     suspend fun getWorkoutsRaw(
@@ -26,12 +26,12 @@ interface WorkoutService {
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date?,
         @Query("provider") provider: String?,
-    ): Response<Any>
+    ): Any
 
     @GET("timeseries/workouts/{workout_id}/stream")
     suspend fun getWorkoutStream(
         @Path("workout_id") workoutId: String,
-    ): Response<WorkoutStreamResponse>
+    ): WorkoutStreamResponse
 
     companion object {
         fun create(retrofit: Retrofit): WorkoutService {

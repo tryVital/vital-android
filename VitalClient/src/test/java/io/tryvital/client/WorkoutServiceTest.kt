@@ -22,7 +22,7 @@ class WorkoutServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -51,7 +51,7 @@ class WorkoutServiceTest {
             "GET /summary/workouts/$userId?start_date=2022-07-01&end_date=2022-07-21 HTTP/1.1",
             server.takeRequest().requestLine
         )
-        val workout1 = response.body()!!.workouts[0]
+        val workout1 = response.workouts[0]
         assertEquals("id_1", workout1.id)
         assertEquals(-28800, workout1.timezoneOffset)
         assertEquals(2.0, workout1.distance)
@@ -70,12 +70,11 @@ class WorkoutServiceTest {
                 .setBody(fakeStreamResponse)
         )
         val sut = WorkoutService.create(retrofit)
-        val response = sut.getWorkoutStream(workoutId)
+        val stream = sut.getWorkoutStream(workoutId)
         assertEquals(
             "GET /timeseries/workouts/$workoutId/stream HTTP/1.1",
             server.takeRequest().requestLine
         )
-        val stream = response.body()!!
         assertEquals(12.123456, stream.lat[0])
         assertEquals(12.234567, stream.lat[1])
         assertEquals(47.123456, stream.lng[0])
@@ -96,12 +95,11 @@ class WorkoutServiceTest {
         )
         val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val sut = WorkoutService.create(retrofit)
-        val response = sut.getWorkoutStream(workoutId)
+        val stream = sut.getWorkoutStream(workoutId)
         assertEquals(
             "GET /timeseries/workouts/$workoutId/stream HTTP/1.1",
             server.takeRequest().requestLine
         )
-        val stream = response.body()!!
         assertEquals(0, stream.altitude.size)
         assertEquals(0, stream.cadence.size)
         assertEquals(0, stream.distance.size)

@@ -23,7 +23,7 @@ class BodyServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(),
+            Dependencies.createHttpClient(apiKey = apiKey),
             Dependencies.createMoshi()
         )
     }
@@ -53,8 +53,8 @@ class BodyServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals(response.body()?.body?.size, 2)
-        val bodyData = response.body()!!.body[0]
+        assertEquals(response.body.size, 2)
+        val bodyData = response.body[0]
         assertEquals("id_1", bodyData.id)
         assertEquals(userId, bodyData.userId)
         assertEquals(0.0, bodyData.fat)
@@ -62,7 +62,7 @@ class BodyServiceTest {
         assertEquals("Fitbit", bodyData.source.name)
         assertEquals("fitbit", bodyData.source.slug)
 
-        val bodyData2 = response.body()!!.body[1]
+        val bodyData2 = response.body[1]
         assertEquals("id_2", bodyData2.id)
         assertNull(bodyData2.userId)
         assertNull(bodyData2.fat)
