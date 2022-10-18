@@ -21,7 +21,7 @@ class UserServiceTest {
 
     @Before
     fun setUp() {
-        server = MockWebServer();
+        server = MockWebServer()
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
@@ -44,11 +44,11 @@ class UserServiceTest {
         )
 
         val sut = UserService.create(retrofit)
-        val users = sut.getAll()
+        val users = sut.getAll().users
 
         assertEquals("GET /user/ HTTP/1.1", server.takeRequest().requestLine)
-        assertEquals(2, users.size)
-        val user = users[0]
+        assertEquals(2, users?.size)
+        val user = users!![0]
         validateFirstUser(user)
 
         assertNull(users[1].connectedSources)
@@ -184,46 +184,47 @@ class UserServiceTest {
     private val clientUserId = "Test 1"
     private val userName = "User Name"
     private val fakeUsersResponse = """
-[
 {
-    "user_id": "user_id_1",
-    "user_key": "user_key_1",
-    "team_id": "team_id_1",
-    "client_user_id": "Test 1",
-    "created_on": "2021-04-02T16:03:11.847830+00:00",
-    "connected_sources": [
+  "users": [
     {
-        "source": {
-        "name": "Fitbit",
-        "slug": "fitbit",
-        "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
-    },
-        "created_on": "2022-06-15T13:44:34.770879+00:00"
+      "user_id": "user_id_1",
+      "user_key": "user_key_1",
+      "team_id": "team_id_1",
+      "client_user_id": "Test 1",
+      "created_on": "2021-04-02T16:03:11.847830+00:00",
+      "connected_sources": [
+        {
+          "source": {
+            "name": "Fitbit",
+            "slug": "fitbit",
+            "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
+          },
+          "created_on": "2022-06-15T13:44:34.770879+00:00"
+        },
+        {
+          "source": {
+            "name": null,
+            "slug": null,
+            "logo": null
+          },
+          "created_on": "2022-03-01T12:25:15.558385+00:00"
+        },
+        {
+          "source": null,
+          "created_on": null
+        }
+      ]
     },
     {
-        "source": {
-        "name": null,
-        "slug": null,
-        "logo": null
-    },
-        "created_on": "2022-03-01T12:25:15.558385+00:00"
-    },
-    {
-        "source": null,
-        "created_on": null
+      "user_id": "user_id_2",
+      "user_key": "user_key_2",
+      "team_id": "team_id_2",
+      "client_user_id": "Test 2",
+      "created_on": "2021-12-01T22:43:32.570793+00:00",
+      "connected_sources": null
     }
-    ]
-},
-{
-    "user_id": "user_id_2",
-    "user_key": "user_key_2",
-    "team_id": "team_id_2",
-    "client_user_id": "Test 2",
-    "created_on": "2021-12-01T22:43:32.570793+00:00",
-    "connected_sources": null
-}
-]
-"""
+  ]
+}"""
 
     private val fakeUserResponse = """
 {
