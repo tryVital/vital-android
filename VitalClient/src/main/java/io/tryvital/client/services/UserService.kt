@@ -6,7 +6,7 @@ import retrofit2.http.*
 
 interface UserService {
     @GET("user/")
-    suspend fun getAll(): List<User>
+    suspend fun getAll(): GetAllUsersResponse
 
     @GET("user/{user_id}")
     suspend fun getUser(@Path("user_id") userId: String): User

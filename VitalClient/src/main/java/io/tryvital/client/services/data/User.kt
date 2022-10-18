@@ -1,9 +1,7 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
-import retrofit2.http.Body
 import java.util.*
-
 
 data class User(
     @Json(name = "user_id")
@@ -68,4 +66,9 @@ data class DeleteUserResponse(
 
 data class DeregisterProviderResponse(
     val success: Boolean
+)
+
+data class GetAllUsersResponse(
+    @Json(name = "users")
+    val users: List<User>?
 )

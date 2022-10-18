@@ -14,16 +14,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
-
     private val viewModelState = MutableStateFlow(UsersViewModelState())
     val uiState = viewModelState.asStateFlow()
-
 
     fun update(){
         viewModelScope.launch {
             viewModelState.update { it.copy(loading = true) }
             val response = vitalClient.userService.getAll()
-            viewModelState.update { it.copy(loading = false, users = response) }
+            viewModelState.update { it.copy(loading = false, users = response.users) }
         }
     }
 
