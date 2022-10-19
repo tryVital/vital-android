@@ -4,7 +4,6 @@ import android.content.Context
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.*
 
-
 class VitalClient(
     context: Context,
     region: Region,
