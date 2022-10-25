@@ -9,7 +9,7 @@ class VitalApp : Application() {
     val client = VitalClient(
         context = this,
         region = Region.EU,
-        environment = Environment.sandbox,
+        environment = Environment.Sandbox,
         apiKey = "sk_eu_S5LdXTS_CAtdFrkX9OYsiVq_jGHaIXtZyBPbBtPkzhA"
     )
 }

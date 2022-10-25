@@ -17,7 +17,7 @@ class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
     private val viewModelState = MutableStateFlow(UsersViewModelState())
     val uiState = viewModelState.asStateFlow()
 
-    fun update(){
+    fun update() {
         viewModelScope.launch {
             viewModelState.update { it.copy(loading = true) }
             val response = vitalClient.userService.getAll()

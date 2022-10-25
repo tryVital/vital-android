@@ -68,8 +68,8 @@ class ActivityServiceTest {
 private lateinit var server: MockWebServer
 private lateinit var retrofit: Retrofit
 
-private val apiKey = "API_KEY"
-private val userId = "user_id_1"
+private const val apiKey = "API_KEY"
+private const val userId = "user_id_1"
 
 
 const val fakeActivityResponse = """{

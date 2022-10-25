@@ -35,9 +35,7 @@ class WorkoutServiceTest {
     @Test
     fun `Get workouts`() = runTest {
         server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(fakeWorkoutsResponse)
+            MockResponse().setResponseCode(200).setBody(fakeWorkoutsResponse)
         )
         val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val sut = WorkoutService.create(retrofit)
@@ -65,15 +63,12 @@ class WorkoutServiceTest {
     @Test
     fun `Get workout stream`() = runTest {
         server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(fakeStreamResponse)
+            MockResponse().setResponseCode(200).setBody(fakeStreamResponse)
         )
         val sut = WorkoutService.create(retrofit)
         val stream = sut.getWorkoutStream(workoutId)
         assertEquals(
-            "GET /timeseries/workouts/$workoutId/stream HTTP/1.1",
-            server.takeRequest().requestLine
+            "GET /timeseries/workouts/$workoutId/stream HTTP/1.1", server.takeRequest().requestLine
         )
         assertEquals(12.123456, stream.lat[0])
         assertEquals(12.234567, stream.lat[1])
@@ -89,30 +84,27 @@ class WorkoutServiceTest {
     @Test
     fun `Get workout stream nulls`() = runTest {
         server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(fakeStreamResponseNulls)
+            MockResponse().setResponseCode(200).setBody(fakeStreamResponseNulls)
         )
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
+        SimpleDateFormat("yyyy-MM-dd")
         val sut = WorkoutService.create(retrofit)
         val stream = sut.getWorkoutStream(workoutId)
         assertEquals(
-            "GET /timeseries/workouts/$workoutId/stream HTTP/1.1",
-            server.takeRequest().requestLine
+            "GET /timeseries/workouts/$workoutId/stream HTTP/1.1", server.takeRequest().requestLine
         )
         assertEquals(0, stream.altitude.size)
         assertEquals(0, stream.cadence.size)
         assertEquals(0, stream.distance.size)
         assertEquals(0, stream.heartrate.size)
-        assertEquals(0, stream.lat.size )
-        assertEquals(0, stream.lng.size )
+        assertEquals(0, stream.lat.size)
+        assertEquals(0, stream.lng.size)
         assertEquals(0, stream.power.size)
         assertEquals(0, stream.resistance.size)
         assertEquals(0, stream.time.size)
-        assertEquals(0, stream.velocitySmooth.size )
+        assertEquals(0, stream.velocitySmooth.size)
     }
 
-    private fun assertEquals(expected: Double, actual: Double){
+    private fun assertEquals(expected: Double, actual: Double) {
         assertEquals(expected, actual, 0.01)
     }
 
@@ -121,9 +113,9 @@ class WorkoutServiceTest {
 private lateinit var server: MockWebServer
 private lateinit var retrofit: Retrofit
 
-private val apiKey = "API_KEY"
-private val userId = "user_id_1"
-private val workoutId = "workout_id_1"
+private const val apiKey = "API_KEY"
+private const val userId = "user_id_1"
+private const val workoutId = "workout_id_1"
 
 
 const val fakeWorkoutsResponse = """

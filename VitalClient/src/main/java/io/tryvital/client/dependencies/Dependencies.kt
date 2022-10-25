@@ -19,7 +19,6 @@ import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
 
-
 class Dependencies(
     context: Context,
     region: Region,
@@ -77,25 +76,25 @@ class Dependencies(
         private fun resolveUrl(region: Region, environment: Environment): String {
             val urls = mapOf(
                 Region.EU to mapOf(
-                    Environment.production to "https://api.eu.tryvital.io",
-                    Environment.dev to "https://api.dev.eu.tryvital.io",
-                    Environment.sandbox to "https://api.sandbox.eu.tryvital.io"
+                    Environment.Production to "https://api.eu.tryvital.io",
+                    Environment.Dev to "https://api.dev.eu.tryvital.io",
+                    Environment.Sandbox to "https://api.sandbox.eu.tryvital.io"
                 ),
                 Region.US to mapOf(
-                    Environment.production to "https://api.tryvital.io",
-                    Environment.dev to "https://api.dev.tryvital.io",
-                    Environment.sandbox to "https://api.sandbox.tryvital.io"
+                    Environment.Production to "https://api.tryvital.io",
+                    Environment.Dev to "https://api.dev.tryvital.io",
+                    Environment.Sandbox to "https://api.sandbox.tryvital.io"
                 )
             )
-            return "${urls[region]!![environment]!!}/v2/";
+            return "${urls[region]!![environment]!!}/v2/"
         }
     }
 
     class QueryConverterFactory : Converter.Factory() {
         override fun stringConverter(
             type: Type,
-            annotations: Array<Annotation?>?,
-            retrofit: Retrofit?
+            annotations: Array<out Annotation>,
+            retrofit: Retrofit
         ): Converter<*, String>? {
             return if (type === Date::class.java) {
                 DateQueryConverter.INSTANCE

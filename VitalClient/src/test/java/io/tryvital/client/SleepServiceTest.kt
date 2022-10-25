@@ -54,7 +54,7 @@ class SleepServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals( 3, response.sleep.size)
+        assertEquals(3, response.sleep.size)
         val sleep = response.sleep[0]
         checkFirstSleep(sleep)
     }
@@ -79,7 +79,7 @@ class SleepServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals( 2, response.sleep.size)
+        assertEquals(2, response.sleep.size)
         val sleep = response.sleep[0]
         checkFirstSleep(sleep)
         checkFirstSleepStream(sleep.sleepStream!!)
@@ -104,7 +104,7 @@ class SleepServiceTest {
         checkFirstSleepStream(response)
     }
 
-    private fun checkFirstSleep( sleep: SleepData) {
+    private fun checkFirstSleep(sleep: SleepData) {
         assertEquals(id, sleep.id)
         assertEquals(userId, sleep.userId)
         assertEquals(21480, sleep.duration)
@@ -114,7 +114,7 @@ class SleepServiceTest {
         assertEquals("oura", sleep.source!!.slug)
     }
 
-    private fun checkFirstSleepStream( sleepStream: SleepStreamResponse) {
+    private fun checkFirstSleepStream(sleepStream: SleepStreamResponse) {
         assertEquals(2, sleepStream.hrv.size)
         assertEquals(1, sleepStream.heartrate.size)
         assertEquals(1, sleepStream.hypnogram.size)
@@ -369,8 +369,4 @@ const val fakeSleepStreamResponse = """{
     "unit": "rate"
 }
 ]
-}"""
-
-const val fakeSleepStreamResponseNulls = """{
-"hrv": null,
 }"""

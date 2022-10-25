@@ -1,12 +1,12 @@
 package io.tryvital.client.services
 
 import io.tryvital.client.services.data.Profile
-import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 
+@Suppress("unused")
 interface ProfileService {
 
     @GET("summary/profile/{user_id}")

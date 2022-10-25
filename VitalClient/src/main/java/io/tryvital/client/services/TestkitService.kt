@@ -1,11 +1,11 @@
 package io.tryvital.client.services
 
 import io.tryvital.client.services.data.*
-import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.*
 import java.util.*
 
+@Suppress("unused")
 interface TestkitService {
 
     @POST("testkit/orders")
@@ -19,10 +19,10 @@ interface TestkitService {
 
     @GET("testkit/orders/{order_id}")
     @Deprecated("For backwards compatibility, use getOrder")
-    suspend fun getOrderStatus(@Path("order_id")  orderId:String): OrderData
+    suspend fun getOrderStatus(@Path("order_id") orderId: String): OrderData
 
     @GET("testkit/orders/{order_id}")
-    suspend fun getOrder(@Path("order_id")  orderId:String): OrderData
+    suspend fun getOrder(@Path("order_id") orderId: String): OrderData
 
     @GET("testkit/orders")
     suspend fun getAllOrders(
