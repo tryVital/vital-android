@@ -26,7 +26,7 @@ jobs:
         run: ./gradlew lint
       - uses: yutailang0119/action-android-lint@v3
         with:
-        report-path: build/reports/*.xml
+          report-path: build/reports/*.xml
       - name: Build with Gradle
         run: ./gradlew :VitalClient:testDebugUnitTest
       - name: Android Test Report
