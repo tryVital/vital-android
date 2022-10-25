@@ -19,7 +19,7 @@ class LinkServiceTest {
 
     @Before
     fun setUp() {
-        server = MockWebServer();
+        server = MockWebServer()
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),

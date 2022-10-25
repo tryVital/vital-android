@@ -1,6 +1,5 @@
 package io.tryvital.sample.ui
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -46,9 +45,8 @@ fun UsersScreen(client: VitalClient) {
 
     Scaffold(
         topBar = {
-            SmallTopAppBar(
+            TopAppBar(
                 title = { Text("Vital sample") },
-                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0)),
                 actions = {
                     IconAction(
                         painter = painterResource(id = R.drawable.ic_baseline_person_add_24),
@@ -57,7 +55,6 @@ fun UsersScreen(client: VitalClient) {
                             openDialog.value = true
                         }
                     )
-
                     IconAction(
                         painter = rememberVectorPainter(image = Icons.Outlined.Refresh),
                         description = "Refresh",
@@ -65,7 +62,8 @@ fun UsersScreen(client: VitalClient) {
                             viewModel.update()
                         }
                     )
-                }
+                },
+                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0))
             )
         }
     ) { padding ->
@@ -112,6 +110,7 @@ fun UserRow(user: User, onCreateLink: (User) -> Unit, onRemove: (User) -> Unit) 
         )
         Spacer(modifier = Modifier.width(12.dp))
 
+
         Text(
             text = user.clientUserId ?: "",
             style = TextStyle(fontSize = 18.sp),
@@ -149,6 +148,7 @@ fun UserRow(user: User, onCreateLink: (User) -> Unit, onRemove: (User) -> Unit) 
 }
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UserInputDialog(onDismiss: () -> Unit, onSubmit: (String) -> Unit) {
     val text = remember {

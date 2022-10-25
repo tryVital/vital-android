@@ -1,11 +1,11 @@
 package io.tryvital.client.services
 
 import io.tryvital.client.services.data.*
-import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.*
 import java.util.*
 
+@Suppress("unused")
 interface ActivityService {
     @GET("user/")
     suspend fun getAll(): List<User>

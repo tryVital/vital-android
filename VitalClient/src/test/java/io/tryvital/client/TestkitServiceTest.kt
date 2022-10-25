@@ -75,7 +75,7 @@ class TestkitServiceTest {
             "GET /testkit/ HTTP/1.1",
             server.takeRequest().requestLine
         )
-        assertEquals(2, response.testkits?.size)
+        assertEquals(2, response.testkits.size)
         val testkit1 = response.testkits[0]
         assertEquals("71d54fff-70e1-4f74-937e-5a185b925d0d", testkit1.id)
         assertEquals(2, testkit1.markers.size)
@@ -107,7 +107,7 @@ class TestkitServiceTest {
                     phoneNumber = "+123"
                 ),
                 patientDetails = PatientDetails(
-                    dob = Date(1993, 8, 18),
+                    dob = GregorianCalendar(1993, 8, 18).time,
                     gender = "male",
                     email = null
                 ),
@@ -143,7 +143,7 @@ class TestkitServiceTest {
         checkOrder(order, status = "cancelled")
     }
 
-    fun checkOrder(order: OrderData, status: String = "ordered") {
+    private fun checkOrder(order: OrderData, status: String = "ordered") {
         assertEquals(order.id, "id_1")
         assertEquals(order.userId, userId)
         assertEquals(order.testkit!!.id, "71d54fff-70e1-4f74-937e-5a185b925d0d")
@@ -156,8 +156,8 @@ class TestkitServiceTest {
 private lateinit var server: MockWebServer
 private lateinit var retrofit: Retrofit
 
-private val apiKey = "API_KEY"
-private val userId = "user_id_1"
+private const val apiKey = "API_KEY"
+private const val userId = "user_id_1"
 
 const val fakeTestKitsResponse = """{
 "testkits": [
@@ -338,47 +338,5 @@ const val fakeCancelResponse = """{
 },
 "status": "success",
 "message": "order cancelled"
-}"""
-
-const val fakeOrderData = """{
-"user_id": "user_id_1",
-"user_key": "user_key_1",
-"id": "id_1",
-"team_id": "team_id_1",
-"created_on": "2022-07-05T15:14:41.547806+00:00",
-"updated_on": "2022-07-05T15:14:41.547806+00:00",
-"status": "ordered",
-"testkit_id": "testkit_id_1",
-"testkit": {
-    "id": "71d54fff-70e1-4f74-937e-5a185b925d0d",
-    "name": "Respiratory Allergen",
-    "description": "Respiratory Allergens ",
-    "markers": [],
-    "turnaround_time_lower": 4,
-    "turnaround_time_upper": 14,
-    "price": 250.0
-},
-"inbound_tracking_number": null,
-"outbound_tracking_number": null,
-"inbound_tracking_url": null,
-"outbound_tracking_url": null,
-"outbound_courier": null,
-"inbound_courier": null,
-"patient_address": {
-    "receiver_name": "Receiver Name",
-    "street": "340 street",
-    "street_number": "340",
-    "city": "City",
-    "state": "State",
-    "zip": "12345",
-    "country": "US",
-    "phone_number": "+123"
-},
-"patient_details": {
-    "dob": "1993-08-18T00:00:00+00:00",
-    "gender": "male",
-    "email": null
-},
-"sample_id": null
 }"""
 

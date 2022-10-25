@@ -4,10 +4,11 @@ import android.content.Context
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.*
 
+@Suppress("unused")
 class VitalClient(
     context: Context,
     region: Region,
-    environment: Environment = Environment.sandbox,
+    environment: Environment = Environment.Sandbox,
     apiKey: String,
 ) {
 

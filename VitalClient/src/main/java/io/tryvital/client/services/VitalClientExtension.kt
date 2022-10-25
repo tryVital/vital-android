@@ -8,7 +8,13 @@ import io.tryvital.client.services.data.CreateLinkRequest
 import io.tryvital.client.services.data.User
 import java.io.IOException
 
-suspend fun VitalClient.linkProvider(context: Context, user: User, provider: String, callback: String, customizeTabs: (CustomTabsIntent.Builder) -> Unit = {}): Result<Boolean> {
+suspend fun VitalClient.linkProvider(
+    context: Context,
+    user: User,
+    provider: String,
+    callback: String,
+    customizeTabs: (CustomTabsIntent.Builder) -> Unit = {}
+): Result<Boolean> {
     try {
         val token = linkService
             .createLink(CreateLinkRequest(user.userId!!, provider, callback))
@@ -21,7 +27,7 @@ suspend fun VitalClient.linkProvider(context: Context, user: User, provider: Str
         customizeTabs(builder)
         val customTabsIntent = builder.build()
         customTabsIntent.launchUrl(context, Uri.parse(oauth.oauthUrl!!))
-    } catch (e: IOException){
+    } catch (e: IOException) {
         return Result.failure(e)
     }
     return Result.success(true)

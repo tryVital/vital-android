@@ -1,16 +1,14 @@
 package io.tryvital.client.services
 
-import io.tryvital.client.services.data.CholesterolType
-import io.tryvital.client.services.data.Measurement
 import io.tryvital.client.services.data.WorkoutStreamResponse
 import io.tryvital.client.services.data.WorkoutsResponse
-import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
 import java.util.*
 
+@Suppress("unused")
 interface WorkoutService {
     @GET("summary/workouts/{user_id}")
     suspend fun getWorkouts(

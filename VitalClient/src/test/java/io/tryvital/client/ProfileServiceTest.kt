@@ -7,7 +7,6 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
-import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -68,7 +67,7 @@ class ProfileServiceTest {
             userId = userId,
             provider = null
         )
-        Assert.assertEquals(
+        assertEquals(
             "GET /summary/profile/$userId HTTP/1.1",
             server.takeRequest().requestLine
         )
@@ -83,8 +82,8 @@ class ProfileServiceTest {
 private lateinit var server: MockWebServer
 private lateinit var retrofit: Retrofit
 
-private val apiKey = "API_KEY"
-private val userId = "user_id_1"
+private const val apiKey = "API_KEY"
+private const val userId = "user_id_1"
 
 
 const val fakeProfileResponse = """

@@ -7,6 +7,7 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 import java.util.*
 
+@Suppress("unused")
 interface BodyService {
 
     @GET("summary/body/{user_id}")

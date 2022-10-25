@@ -16,7 +16,6 @@ import org.junit.Test
 import retrofit2.Retrofit
 import java.text.SimpleDateFormat
 
-
 @OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("BlockingMethodInNonBlockingContext")
 class VitalsServiceTest {
@@ -43,9 +42,7 @@ class VitalsServiceTest {
         val sut = VitalsService.create(retrofit)
         for (type in CholesterolType.values()) {
             server.enqueue(
-                MockResponse()
-                    .setResponseCode(200)
-                    .setBody(fakeVitalsResponse)
+                MockResponse().setResponseCode(200).setBody(fakeVitalsResponse)
             )
             val response = sut.getCholesterol(
                 cholesterolType = type,
@@ -65,9 +62,7 @@ class VitalsServiceTest {
     @Test
     fun `Get glucose`() = runTest {
         server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(fakeVitalsResponse)
+            MockResponse().setResponseCode(200).setBody(fakeVitalsResponse)
         )
         val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val sut = VitalsService.create(retrofit)
@@ -84,7 +79,7 @@ class VitalsServiceTest {
         checkMeasurements(response)
     }
 
-    fun checkMeasurements(measurements: List<Measurement>) {
+    private fun checkMeasurements(measurements: List<Measurement>) {
         assertEquals(3, measurements.size)
         assertEquals(1, measurements[0].id)
         assertEquals(5.7, measurements[0].value)
@@ -105,11 +100,11 @@ class VitalsServiceTest {
 private lateinit var server: MockWebServer
 private lateinit var retrofit: Retrofit
 
-private val apiKey = "API_KEY"
-private val userId = "user_id_1"
+private const val apiKey = "API_KEY"
+private const val userId = "user_id_1"
 
 
-const val fakeVitalsResponse = """[
+private const val fakeVitalsResponse = """[
     {
         "id": 1,
         "timestamp": "2022-01-01T03:16:31+00:00",

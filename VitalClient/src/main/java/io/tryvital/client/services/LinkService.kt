@@ -1,10 +1,10 @@
 package io.tryvital.client.services
 
 import io.tryvital.client.services.data.*
-import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.*
 
+@Suppress("unused")
 interface LinkService {
     @POST("link/token")
     suspend fun createLink(
