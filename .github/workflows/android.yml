@@ -24,7 +24,7 @@ jobs:
         run: chmod +x gradlew
       - name: Run lint
         run: ./gradlew lint
-        uses: yutailang0119/action-android-lint@v3
+      - uses: yutailang0119/action-android-lint@v3
         with:
         report-path: build/reports/*.xml
       - name: Build with Gradle
