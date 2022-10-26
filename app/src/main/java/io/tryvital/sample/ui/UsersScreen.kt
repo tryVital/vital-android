@@ -3,8 +3,6 @@ package io.tryvital.sample.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,12 +13,9 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.tryvital.client.VitalClient
-import io.tryvital.client.services.data.User
 import io.tryvital.sample.R
 
 @Composable
@@ -65,7 +60,7 @@ fun UsersScreen(client: VitalClient) {
                 },
                 colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0))
             )
-        }
+        },
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             if (state.loading) {
@@ -78,71 +73,25 @@ fun UsersScreen(client: VitalClient) {
             } else if (state.users != null) {
                 val context = LocalContext.current
                 LazyColumn(contentPadding = PaddingValues(vertical = 16.dp)) {
-                    items(state.users.size) { idx ->
+                    items(state.users.size) { index ->
+                        val user = state.users[index]
+
                         UserRow(
-                            user = state.users[idx],
+                            user = user,
+                            isSelected = state.selectedUser == user,
                             onCreateLink = {
-                                viewModel.linkProvider(context, it)
+                                viewModel.linkUserWithProvider(context, it)
                             },
                             onRemove = {
                                 viewModel.removeUser(it)
+                            },
+                            onSelect = {
+                                viewModel.selectUser(it)
                             }
                         )
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-fun UserRow(user: User, onCreateLink: (User) -> Unit, onRemove: (User) -> Unit) {
-    Row(
-        modifier = Modifier
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .height(56.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = rememberVectorPainter(image = Icons.Default.Person),
-            contentDescription = "Person",
-            tint = Color.Gray
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-
-
-        Text(
-            text = user.clientUserId ?: "",
-            style = TextStyle(fontSize = 18.sp),
-            modifier = Modifier.weight(1f)
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        IconButton(
-            onClick = {
-                onCreateLink(user)
-            },
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_baseline_content_copy_24),
-                contentDescription = "Link provider",
-                tint = Color.Gray
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        IconButton(
-            onClick = {
-                onRemove(user)
-            },
-        ) {
-            Icon(
-                painter = rememberVectorPainter(image = Icons.Default.Delete),
-                contentDescription = "Remove",
-                tint = Color.Gray
-            )
         }
     }
 }

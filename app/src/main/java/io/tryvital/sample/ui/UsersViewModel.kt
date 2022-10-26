@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.CreateUserRequest
 import io.tryvital.client.services.data.User
-import io.tryvital.client.services.linkProvider
+import io.tryvital.client.services.linkUserWithProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -39,9 +39,19 @@ class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
         }
     }
 
-    fun linkProvider(context: Context, user: User) {
+    fun selectUser(newSelectedUser: User) {
         viewModelScope.launch {
-            vitalClient.linkProvider(context, user, "strava", "vitalexample://callback")
+            viewModelState.update {
+                it.copy(
+                    selectedUser = if (newSelectedUser == it.selectedUser) null else newSelectedUser
+                )
+            }
+        }
+    }
+
+    fun linkUserWithProvider(context: Context, user: User) {
+        viewModelScope.launch {
+            vitalClient.linkUserWithProvider(context, user, "strava", "vitalexample://callback")
         }
     }
 
@@ -59,5 +69,6 @@ class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
 
 data class UsersViewModelState(
     val loading: Boolean = false,
-    val users: List<User>? = listOf()
+    val users: List<User>? = listOf(),
+    val selectedUser: User? = null,
 )

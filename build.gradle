@@ -19,6 +19,7 @@ buildscript {
         mockito_inline = "4.5.1"
         mockwebserver = "4.10.0"
         kotlinx_coroutines_test = "1.6.4"
+        health_connect = "1.0.0-alpha07"
     }
 }
 

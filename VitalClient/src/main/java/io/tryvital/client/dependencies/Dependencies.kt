@@ -1,6 +1,7 @@
 package io.tryvital.client.dependencies
 
 import android.content.Context
+import androidx.health.connect.client.HealthConnectClient
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
@@ -37,8 +38,12 @@ class Dependencies(
         createRetrofit(resolveUrl(region, environment), httpClient, moshi)
     }
 
+    val healthConnectClient: HealthConnectClient by lazy {
+        createHealthConnectClient(context)
+    }
+
     companion object {
-        fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
+        private fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
             val cacheSizeInMB: Long = 2 * 1024 * 1024
 
             val loggingInterceptor = HttpLoggingInterceptor()
@@ -55,7 +60,7 @@ class Dependencies(
                 .build()
         }
 
-        fun createRetrofit(
+        private fun createRetrofit(
             baseUrl: String,
             okHttpClient: OkHttpClient,
             moshi: Moshi
@@ -68,7 +73,7 @@ class Dependencies(
                 .client(okHttpClient)
                 .build()
 
-        fun createMoshi(): Moshi = Moshi.Builder()
+        private fun createMoshi(): Moshi = Moshi.Builder()
             .add(KotlinJsonAdapterFactory())
             .add(Date::class.java, Rfc3339DateJsonAdapter().nullSafe())
             .build()
@@ -87,6 +92,10 @@ class Dependencies(
                 )
             )
             return "${urls[region]!![environment]!!}/v2/"
+        }
+
+        private fun createHealthConnectClient(context: Context): HealthConnectClient {
+            return HealthConnectClient.getOrCreate(context)
         }
     }
 
