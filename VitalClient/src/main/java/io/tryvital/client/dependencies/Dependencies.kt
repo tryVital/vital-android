@@ -38,8 +38,8 @@ class Dependencies(
         createRetrofit(resolveUrl(region, environment), httpClient, moshi)
     }
 
-    val healthConnectClient: HealthConnectClient by lazy {
-        createHealthConnectClient(context)
+    val healthConnectClientProvider: HealthConnectClientProvider by lazy {
+        createHealthConnectClientProvider()
     }
 
     companion object {
@@ -94,8 +94,8 @@ class Dependencies(
             return "${urls[region]!![environment]!!}/v2/"
         }
 
-        private fun createHealthConnectClient(context: Context): HealthConnectClient {
-            return HealthConnectClient.getOrCreate(context)
+        private fun createHealthConnectClientProvider(): HealthConnectClientProvider {
+            return HealthConnectClientProvider()
         }
     }
 
@@ -130,5 +130,11 @@ class Dependencies(
                 return QueryConverterFactory()
             }
         }
+    }
+}
+
+class HealthConnectClientProvider {
+    fun getHealthConnectClient(context: Context): HealthConnectClient {
+        return HealthConnectClient.getOrCreate(context)
     }
 }

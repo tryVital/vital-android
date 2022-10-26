@@ -1,4 +1,4 @@
-package io.tryvital.sample.ui
+package io.tryvital.sample
 
 import android.app.Application
 import io.tryvital.client.Environment
@@ -12,4 +12,6 @@ class VitalApp : Application() {
         environment = Environment.Sandbox,
         apiKey = "sk_eu_S5LdXTS_CAtdFrkX9OYsiVq_jGHaIXtZyBPbBtPkzhA"
     )
+
+    val userRepository = UserRepository.create()
 }

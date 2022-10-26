@@ -1,4 +1,4 @@
-package io.tryvital.sample.ui
+package io.tryvital.sample.ui.users
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -8,12 +8,16 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.CreateUserRequest
 import io.tryvital.client.services.data.User
 import io.tryvital.client.services.linkUserWithProvider
+import io.tryvital.sample.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
+class UsersViewModel(
+    private val vitalClient: VitalClient,
+    private val userRepository: UserRepository
+) : ViewModel() {
     private val viewModelState = MutableStateFlow(UsersViewModelState())
     val uiState = viewModelState.asStateFlow()
 
@@ -42,9 +46,10 @@ class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
     fun selectUser(newSelectedUser: User) {
         viewModelScope.launch {
             viewModelState.update {
-                it.copy(
-                    selectedUser = if (newSelectedUser == it.selectedUser) null else newSelectedUser
-                )
+                val selectedUser = if (newSelectedUser == it.selectedUser) null else newSelectedUser
+
+                userRepository.selectedUser = selectedUser
+                it.copy(selectedUser = selectedUser)
             }
         }
     }
@@ -58,10 +63,11 @@ class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
     companion object {
         fun provideFactory(
             client: VitalClient,
+            userRepository: UserRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return UsersViewModel(client) as T
+                return UsersViewModel(client, userRepository) as T
             }
         }
     }

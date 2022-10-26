@@ -1,11 +1,10 @@
-package io.tryvital.sample.ui
+package io.tryvital.sample.ui.users
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -14,15 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.tryvital.client.services.data.User
-import io.tryvital.sample.R
 
 @Composable
-fun UserRow(
+fun UserListItem(
     user: User,
     isSelected: Boolean,
     onCreateLink: (User) -> Unit,
@@ -64,7 +61,7 @@ fun UserRow(
             },
         ) {
             Icon(
-                painter = painterResource(R.drawable.ic_baseline_content_copy_24),
+                painter = rememberVectorPainter(image = Icons.Default.Sync),
                 contentDescription = "Link provider",
                 tint = iconColor
             )

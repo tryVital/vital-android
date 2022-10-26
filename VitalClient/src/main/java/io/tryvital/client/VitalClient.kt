@@ -17,8 +17,8 @@ class VitalClient(
         Dependencies(context, region, environment, apiKey)
     }
 
-    private val healthConnectClient by lazy {
-        HealthConnectManager.create(dependencies.healthConnectClient)
+    val healthConnectManager by lazy {
+        HealthConnectManager.create(dependencies.healthConnectClientProvider)
     }
 
     val activityService by lazy {

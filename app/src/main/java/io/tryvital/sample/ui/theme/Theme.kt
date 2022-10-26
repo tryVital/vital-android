@@ -2,7 +2,6 @@ package io.tryvital.sample.ui.theme
 
 import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -35,8 +34,8 @@ private val LightColorScheme = lightColorScheme(
 
 @Composable
 fun VitalSampleTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
+    //TODO implement dark mode
+    darkTheme: Boolean = false,//isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {

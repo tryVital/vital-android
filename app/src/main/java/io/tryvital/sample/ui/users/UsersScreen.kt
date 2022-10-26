@@ -1,9 +1,12 @@
-package io.tryvital.sample.ui
+package io.tryvital.sample.ui.users
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,17 +15,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import io.tryvital.client.VitalClient
-import io.tryvital.sample.R
+import io.tryvital.sample.Screen
+import io.tryvital.sample.UserRepository
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun UsersScreen(client: VitalClient) {
+fun UsersScreen(
+    client: VitalClient,
+    navController: NavHostController,
+    userRepository: UserRepository
+) {
     val viewModel: UsersViewModel = viewModel(
-        factory = UsersViewModel.provideFactory(client)
+        factory = UsersViewModel.provideFactory(client,userRepository)
     )
     val openDialog = remember { mutableStateOf(false) }
 
@@ -44,7 +54,7 @@ fun UsersScreen(client: VitalClient) {
                 title = { Text("Vital sample") },
                 actions = {
                     IconAction(
-                        painter = painterResource(id = R.drawable.ic_baseline_person_add_24),
+                        painter = rememberVectorPainter(image = Icons.Default.Person),
                         description = "Add user",
                         onClick = {
                             openDialog.value = true
@@ -76,7 +86,7 @@ fun UsersScreen(client: VitalClient) {
                     items(state.users.size) { index ->
                         val user = state.users[index]
 
-                        UserRow(
+                        UserListItem(
                             user = user,
                             isSelected = state.selectedUser == user,
                             onCreateLink = {
@@ -92,6 +102,56 @@ fun UsersScreen(client: VitalClient) {
                     }
                 }
             }
+
+            Box(Modifier.align(Alignment.BottomCenter)) {
+                AnimatedVisibility(
+                    visible = state.selectedUser != null,
+                    enter = slideInVertically(
+                        initialOffsetY = { 40 }
+                    ) + expandVertically(
+                        expandFrom = Alignment.Bottom
+                    ) + fadeIn(initialAlpha = 0.3f),
+                    exit = slideOutVertically() + shrinkVertically() + fadeOut(),
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .height(80.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Row(
+                            Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Health Connect",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Button(
+                                onClick = { navController.navigate(Screen.HealthConnect.route) },
+                                contentPadding = PaddingValues(
+                                    start = 20.dp,
+                                    top = 12.dp,
+                                    end = 20.dp,
+                                    bottom = 12.dp
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Sync,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                                )
+                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                Text("Connect")
+                            }
+                        }
+                    }
+
+                }
+            }
+
         }
     }
 }
