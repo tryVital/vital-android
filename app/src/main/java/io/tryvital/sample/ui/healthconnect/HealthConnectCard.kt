@@ -2,8 +2,10 @@ package io.tryvital.sample.ui.healthconnect
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.InstallMobile
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -19,6 +21,7 @@ import io.tryvital.client.healthconnect.HealthConnectAvailability
 @Composable
 fun HealthConnectCard(
     state: HealthConnectViewModelState,
+    viewModel: HealthConnectViewModel,
 ) {
     Card(Modifier.padding(16.dp)) {
         Column(
@@ -36,6 +39,76 @@ fun HealthConnectCard(
             Box(Modifier.align(Alignment.CenterHorizontally)) {
                 Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
+            PermissionInfo(state.permissionsGranted, viewModel)
+        }
+    }
+}
+
+@Composable
+fun PermissionInfo(permissionsGranted: Boolean?, viewModel: HealthConnectViewModel) {
+    when (permissionsGranted) {
+        true -> Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "All permission granted 👍",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta
+            )
+        }
+        false -> Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val context = LocalContext.current
+            val permissionsLauncher =
+                rememberLauncherForActivityResult(viewModel.createRequestPermissionResultContract()) {
+                    viewModel.checkPermissions(context)
+                }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "Not all permission granted", fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = Color.Magenta
+                )
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = {
+                        permissionsLauncher.launch(viewModel.getPermissions())
+                    },
+                    contentPadding = PaddingValues(
+                        start = 20.dp,
+                        top = 12.dp,
+                        end = 20.dp,
+                        bottom = 12.dp
+                    )
+                ) {
+                    Icon(
+                        Icons.Outlined.HealthAndSafety,
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text("Request")
+                }
+
+            }
+        }
+        null -> Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+                .size(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
         }
     }
 }
@@ -50,7 +123,8 @@ private fun AvailabilityInfo(availability: HealthConnectAvailability?) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "This device has health connect installed 👍", fontWeight = FontWeight.Bold,
+                "This device has health connect installed 👍",
+                fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = Color.Magenta
             )
@@ -131,6 +205,5 @@ private fun AvailabilityInfo(availability: HealthConnectAvailability?) {
         ) {
             CircularProgressIndicator()
         }
-
     }
 }

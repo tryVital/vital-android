@@ -70,6 +70,8 @@ dependencies {
     implementation "androidx.activity:activity-compose:$activity_compose"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_runtime"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_viewmodel_compose"
+//    TODO it would be the best if this dependency could be removed from the client
+    implementation "androidx.health.connect:connect-client:$health_connect"
 
     testImplementation "junit:junit:$junit"
     androidTestImplementation "androidx.test.ext:junit:$test_ext"
