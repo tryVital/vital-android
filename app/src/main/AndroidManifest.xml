@@ -37,7 +37,7 @@
                     android:scheme="vitalexample" />
             </intent-filter>
 
-<!--            TODO create a rational page for the privacy policy-->
+            <!-- TODO create a rational page for the privacy policy-->
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>

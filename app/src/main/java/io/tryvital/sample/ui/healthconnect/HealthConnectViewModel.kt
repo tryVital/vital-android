@@ -1,7 +1,6 @@
 package io.tryvital.sample.ui.healthconnect
 
 import android.content.Context
-import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -52,11 +51,7 @@ class HealthConnectViewModel(
     }
 
     fun getPermissions(): Set<HealthPermission> {
-        return vitalClient.healthConnectManager.permissions
-    }
-
-    fun createRequestPermissionResultContract(): ActivityResultContract<Set<HealthPermission>, Set<HealthPermission>> {
-        return vitalClient.healthConnectManager.createRequestPermissionResultContract()
+        return vitalClient.healthConnectManager.requiredPermissions
     }
 
     companion object {

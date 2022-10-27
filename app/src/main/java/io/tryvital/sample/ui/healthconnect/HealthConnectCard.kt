@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.health.connect.client.PermissionController
 import io.tryvital.client.healthconnect.HealthConnectAvailability
 
 @Composable
@@ -68,7 +69,7 @@ fun PermissionInfo(permissionsGranted: Boolean?, viewModel: HealthConnectViewMod
         ) {
             val context = LocalContext.current
             val permissionsLauncher =
-                rememberLauncherForActivityResult(viewModel.createRequestPermissionResultContract()) {
+                rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
                     viewModel.checkPermissions(context)
                 }
 
