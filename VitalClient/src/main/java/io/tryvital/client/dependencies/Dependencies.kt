@@ -43,7 +43,7 @@ class Dependencies(
     }
 
     companion object {
-        private fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
+        internal fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
             val cacheSizeInMB: Long = 2 * 1024 * 1024
 
             val loggingInterceptor = HttpLoggingInterceptor()
@@ -60,7 +60,7 @@ class Dependencies(
                 .build()
         }
 
-        private fun createRetrofit(
+        internal fun createRetrofit(
             baseUrl: String,
             okHttpClient: OkHttpClient,
             moshi: Moshi
@@ -73,12 +73,12 @@ class Dependencies(
                 .client(okHttpClient)
                 .build()
 
-        private fun createMoshi(): Moshi = Moshi.Builder()
+        internal fun createMoshi(): Moshi = Moshi.Builder()
             .add(KotlinJsonAdapterFactory())
             .add(Date::class.java, Rfc3339DateJsonAdapter().nullSafe())
             .build()
 
-        private fun resolveUrl(region: Region, environment: Environment): String {
+        internal fun resolveUrl(region: Region, environment: Environment): String {
             val urls = mapOf(
                 Region.EU to mapOf(
                     Environment.Production to "https://api.eu.tryvital.io",
@@ -94,7 +94,7 @@ class Dependencies(
             return "${urls[region]!![environment]!!}/v2/"
         }
 
-        private fun createHealthConnectClientProvider(): HealthConnectClientProvider {
+        internal fun createHealthConnectClientProvider(): HealthConnectClientProvider {
             return HealthConnectClientProvider()
         }
     }
