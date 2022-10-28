@@ -4,6 +4,7 @@ import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.metadata.DataOrigin
+import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import io.tryvital.client.services.data.AddWorkoutRequestData
 import io.tryvital.client.services.data.QuantitySample
@@ -21,7 +22,53 @@ import java.util.*
 class HealthConnectRecordProcessorTest {
 
     @Test
-    fun `process workouts data`() = runTest {
+    fun `process workouts heart rate`() = runTest {
+        val healthConnectRecordProcessor = setupProcessor()
+        val response =
+            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
+
+        assertEquals(2, response.size)
+        assertEquals(
+            expectedData.heartRate[0],
+            response[0].heartRate[0]
+        )
+    }
+
+    @Test
+    fun `process workouts respiratory rate`() = runTest {
+        val healthConnectRecordProcessor = setupProcessor()
+        val response =
+            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
+
+        assertEquals(2, response.size)
+        assertEquals(
+            expectedData.respiratoryRate,
+            response[0].respiratoryRate
+        )
+
+    }
+
+    @Test
+    fun `process workouts with samples`() = runTest {
+        val healthConnectRecordProcessor = setupProcessor()
+        val response =
+            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
+
+        assertEquals(2, response.size)
+        assertEquals(expectedData, response[0])
+    }
+
+    @Test
+    fun `process workouts without samples`() = runTest {
+        val healthConnectRecordProcessor = setupProcessor()
+        val response =
+            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
+
+        assertEquals(2, response.size)
+        assertEquals(expectedData2, response[1])
+    }
+
+    private suspend fun setupProcessor(): HealthConnectRecordProcessor {
         val recordProcessor = mock<RecordReader>()
         whenever(recordProcessor.readExerciseSessions(startTime, endTime)).thenReturn(
             testRawExercise
@@ -36,22 +83,7 @@ class HealthConnectRecordProcessorTest {
         )
 
         val healthConnectRecordProcessor = HealthConnectRecordProcessor(recordProcessor)
-        val response =
-            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
-
-        assertEquals(2, response.size)
-        assertEquals(
-            "heart rate mapping",
-            expectedData.heartRate,
-            response[0].heartRate
-        )
-        assertEquals(
-            "respiratory rate mapping",
-            expectedData.respiratoryRate,
-            response[0].respiratoryRate
-        )
-        assertEquals(expectedData, response[0])
-        assertEquals(expectedData2, response[1])
+        return healthConnectRecordProcessor
     }
 }
 
@@ -75,6 +107,7 @@ val expectedData = AddWorkoutRequestData(
             startDate = Date.from(Instant.parse("2007-01-01T00:00:00Z")),
             endDate = Date.from(Instant.parse("2007-01-01T00:00:00Z")),
             deviceType = "not Iphone",
+            sourceBundle = "fit"
         ),
         QuantitySample(
             id = "heartRate-2007-01-01T00:01:00Z",
@@ -83,6 +116,7 @@ val expectedData = AddWorkoutRequestData(
             startDate = Date.from(Instant.parse("2007-01-01T00:01:00Z")),
             endDate = Date.from(Instant.parse("2007-01-01T00:01:00Z")),
             deviceType = "not Iphone",
+            sourceBundle = "fit"
         )
 
     ),
@@ -94,7 +128,8 @@ val expectedData = AddWorkoutRequestData(
             startDate = Date.from(Instant.parse("2007-01-01T00:00:00Z")),
             endDate = Date.from(Instant.parse("2007-01-01T00:00:00Z")),
             deviceType = "not Iphone",
-            ),
+            sourceBundle = "fit"
+        ),
         QuantitySample(
             id = "respiratoryRate-2007-01-01T00:01:00Z",
             value = "22.0",
@@ -102,6 +137,7 @@ val expectedData = AddWorkoutRequestData(
             startDate = Date.from(Instant.parse("2007-01-01T00:01:00Z")),
             endDate = Date.from(Instant.parse("2007-01-01T00:01:00Z")),
             deviceType = "not Iphone",
+            sourceBundle = "fit"
         )
 
     )
@@ -150,12 +186,23 @@ val testRawHealthRate = listOf(
         listOf(
             HeartRateRecord.Sample(startTime, 1),
             HeartRateRecord.Sample(startTime.plus(1, ChronoUnit.MINUTES), 2),
-        )
+        ),
+        metadata = Metadata(device = Device(model = "iphone"), dataOrigin = DataOrigin("fit"))
     )
 )
 
 val testRawRespiratoryRate = listOf(
-    RespiratoryRateRecord(startTime, null, 21.0),
-    RespiratoryRateRecord(startTime.plus(1, ChronoUnit.MINUTES), null, 22.0),
+    RespiratoryRateRecord(
+        startTime,
+        null,
+        21.0,
+        Metadata(dataOrigin = DataOrigin("fit"))
+    ),
+    RespiratoryRateRecord(
+        startTime.plus(1, ChronoUnit.MINUTES),
+        null,
+        22.0,
+        Metadata(dataOrigin = DataOrigin("fit"))
+    ),
 )
 

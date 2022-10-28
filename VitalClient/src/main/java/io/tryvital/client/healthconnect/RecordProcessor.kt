@@ -19,7 +19,8 @@ interface RecordProcessor {
     ): List<AddWorkoutRequestData>
 }
 
-class HealthConnectRecordProcessor(private val recordReader: RecordReader) : RecordProcessor {
+internal class HealthConnectRecordProcessor(private val recordReader: RecordReader) :
+    RecordProcessor {
 
     override suspend fun processWorkouts(
         startTime: Instant,
@@ -61,7 +62,7 @@ class HealthConnectRecordProcessor(private val recordReader: RecordReader) : Rec
                 startDate = Date.from(it.time),
                 endDate = Date.from(it.time),
                 sourceBundle = it.metadata.dataOrigin.packageName,
-                deviceType = it.metadata.device?.type ?: deviceType,
+                deviceType = it.metadata.device?.model ?: deviceType,
             )
 
         }

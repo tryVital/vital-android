@@ -35,7 +35,7 @@ interface RecordReader {
     ): Long
 }
 
-class HealthConnectRecordReader(
+internal class HealthConnectRecordReader(
     private val context: Context,
     private val healthConnectClientProvider: HealthConnectClientProvider,
 ) : RecordReader {
