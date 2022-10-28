@@ -1,4 +1,4 @@
-package io.tryvital.sample.ui
+package io.tryvital.sample
 
 import android.app.Application
 import io.tryvital.client.Environment
@@ -8,8 +8,10 @@ import io.tryvital.client.VitalClient
 class VitalApp : Application() {
     val client = VitalClient(
         context = this,
-        region = Region.EU,
-        environment = Environment.Sandbox,
-        apiKey = "sk_eu_S5LdXTS_CAtdFrkX9OYsiVq_jGHaIXtZyBPbBtPkzhA"
+        region = Region.US,
+        environment = Environment.Dev,
+        apiKey = "sk_us_Wk1rrNAYxFPN9HFOiAwja0_DBJKS3igHP8GEd9JUd6M"
     )
+
+    val userRepository = UserRepository.create()
 }

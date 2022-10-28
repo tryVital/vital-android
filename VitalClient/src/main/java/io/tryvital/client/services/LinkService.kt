@@ -32,6 +32,13 @@ interface LinkService {
         @Header("LinkToken") linkToken: String,
     ): OauthLinkResponse
 
+    @POST("link/provider/manual/{provider}")
+    suspend fun manualProvider(
+        @Path("provider") provider: String,
+        @Header("LinkToken") linkToken: String,
+        @Body request: ManualProviderRequest,
+    ): ManualProviderResponse
+
     companion object {
         fun create(retrofit: Retrofit): LinkService {
             return retrofit.create(LinkService::class.java)

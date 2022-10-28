@@ -2,6 +2,7 @@ package io.tryvital.client
 
 import android.content.Context
 import io.tryvital.client.dependencies.Dependencies
+import io.tryvital.client.healthconnect.HealthConnectManager
 import io.tryvital.client.services.*
 
 @Suppress("unused")
@@ -14,6 +15,15 @@ class VitalClient(
 
     private val dependencies: Dependencies by lazy {
         Dependencies(context, region, environment, apiKey)
+    }
+
+    val healthConnectManager by lazy {
+        HealthConnectManager.create(
+            dependencies.healthConnectClientProvider,
+            summaryService,
+            linkService,
+            dependencies.recordProcessor
+        )
     }
 
     val activityService by lazy {
@@ -42,5 +52,9 @@ class VitalClient(
 
     val userService by lazy {
         UserService.create(dependencies.retrofit)
+    }
+
+    private val summaryService by lazy {
+        SummaryService.create(dependencies.retrofit)
     }
 }

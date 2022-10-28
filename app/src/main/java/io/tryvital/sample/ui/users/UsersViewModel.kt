@@ -1,4 +1,4 @@
-package io.tryvital.sample.ui
+package io.tryvital.sample.ui.users
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
@@ -7,13 +7,17 @@ import androidx.lifecycle.viewModelScope
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.CreateUserRequest
 import io.tryvital.client.services.data.User
-import io.tryvital.client.services.linkProvider
+import io.tryvital.client.services.linkUserWithOauthProvider
+import io.tryvital.sample.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
+class UsersViewModel(
+    private val vitalClient: VitalClient,
+    private val userRepository: UserRepository
+) : ViewModel() {
     private val viewModelState = MutableStateFlow(UsersViewModelState())
     val uiState = viewModelState.asStateFlow()
 
@@ -39,19 +43,31 @@ class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
         }
     }
 
-    fun linkProvider(context: Context, user: User) {
+    fun selectUser(newSelectedUser: User) {
         viewModelScope.launch {
-            vitalClient.linkProvider(context, user, "strava", "vitalexample://callback")
+            viewModelState.update {
+                val selectedUser = if (newSelectedUser == it.selectedUser) null else newSelectedUser
+
+                userRepository.selectedUser = selectedUser
+                it.copy(selectedUser = selectedUser)
+            }
+        }
+    }
+
+    fun linkUserWithProvider(context: Context, user: User) {
+        viewModelScope.launch {
+            vitalClient.linkUserWithOauthProvider(context, user, "strava", "vitalexample://callback")
         }
     }
 
     companion object {
         fun provideFactory(
             client: VitalClient,
+            userRepository: UserRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return UsersViewModel(client) as T
+                return UsersViewModel(client, userRepository) as T
             }
         }
     }
@@ -59,5 +75,6 @@ class UsersViewModel(private val vitalClient: VitalClient) : ViewModel() {
 
 data class UsersViewModelState(
     val loading: Boolean = false,
-    val users: List<User>? = listOf()
+    val users: List<User>? = listOf(),
+    val selectedUser: User? = null,
 )
