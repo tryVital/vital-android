@@ -8,7 +8,7 @@ import io.tryvital.client.services.data.CreateLinkRequest
 import io.tryvital.client.services.data.User
 import java.io.IOException
 
-suspend fun VitalClient.linkUserWithProvider(
+suspend fun VitalClient.linkUserWithOauthProvider(
     context: Context,
     user: User,
     provider: String,

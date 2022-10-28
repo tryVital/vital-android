@@ -7,7 +7,7 @@ import androidx.lifecycle.viewModelScope
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.CreateUserRequest
 import io.tryvital.client.services.data.User
-import io.tryvital.client.services.linkUserWithProvider
+import io.tryvital.client.services.linkUserWithOauthProvider
 import io.tryvital.sample.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -56,7 +56,7 @@ class UsersViewModel(
 
     fun linkUserWithProvider(context: Context, user: User) {
         viewModelScope.launch {
-            vitalClient.linkUserWithProvider(context, user, "strava", "vitalexample://callback")
+            vitalClient.linkUserWithOauthProvider(context, user, "strava", "vitalexample://callback")
         }
     }
 

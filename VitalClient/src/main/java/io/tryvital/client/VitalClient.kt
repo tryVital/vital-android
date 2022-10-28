@@ -18,7 +18,12 @@ class VitalClient(
     }
 
     val healthConnectManager by lazy {
-        HealthConnectManager.create(dependencies.healthConnectClientProvider)
+        HealthConnectManager.create(
+            dependencies.healthConnectClientProvider,
+            summaryService,
+            linkService,
+            dependencies.recordProcessor
+        )
     }
 
     val activityService by lazy {
@@ -47,5 +52,9 @@ class VitalClient(
 
     val userService by lazy {
         UserService.create(dependencies.retrofit)
+    }
+
+    private val summaryService by lazy {
+        SummaryService.create(dependencies.retrofit)
     }
 }

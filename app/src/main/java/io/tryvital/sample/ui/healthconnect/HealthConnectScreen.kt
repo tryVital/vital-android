@@ -57,6 +57,7 @@ fun HealthConnectScreen(client: VitalClient, userRepository: UserRepository) {
         Column(modifier = Modifier.padding(padding), content = {
             UserDetailsCard(state)
             HealthConnectCard(state, viewModel)
+            ReadDataCard(viewModel)
         })
     }
 }

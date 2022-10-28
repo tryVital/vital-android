@@ -72,7 +72,7 @@ fun UsersScreen(
             )
         },
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
             if (state.loading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
