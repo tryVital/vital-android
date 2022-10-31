@@ -7,7 +7,7 @@ import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
 import io.tryvital.client.services.data.QuantitySample
-import io.tryvital.client.services.data.RawWorkout
+import io.tryvital.client.services.data.WorkoutPayload
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -69,32 +69,35 @@ class HealthConnectRecordProcessorTest {
     }
 
     private suspend fun setupProcessor(): HealthConnectRecordProcessor {
-        val recordProcessor = mock<RecordReader>()
-        whenever(recordProcessor.readExerciseSessions(startTime, endTime)).thenReturn(
+        val recordAggregator = mock<RecordAggregator>()
+        whenever(recordAggregator.aggregateCalories(startTime, endTime)).thenReturn(101, 102)
+        whenever(recordAggregator.aggregateDistance(startTime, endTime)).thenReturn(301, 302)
+
+        val recordReader = mock<RecordReader>()
+        whenever(recordReader.readExerciseSessions(startTime, endTime)).thenReturn(
             testRawExercise
         )
-        whenever(recordProcessor.aggregateCalories(startTime, endTime)).thenReturn(101, 102)
-        whenever(recordProcessor.aggregateDistance(startTime, endTime)).thenReturn(301, 302)
-        whenever(recordProcessor.readHeartRate(startTime, endTime)).thenReturn(
+        whenever(recordReader.readHeartRate(startTime, endTime)).thenReturn(
             testRawHealthRate, emptyList()
         )
-        whenever(recordProcessor.readRespiratoryRate(startTime, endTime)).thenReturn(
+        whenever(recordReader.readRespiratoryRate(startTime, endTime)).thenReturn(
             testRawRespiratoryRate, emptyList()
         )
 
-        return HealthConnectRecordProcessor(recordProcessor)
+
+        return HealthConnectRecordProcessor(recordReader, recordAggregator)
     }
 }
 
 val startTime: Instant = Instant.parse("2007-01-01T00:00:00.00Z")
 val endTime: Instant = Instant.parse("2007-01-10T00:00:00.00Z")
 
-val expectedData = RawWorkout(
+val expectedData = WorkoutPayload(
     id = "test raw supersize",
     startDate = Date.from(Instant.parse("2007-01-01T00:00:00.00Z")),
     endDate = Date.from(Instant.parse("2007-01-05T00:00:00.00Z")),
     sourceBundle = "fit",
-    deviceType = "not Iphone",
+    deviceModel = "not Iphone",
     sport = "walking",
     caloriesInKiloJules = 101,
     distanceInMeter = 301,
@@ -105,7 +108,7 @@ val expectedData = RawWorkout(
             unit = "bpm",
             startDate = Date.from(Instant.parse("2007-01-01T00:00:00Z")),
             endDate = Date.from(Instant.parse("2007-01-01T00:00:00Z")),
-            deviceType = "not Iphone",
+            deviceModel = "not Iphone",
             sourceBundle = "fit"
         ),
         QuantitySample(
@@ -114,7 +117,7 @@ val expectedData = RawWorkout(
             unit = "bpm",
             startDate = Date.from(Instant.parse("2007-01-01T00:01:00Z")),
             endDate = Date.from(Instant.parse("2007-01-01T00:01:00Z")),
-            deviceType = "not Iphone",
+            deviceModel = "not Iphone",
             sourceBundle = "fit"
         )
 
@@ -126,7 +129,7 @@ val expectedData = RawWorkout(
             unit = "bpm",
             startDate = Date.from(Instant.parse("2007-01-01T00:00:00Z")),
             endDate = Date.from(Instant.parse("2007-01-01T00:00:00Z")),
-            deviceType = "not Iphone",
+            deviceModel = "not Iphone",
             sourceBundle = "fit"
         ),
         QuantitySample(
@@ -135,19 +138,19 @@ val expectedData = RawWorkout(
             unit = "bpm",
             startDate = Date.from(Instant.parse("2007-01-01T00:01:00Z")),
             endDate = Date.from(Instant.parse("2007-01-01T00:01:00Z")),
-            deviceType = "not Iphone",
+            deviceModel = "not Iphone",
             sourceBundle = "fit"
         )
 
     )
 )
 
-val expectedData2 = RawWorkout(
+val expectedData2 = WorkoutPayload(
     id = "test raw supersize2",
     startDate = Date.from(Instant.parse("2007-01-06T00:00:00.00Z")),
     endDate = Date.from(Instant.parse("2007-01-10T00:00:00.00Z")),
     sourceBundle = "shealth",
-    deviceType = "not Iphone",
+    deviceModel = "not Iphone",
     sport = "running",
     caloriesInKiloJules = 102,
     distanceInMeter = 302,

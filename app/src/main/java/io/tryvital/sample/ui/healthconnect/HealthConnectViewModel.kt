@@ -68,7 +68,7 @@ class HealthConnectViewModel(
         viewModelScope.launch {
             vitalClient.healthConnectManager.readAndUploadHealthData(
                 Instant.now().plus(
-                    -30,
+                    -1,
                     ChronoUnit.DAYS
                 ),
                 Instant.now(),
