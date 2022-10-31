@@ -47,7 +47,7 @@ data class RawProfile(
     @Json(name = "date_of_birth")
     val dateOfBirth: Date,
     @Json(name = "height")
-    val height: Int, //TODO what is the unit
+    val heightInCm: Int,
 )
 
 

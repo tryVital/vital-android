@@ -44,7 +44,7 @@ class SummaryServiceTest {
         val summaryService = SummaryService.create(retrofit)
         val response = summaryService.addWorkout(
             userId = userId,
-            addWorkoutRequest = SummaryTimeframe(
+            body = SummaryTimeframe(
                 stage = "dev",
                 provider = "manual",
                 startDate = null,
@@ -80,7 +80,7 @@ class SummaryServiceTest {
         val summaryService = SummaryService.create(retrofit)
         val response = summaryService.addProfile(
             userId = userId,
-            addWorkoutRequest = SummaryTimeframe(
+            body = SummaryTimeframe(
                 stage = "dev",
                 provider = "manual",
                 startDate = null,
@@ -89,7 +89,7 @@ class SummaryServiceTest {
                 data = RawProfile(
                     biologicalSex = "not_set",
                     dateOfBirth = Date(0),
-                    height = 188,
+                    heightInCm = 188,
                 )
             )
         )

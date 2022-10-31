@@ -11,13 +11,13 @@ interface SummaryService {
     @POST("summary/workouts/{user_id}")
     suspend fun addWorkout(
         @Path("user_id") userId: String,
-        @Body addWorkoutRequest: SummaryTimeframe<List<RawWorkout>>
+        @Body body: SummaryTimeframe<List<RawWorkout>>
     )
 
     @POST("summary/profile/{user_id}")
     suspend fun addProfile(
         @Path("user_id") userId: String,
-        @Body addWorkoutRequest: SummaryTimeframe<RawProfile>
+        @Body body: SummaryTimeframe<RawProfile>
         )
 
     companion object {

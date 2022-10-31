@@ -63,9 +63,9 @@ internal class HealthConnectRecordProcessor(private val recordReader: RecordRead
         val height = recordReader.readHeight(startTime, endTime)
 
         return RawProfile(
-            biologicalSex = "not_set", //TODO missing
-            dateOfBirth = Date(0), //TODO missing
-            height = height
+            biologicalSex = "not_set",
+            dateOfBirth = Date(0),
+            heightInCm = height
         )
     }
 
