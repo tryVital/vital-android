@@ -11,8 +11,14 @@ interface SummaryService {
     @POST("summary/workouts/{user_id}")
     suspend fun addWorkout(
         @Path("user_id") userId: String,
-        @Body addWorkoutRequest: AddWorkoutRequest
-    ): ActivitiesResponse
+        @Body addWorkoutRequest: SummaryTimeframe<List<RawWorkout>>
+    ): String
+
+    @POST("summary/profile/{user_id}")
+    suspend fun addProfile(
+        @Path("user_id") userId: String,
+        @Body addWorkoutRequest: SummaryTimeframe<RawProfile>
+        )
 
     companion object {
         fun create(retrofit: Retrofit): SummaryService {

@@ -24,6 +24,11 @@ interface RecordReader {
         endTime: Instant
     ): List<RespiratoryRateRecord>
 
+    suspend fun readHeight(
+        startTime: Instant,
+        endTime: Instant
+    ): Int
+
     suspend fun aggregateDistance(
         startTime: Instant,
         endTime: Instant
@@ -89,6 +94,23 @@ internal class HealthConnectRecordReader(
             ).records
         } catch (e: Exception) {
             emptyList()
+        }
+
+    }
+
+    override suspend fun readHeight(
+        startTime: Instant,
+        endTime: Instant
+    ): Int {
+        return try {
+            (healthConnectClient.readRecords(
+                ReadRecordsRequest(
+                    HeightRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                )
+            ).records.last().height.inMeters * 100).toInt()
+        } catch (e: Exception) {
+            0
         }
 
     }

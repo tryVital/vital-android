@@ -3,7 +3,7 @@ package io.tryvital.client.services.data
 import com.squareup.moshi.Json
 import java.util.*
 
-data class AddWorkoutRequest(
+data class SummaryTimeframe<T>(
     @Json(name = "stage")
     val stage: String,
     @Json(name = "provider")
@@ -15,10 +15,10 @@ data class AddWorkoutRequest(
     @Json(name = "time_zone")
     val timeZone: String?, //time zone in second
     @Json(name = "data")
-    val data: List<AddWorkoutRequestData>
+    val data: T
 )
 
-data class AddWorkoutRequestData(
+data class RawWorkout(
     @Json(name = "id")
     val id: String,
     @Json(name = "start_date")
@@ -40,6 +40,16 @@ data class AddWorkoutRequestData(
     @Json(name = "respiratory_rate")
     val respiratoryRate: List<QuantitySample>
 )
+
+data class RawProfile(
+    @Json(name = "biological_sex")
+    val biologicalSex: String,
+    @Json(name = "date_of_birth")
+    val dateOfBirth: Date,
+    @Json(name = "height")
+    val height: Int, //TODO what is the unit
+)
+
 
 data class QuantitySample(
     @Json(name = "id")

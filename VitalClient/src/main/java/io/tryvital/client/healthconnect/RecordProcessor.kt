@@ -2,8 +2,9 @@ package io.tryvital.client.healthconnect
 
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.RespiratoryRateRecord
-import io.tryvital.client.services.data.AddWorkoutRequestData
 import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.client.services.data.RawProfile
+import io.tryvital.client.services.data.RawWorkout
 import io.tryvital.client.services.data.SampleType
 import java.time.Instant
 import java.util.*
@@ -16,7 +17,12 @@ interface RecordProcessor {
         startTime: Instant,
         endTime: Instant,
         deviceType: String
-    ): List<AddWorkoutRequestData>
+    ): List<RawWorkout>
+
+    suspend fun processProfile(
+        startTime: Instant,
+        endTime: Instant,
+    ): RawProfile
 }
 
 internal class HealthConnectRecordProcessor(private val recordReader: RecordReader) :
@@ -26,7 +32,7 @@ internal class HealthConnectRecordProcessor(private val recordReader: RecordRead
         startTime: Instant,
         endTime: Instant,
         deviceType: String
-    ): List<AddWorkoutRequestData> {
+    ): List<RawWorkout> {
         val exercises = recordReader.readExerciseSessions(startTime, endTime)
 
         return exercises.map { exerciseRecord ->
@@ -35,7 +41,7 @@ internal class HealthConnectRecordProcessor(private val recordReader: RecordRead
             val heartRateRecord = recordReader.readHeartRate(startTime, endTime)
             val respiratoryRateRecord = recordReader.readRespiratoryRate(startTime, endTime)
 
-            AddWorkoutRequestData(
+            RawWorkout(
                 id = exerciseRecord.metadata.id,
                 startDate = Date.from(exerciseRecord.startTime),
                 endDate = Date.from(exerciseRecord.endTime),
@@ -48,6 +54,19 @@ internal class HealthConnectRecordProcessor(private val recordReader: RecordRead
                 deviceType = deviceType
             )
         }
+    }
+
+    override suspend fun processProfile(
+        startTime: Instant,
+        endTime: Instant,
+    ): RawProfile {
+        val height = recordReader.readHeight(startTime, endTime)
+
+        return RawProfile(
+            biologicalSex = "not_set", //TODO missing
+            dateOfBirth = Date(0), //TODO missing
+            height = height
+        )
     }
 
     private fun mapRespiratoryRate(

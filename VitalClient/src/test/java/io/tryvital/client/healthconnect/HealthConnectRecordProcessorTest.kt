@@ -6,8 +6,8 @@ import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
-import io.tryvital.client.services.data.AddWorkoutRequestData
 import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.client.services.data.RawWorkout
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -82,15 +82,14 @@ class HealthConnectRecordProcessorTest {
             testRawRespiratoryRate, emptyList()
         )
 
-        val healthConnectRecordProcessor = HealthConnectRecordProcessor(recordProcessor)
-        return healthConnectRecordProcessor
+        return HealthConnectRecordProcessor(recordProcessor)
     }
 }
 
 val startTime: Instant = Instant.parse("2007-01-01T00:00:00.00Z")
 val endTime: Instant = Instant.parse("2007-01-10T00:00:00.00Z")
 
-val expectedData = AddWorkoutRequestData(
+val expectedData = RawWorkout(
     id = "test raw supersize",
     startDate = Date.from(Instant.parse("2007-01-01T00:00:00.00Z")),
     endDate = Date.from(Instant.parse("2007-01-05T00:00:00.00Z")),
@@ -143,7 +142,7 @@ val expectedData = AddWorkoutRequestData(
     )
 )
 
-val expectedData2 = AddWorkoutRequestData(
+val expectedData2 = RawWorkout(
     id = "test raw supersize2",
     startDate = Date.from(Instant.parse("2007-01-06T00:00:00.00Z")),
     endDate = Date.from(Instant.parse("2007-01-10T00:00:00.00Z")),
@@ -165,7 +164,10 @@ val testRawExercise = listOf(
         "walking",
         "exercise 1",
         null,
-        metadata = Metadata("test raw supersize", dataOrigin = DataOrigin("fit"))
+        metadata = Metadata(
+            "test raw supersize",
+            dataOrigin = DataOrigin("fit")
+        )
     ),
     ExerciseSessionRecord(
         startTime.plus(5, ChronoUnit.DAYS),
@@ -173,7 +175,10 @@ val testRawExercise = listOf(
         endTime, null,
         "running",
         "exercise 2",
-        metadata = Metadata("test raw supersize2", dataOrigin = DataOrigin("shealth")),
+        metadata = Metadata(
+            "test raw supersize2",
+            dataOrigin = DataOrigin("shealth")
+        ),
     )
 )
 
@@ -187,7 +192,10 @@ val testRawHealthRate = listOf(
             HeartRateRecord.Sample(startTime, 1),
             HeartRateRecord.Sample(startTime.plus(1, ChronoUnit.MINUTES), 2),
         ),
-        metadata = Metadata(device = Device(model = "iphone"), dataOrigin = DataOrigin("fit"))
+        metadata = Metadata(
+            device = Device(model = "iphone"),
+            dataOrigin = DataOrigin("fit")
+        )
     )
 )
 

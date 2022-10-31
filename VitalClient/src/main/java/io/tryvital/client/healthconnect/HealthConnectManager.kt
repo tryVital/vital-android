@@ -8,9 +8,9 @@ import androidx.health.connect.client.records.*
 import io.tryvital.client.dependencies.HealthConnectClientProvider
 import io.tryvital.client.services.LinkService
 import io.tryvital.client.services.SummaryService
-import io.tryvital.client.services.data.AddWorkoutRequest
 import io.tryvital.client.services.data.CreateLinkRequest
 import io.tryvital.client.services.data.ManualProviderRequest
+import io.tryvital.client.services.data.SummaryTimeframe
 import java.time.Instant
 import java.util.*
 
@@ -70,7 +70,7 @@ class HealthConnectManager private constructor(
             linkToken = token.linkToken!!,
             ManualProviderRequest(
                 userId = userId!!,
-                providerId = "todo"
+                providerId = ""
             )
         )
     }
@@ -85,13 +85,24 @@ class HealthConnectManager private constructor(
 
 
         summaryService.addWorkout(
-            userId!!, AddWorkoutRequest(
+            userId!!, SummaryTimeframe(
                 stage = "daily", //Not used
                 provider = providerId,
                 startDate = Date.from(startTime),
                 endDate = Date.from(endTime),
                 timeZone = "0",
                 data = recordProcessor.processWorkouts(startTime, endTime, Build.DEVICE),
+            )
+        )
+
+        summaryService.addProfile(
+            userId!!, SummaryTimeframe(
+                stage = "daily", //Not used
+                provider = providerId,
+                startDate = Date.from(startTime),
+                endDate = Date.from(endTime),
+                timeZone = "0",
+                data = recordProcessor.processProfile(startTime, endTime)
             )
         )
     }
