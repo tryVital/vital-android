@@ -12,7 +12,7 @@ interface SummaryService {
     suspend fun addWorkout(
         @Path("user_id") userId: String,
         @Body addWorkoutRequest: SummaryTimeframe<List<RawWorkout>>
-    ): String
+    )
 
     @POST("summary/profile/{user_id}")
     suspend fun addProfile(

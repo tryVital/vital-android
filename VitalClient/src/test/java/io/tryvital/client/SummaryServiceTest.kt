@@ -39,8 +39,8 @@ class SummaryServiceTest {
         server.enqueue(
             MockResponse()
                 .setResponseCode(200)
-                .setBody("sfd")
         )
+
         val summaryService = SummaryService.create(retrofit)
         val response = summaryService.addWorkout(
             userId = userId,
@@ -66,11 +66,8 @@ class SummaryServiceTest {
                 )
             )
         )
-        assertEquals(
-            "POST http://localhost:58302/summary/workouts/user_id_1 HTTP/1.1",
-            server.takeRequest().requestLine
-        )
-        assertEquals("", response)
+        assertEquals("POST /summary/workouts/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
+        assertEquals(Unit, response)
     }
 
     @Test
@@ -97,10 +94,7 @@ class SummaryServiceTest {
             )
         )
 
-        assertEquals(
-            "POST /summary/profile/user_id_1 HTTP/1.1",
-            server.takeRequest().requestLine
-        )
+        assertEquals("POST /summary/profile/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
         assertEquals(Unit, response)
     }
 
