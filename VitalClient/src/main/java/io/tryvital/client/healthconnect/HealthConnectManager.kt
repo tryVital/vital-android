@@ -32,6 +32,7 @@ class HealthConnectManager private constructor(
             HealthPermission.createReadPermission(ActiveCaloriesBurnedRecord::class),
             HealthPermission.createReadPermission(HeartRateRecord::class),
             HealthPermission.createReadPermission(RespiratoryRateRecord::class),
+            HealthPermission.createReadPermission(HeightRecord::class),
         )
 
     fun isAvailable(context: Context): HealthConnectAvailability {

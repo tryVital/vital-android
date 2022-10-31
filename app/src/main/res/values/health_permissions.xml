@@ -6,5 +6,6 @@
         <item>androidx.health.permission.ActiveCaloriesBurned.READ</item>
         <item>androidx.health.permission.HeartRate.READ</item>
         <item>androidx.health.permission.RespiratoryRate.READ</item>
+        <item>androidx.health.permission.Height.READ</item>
     </array>
 </resources>
