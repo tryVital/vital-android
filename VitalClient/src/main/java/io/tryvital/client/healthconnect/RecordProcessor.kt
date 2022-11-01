@@ -1,5 +1,6 @@
 package io.tryvital.client.healthconnect
 
+import android.annotation.SuppressLint
 import androidx.health.connect.client.records.*
 import io.tryvital.client.services.data.*
 import java.time.Instant
@@ -171,6 +172,12 @@ internal class HealthConnectRecordProcessor(
 
     }
 
+    /**
+    HeartRateVariabilitySdnnRecord is marked as RestrictedApi as the plugin is still alpha
+    We assume it's a mistake, if later this stays the same we have to move to a different
+    hearth rate
+     */
+    @SuppressLint("RestrictedApi")
     private fun mapHeartRateVariabilitySdnnRecord(
         readHeartRateVariabilitySdnnRecords: List<HeartRateVariabilitySdnnRecord>,
         fallbackDeviceModel: String
