@@ -6,5 +6,12 @@
         <item>androidx.health.permission.ActiveCaloriesBurned.READ</item>
         <item>androidx.health.permission.HeartRate.READ</item>
         <item>androidx.health.permission.RespiratoryRate.READ</item>
+        <item>androidx.health.permission.Height.READ</item>
+        <item>androidx.health.permission.Weight.READ</item>
+        <item>androidx.health.permission.BodyFat.READ</item>
+        <item>androidx.health.permission.SleepSession.READ</item>
+        <item>androidx.health.permission.OxygenSaturation.READ</item>
+        <item>androidx.health.permission.HeartRateVariabilitySdnn.READ</item>
+        <item>androidx.health.permission.RestingHeartRate.READ</item>
     </array>
 </resources>

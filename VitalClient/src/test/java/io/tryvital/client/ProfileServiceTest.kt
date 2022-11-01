@@ -14,7 +14,6 @@ import org.junit.Test
 import retrofit2.Retrofit
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("BlockingMethodInNonBlockingContext")
 class ProfileServiceTest {
     @Before
     fun setUp() {

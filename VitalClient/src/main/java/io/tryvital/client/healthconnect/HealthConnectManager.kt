@@ -8,9 +8,9 @@ import androidx.health.connect.client.records.*
 import io.tryvital.client.dependencies.HealthConnectClientProvider
 import io.tryvital.client.services.LinkService
 import io.tryvital.client.services.SummaryService
-import io.tryvital.client.services.data.AddWorkoutRequest
 import io.tryvital.client.services.data.CreateLinkRequest
 import io.tryvital.client.services.data.ManualProviderRequest
+import io.tryvital.client.services.data.SummaryTimeframe
 import java.time.Instant
 import java.util.*
 
@@ -19,9 +19,9 @@ private const val providerId = "health_connect"
 
 class HealthConnectManager private constructor(
     private val healthConnectClientProvider: HealthConnectClientProvider,
+    private val recordProcessor: RecordProcessor,
     private val summaryService: SummaryService,
     private val linkService: LinkService,
-    private val recordProcessor: RecordProcessor,
 ) {
     private var userId: String? = null
 
@@ -32,6 +32,13 @@ class HealthConnectManager private constructor(
             HealthPermission.createReadPermission(ActiveCaloriesBurnedRecord::class),
             HealthPermission.createReadPermission(HeartRateRecord::class),
             HealthPermission.createReadPermission(RespiratoryRateRecord::class),
+            HealthPermission.createReadPermission(HeightRecord::class),
+            HealthPermission.createReadPermission(BodyFatRecord::class),
+            HealthPermission.createReadPermission(WeightRecord::class),
+            HealthPermission.createReadPermission(SleepSessionRecord::class),
+            HealthPermission.createReadPermission(OxygenSaturationRecord::class),
+            HealthPermission.createReadPermission(HeartRateVariabilitySdnnRecord::class),
+            HealthPermission.createReadPermission(RestingHeartRateRecord::class),
         )
 
     fun isAvailable(context: Context): HealthConnectAvailability {
@@ -70,7 +77,7 @@ class HealthConnectManager private constructor(
             linkToken = token.linkToken!!,
             ManualProviderRequest(
                 userId = userId!!,
-                providerId = "todo"
+                providerId = providerId
             )
         )
     }
@@ -83,15 +90,53 @@ class HealthConnectManager private constructor(
             throw IllegalStateException("You need to call setUserId before you can read the health data")
         }
 
+        val currentDevice = Build.MODEL
+        val startDate = Date.from(startTime)
+        val endDate = Date.from(endTime)
+        val stage = "daily"
+        val timeZoneInSecond = "0"
 
         summaryService.addWorkout(
-            userId!!, AddWorkoutRequest(
-                stage = "daily", //Not used
+            userId!!, SummaryTimeframe(
+                stage = stage,
                 provider = providerId,
-                startDate = Date.from(startTime),
-                endDate = Date.from(endTime),
-                timeZone = "0",
-                data = recordProcessor.processWorkouts(startTime, endTime, Build.DEVICE),
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneInSecond = timeZoneInSecond,
+                data = recordProcessor.processWorkouts(startTime, endTime, currentDevice),
+            )
+        )
+
+        summaryService.addProfile(
+            userId!!, SummaryTimeframe(
+                stage = stage,
+                provider = providerId,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneInSecond = timeZoneInSecond,
+                data = recordProcessor.processProfile(startTime, endTime)
+            )
+        )
+
+        summaryService.addBody(
+            userId!!, SummaryTimeframe(
+                stage = stage,
+                provider = providerId,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneInSecond = timeZoneInSecond,
+                data = recordProcessor.processBody(startTime, endTime, currentDevice)
+            )
+        )
+
+        summaryService.addSleep(
+            userId!!, SummaryTimeframe(
+                stage = stage,
+                provider = providerId,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneInSecond = timeZoneInSecond,
+                data = recordProcessor.processSleep(startTime, endTime, currentDevice)
             )
         )
     }
@@ -105,9 +150,9 @@ class HealthConnectManager private constructor(
         ): HealthConnectManager =
             HealthConnectManager(
                 healthConnectClientProvider,
+                recordProcessor,
                 summaryService,
                 linkService,
-                recordProcessor
             )
     }
 }

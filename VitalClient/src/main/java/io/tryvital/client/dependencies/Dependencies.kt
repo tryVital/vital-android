@@ -9,10 +9,7 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.dependencies.utils.ApiKeyInterceptor
-import io.tryvital.client.healthconnect.HealthConnectRecordProcessor
-import io.tryvital.client.healthconnect.HealthConnectRecordReader
-import io.tryvital.client.healthconnect.RecordProcessor
-import io.tryvital.client.healthconnect.RecordReader
+import io.tryvital.client.healthconnect.*
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -42,16 +39,20 @@ class Dependencies(
         HealthConnectRecordReader(context, healthConnectClientProvider)
     }
 
+    private val recordAggregator: RecordAggregator by lazy {
+        HealthConnectRecordAggregator(context, healthConnectClientProvider)
+    }
+
     val retrofit: Retrofit by lazy {
         createRetrofit(resolveUrl(region, environment), httpClient, moshi)
     }
 
     val healthConnectClientProvider: HealthConnectClientProvider by lazy {
-        createHealthConnectClientProvider()
+        HealthConnectClientProvider()
     }
 
     val recordProcessor: RecordProcessor by lazy {
-        HealthConnectRecordProcessor(recordReader)
+        HealthConnectRecordProcessor(recordReader, recordAggregator)
     }
 
     companion object {
@@ -104,10 +105,6 @@ class Dependencies(
                 )
             )
             return "${urls[region]!![environment]!!}/v2/"
-        }
-
-        internal fun createHealthConnectClientProvider(): HealthConnectClientProvider {
-            return HealthConnectClientProvider()
         }
     }
 

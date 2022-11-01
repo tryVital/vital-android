@@ -3,7 +3,7 @@ package io.tryvital.client.services.data
 import com.squareup.moshi.Json
 import java.util.*
 
-data class AddWorkoutRequest(
+data class SummaryTimeframe<T>(
     @Json(name = "stage")
     val stage: String,
     @Json(name = "provider")
@@ -13,12 +13,12 @@ data class AddWorkoutRequest(
     @Json(name = "end_date")
     val endDate: Date?,
     @Json(name = "time_zone")
-    val timeZone: String?, //time zone in second
+    val timeZoneInSecond: String?,
     @Json(name = "data")
-    val data: List<AddWorkoutRequestData>
+    val data: T
 )
 
-data class AddWorkoutRequestData(
+data class WorkoutPayload(
     @Json(name = "id")
     val id: String,
     @Json(name = "start_date")
@@ -28,7 +28,7 @@ data class AddWorkoutRequestData(
     @Json(name = "source_bundle")
     val sourceBundle: String?,
     @Json(name = "product_type")
-    val deviceType: String?,
+    val deviceModel: String?,
     @Json(name = "sport")
     val sport: String,
     @Json(name = "calories")
@@ -40,6 +40,46 @@ data class AddWorkoutRequestData(
     @Json(name = "respiratory_rate")
     val respiratoryRate: List<QuantitySample>
 )
+
+data class ProfilePayload(
+    @Json(name = "biological_sex")
+    val biologicalSex: String,
+    @Json(name = "date_of_birth")
+    val dateOfBirth: Date,
+    @Json(name = "height")
+    val heightInCm: Int,
+)
+
+data class BodyPayload(
+    @Json(name = "body_mass")
+    val bodyMass: List<QuantitySample>,
+    @Json(name = "body_fat_percentage")
+    val bodyFatPercentage: List<QuantitySample>,
+)
+
+data class SleepPayload(
+    @Json(name = "id")
+    val id: String,
+    @Json(name = "start_date")
+    val startDate: Date,
+    @Json(name = "end_date")
+    val endDate: Date,
+    @Json(name = "source_bundle")
+    val sourceBundle: String?,
+    @Json(name = "product_type")
+    val deviceModel: String?,
+    @Json(name = "heart_rate")
+    val heartRate: List<QuantitySample>,
+    @Json(name = "resting_heart_rate")
+    val restingHeartRate: List<QuantitySample>,
+    @Json(name = "heart_rate_variability")
+    val heartRateVariability: List<QuantitySample>,
+    @Json(name = "oxygen_saturation")
+    val oxygenSaturation: List<QuantitySample>,
+    @Json(name = "respiratory_rate")
+    val respiratoryRate: List<QuantitySample>,
+
+    )
 
 data class QuantitySample(
     @Json(name = "id")
@@ -55,7 +95,7 @@ data class QuantitySample(
     @Json(name = "source_bundle")
     val sourceBundle: String? = null,
     @Json(name = "product_type")
-    val deviceType: String? = null,
+    val deviceModel: String? = null,
     @Json(name = "type")
     val type: String? = null,
     @Json(name = "metadata")
@@ -65,4 +105,8 @@ data class QuantitySample(
 sealed class SampleType(val unit: String) {
     object HeartRate : SampleType("bpm")
     object RespiratoryRate : SampleType("bpm")
+    object Weight : SampleType("kg")
+    object BodyFat : SampleType("percent")
+    object HeartRateVariabilitySdnn : SampleType("rmssd")
+    object OxygenSaturation : SampleType("percent")
 }
