@@ -16,7 +16,7 @@ interface RecordAggregator {
         endTime: Instant
     ): Long
 
-    suspend fun aggregateCalories(
+    suspend fun aggregateActiveEnergyBurned(
         startTime: Instant,
         endTime: Instant
     ): Long
@@ -48,7 +48,7 @@ internal class HealthConnectRecordAggregator(
         }
     }
 
-    override suspend fun aggregateCalories(
+    override suspend fun aggregateActiveEnergyBurned(
         startTime: Instant,
         endTime: Instant
     ): Long {

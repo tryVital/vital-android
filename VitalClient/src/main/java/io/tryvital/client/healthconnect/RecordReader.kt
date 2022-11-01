@@ -57,6 +57,36 @@ interface RecordReader {
         startTime: Instant,
         endTime: Instant
     ): List<OxygenSaturationRecord>
+
+    suspend fun readActiveEnergyBurned(
+        startTime: Instant,
+        endTime: Instant
+    ): List<ActiveCaloriesBurnedRecord>
+
+    suspend fun readBasalMetabolicRate(
+        startTime: Instant,
+        endTime: Instant
+    ): List<BasalMetabolicRateRecord>
+
+    suspend fun readSteps(
+        startTime: Instant,
+        endTime: Instant
+    ): List<StepsRecord>
+
+    suspend fun readDistance(
+        startTime: Instant,
+        endTime: Instant
+    ): List<DistanceRecord>
+
+    suspend fun readFloorsClimbed(
+        startTime: Instant,
+        endTime: Instant
+    ): List<FloorsClimbedRecord>
+
+    suspend fun readVo2Max(
+        startTime: Instant,
+        endTime: Instant
+    ): List<Vo2MaxRecord>
 }
 
 internal class HealthConnectRecordReader(
@@ -69,142 +99,81 @@ internal class HealthConnectRecordReader(
     }
 
     override suspend fun readExerciseSessions(
-        startTime: Instant,
-        endTime: Instant
-    ): List<ExerciseSessionRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    ExerciseSessionRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-        }
-    }
+        startTime: Instant, endTime: Instant
+    ): List<ExerciseSessionRecord> = readRecords(startTime, endTime)
 
     override suspend fun readHeartRate(
-        startTime: Instant,
-        endTime: Instant
-    ): List<HeartRateRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    HeartRateRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-        }
-    }
+        startTime: Instant, endTime: Instant
+    ): List<HeartRateRecord> = readRecords(startTime, endTime)
 
     override suspend fun readRestingHeartRate(
-        startTime: Instant,
-        endTime: Instant
-    ): List<RestingHeartRateRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    RestingHeartRateRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-        }
-
-    }
+        startTime: Instant, endTime: Instant
+    ): List<RestingHeartRateRecord> = readRecords(startTime, endTime)
 
     override suspend fun readHeartRateVariabilitySdnn(
-        startTime: Instant,
-        endTime: Instant
-    ): List<HeartRateVariabilitySdnnRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    HeartRateVariabilitySdnnRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-        }
-
-    }
+        startTime: Instant, endTime: Instant
+    ): List<HeartRateVariabilitySdnnRecord> = readRecords(startTime, endTime)
 
     override suspend fun readRespiratoryRate(
-        startTime: Instant,
-        endTime: Instant
-    ): List<RespiratoryRateRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    RespiratoryRateRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-        }
-    }
+        startTime: Instant, endTime: Instant
+    ): List<RespiratoryRateRecord> = readRecords(startTime, endTime)
 
     override suspend fun readHeights(
-        startTime: Instant,
-        endTime: Instant
-    ): List<HeightRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    HeightRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-        }
-    }
+        startTime: Instant, endTime: Instant
+    ): List<HeightRecord> = readRecords(startTime, endTime)
 
-    override suspend fun readWeights(startTime: Instant, endTime: Instant): List<WeightRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    WeightRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-        }
-    }
+    override suspend fun readWeights(
+        startTime: Instant, endTime: Instant
+    ): List<WeightRecord> = readRecords(startTime, endTime)
 
-    override suspend fun readBodyFat(startTime: Instant, endTime: Instant): List<BodyFatRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    BodyFatRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-        }
-    }
+    override suspend fun readBodyFat(
+        startTime: Instant, endTime: Instant
+    ): List<BodyFatRecord> = readRecords(startTime, endTime)
 
     override suspend fun readSleepSession(
-        startTime: Instant,
-        endTime: Instant
-    ): List<SleepSessionRecord> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    SleepSessionRecord::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
-
-        }
-    }
+        startTime: Instant, endTime: Instant
+    ): List<SleepSessionRecord> = readRecords(startTime, endTime)
 
     override suspend fun readOxygenSaturation(
+        startTime: Instant, endTime: Instant
+    ): List<OxygenSaturationRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readActiveEnergyBurned(
+        startTime: Instant, endTime: Instant
+    ): List<ActiveCaloriesBurnedRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readBasalMetabolicRate(
+        startTime: Instant, endTime: Instant
+    ): List<BasalMetabolicRateRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readSteps(
+        startTime: Instant, endTime: Instant
+    ): List<StepsRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readDistance(
+        startTime: Instant, endTime: Instant
+    ): List<DistanceRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readFloorsClimbed(
         startTime: Instant,
         endTime: Instant
-    ): List<OxygenSaturationRecord> {
+    ): List<FloorsClimbedRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readVo2Max(
+        startTime: Instant, endTime: Instant
+    ): List<Vo2MaxRecord> = readRecords(startTime, endTime)
+
+    private suspend inline fun <reified T : Record> readRecords(
+        startTime: Instant, endTime: Instant
+    ): List<T> {
         return returnEmptyIfException {
             healthConnectClient.readRecords(
                 ReadRecordsRequest(
-                    OxygenSaturationRecord::class,
+                    T::class,
                     timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
                 )
             ).records
-
         }
-
     }
 }
 

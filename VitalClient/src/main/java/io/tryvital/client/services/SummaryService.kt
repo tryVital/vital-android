@@ -9,27 +9,33 @@ import java.util.*
 interface SummaryService {
 
     @POST("summary/workouts/{user_id}")
-    suspend fun addWorkout(
+    suspend fun addWorkouts(
         @Path("user_id") userId: String,
-        @Body body: SummaryTimeframe<List<WorkoutPayload>>
+        @Body body: SummaryPayload<List<WorkoutPayload>>
+    )
+
+    @POST("summary/activity/{user_id}")
+    suspend fun addActivities(
+        @Path("user_id") userId: String,
+        @Body body: SummaryPayload<List<ActivityPayload>>
     )
 
     @POST("summary/profile/{user_id}")
     suspend fun addProfile(
         @Path("user_id") userId: String,
-        @Body body: SummaryTimeframe<ProfilePayload>
+        @Body body: SummaryPayload<ProfilePayload>
     )
 
     @POST("summary/body/{user_id}")
     suspend fun addBody(
         @Path("user_id") userId: String,
-        @Body body: SummaryTimeframe<BodyPayload>
+        @Body body: SummaryPayload<BodyPayload>
     )
 
     @POST("summary/sleep/{user_id}")
-    suspend fun addSleep(
+    suspend fun addSleeps(
         @Path("user_id") userId: String,
-        @Body body: SummaryTimeframe<List<SleepPayload>>
+        @Body body: SummaryPayload<List<SleepPayload>>
     )
 
     companion object {

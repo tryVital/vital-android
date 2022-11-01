@@ -22,7 +22,8 @@ class VitalClient(
             dependencies.healthConnectClientProvider,
             summaryService,
             linkService,
-            dependencies.recordProcessor
+            dependencies.recordProcessor,
+            dependencies.vitalLogger
         )
     }
 
