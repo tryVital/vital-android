@@ -41,9 +41,9 @@ class SummaryServiceTest {
         )
 
         val summaryService = SummaryService.create(retrofit)
-        val response = summaryService.addWorkout(
+        val response = summaryService.addWorkouts(
             userId = userId,
-            body = SummaryTimeframe(
+            body = SummaryPayload(
                 stage = "dev",
                 provider = "manual",
                 startDate = null,
@@ -79,7 +79,7 @@ class SummaryServiceTest {
         val summaryService = SummaryService.create(retrofit)
         val response = summaryService.addProfile(
             userId = userId,
-            body = SummaryTimeframe(
+            body = SummaryPayload(
                 stage = "dev",
                 provider = "manual",
                 startDate = null,
@@ -107,7 +107,7 @@ class SummaryServiceTest {
         val summaryService = SummaryService.create(retrofit)
         val response = summaryService.addBody(
             userId = userId,
-            body = SummaryTimeframe(
+            body = SummaryPayload(
                 stage = "dev",
                 provider = "manual",
                 startDate = null,
@@ -132,9 +132,9 @@ class SummaryServiceTest {
                 .setBody("")
         )
         val summaryService = SummaryService.create(retrofit)
-        val response = summaryService.addSleep(
+        val response = summaryService.addSleeps(
             userId = userId,
-            body = SummaryTimeframe(
+            body = SummaryPayload(
                 stage = "dev",
                 provider = "manual",
                 startDate = null,
@@ -145,6 +145,30 @@ class SummaryServiceTest {
         )
 
         assertEquals("POST /summary/sleep/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
+        assertEquals(Unit, response)
+    }
+
+    @Test
+    fun `Send activity data`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody("")
+        )
+        val summaryService = SummaryService.create(retrofit)
+        val response = summaryService.addActivities(
+            userId = userId,
+            body = SummaryPayload(
+                stage = "dev",
+                provider = "manual",
+                startDate = null,
+                endDate = null,
+                timeZoneInSecond = null,
+                data = emptyList()
+            )
+        )
+
+        assertEquals("POST /summary/activity/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
         assertEquals(Unit, response)
     }
 

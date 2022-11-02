@@ -3,7 +3,7 @@ package io.tryvital.client.services.data
 import com.squareup.moshi.Json
 import java.util.*
 
-data class SummaryTimeframe<T>(
+data class SummaryPayload<T>(
     @Json(name = "stage")
     val stage: String,
     @Json(name = "provider")
@@ -39,6 +39,21 @@ data class WorkoutPayload(
     val heartRate: List<QuantitySample>,
     @Json(name = "respiratory_rate")
     val respiratoryRate: List<QuantitySample>
+)
+
+data class ActivityPayload(
+    @Json(name = "active_energy_burned")
+    val activeEnergyBurned: List<QuantitySample>,
+    @Json(name = "basal_energy_burned")
+    val basalEnergyBurned: List<QuantitySample>,
+    @Json(name = "steps")
+    val steps: List<QuantitySample>,
+    @Json(name = "distance_walking_running")
+    val distanceWalkingRunning: List<QuantitySample>,
+    @Json(name = "vo2_max")
+    val vo2Max: List<QuantitySample>,
+    @Json(name = "floors_climbed")
+    val floorsClimbed: List<QuantitySample>,
 )
 
 data class ProfilePayload(
@@ -109,4 +124,10 @@ sealed class SampleType(val unit: String) {
     object BodyFat : SampleType("percent")
     object HeartRateVariabilitySdnn : SampleType("rmssd")
     object OxygenSaturation : SampleType("percent")
+    object ActiveCaloriesBurned : SampleType("kJ")
+    object Steps : SampleType("")
+    object Distance : SampleType("m")
+    object FloorsClimbed : SampleType("")
+    object Vo2Max : SampleType("mL/kg/min")
+    object BasalMetabolicRate : SampleType("kJ")
 }

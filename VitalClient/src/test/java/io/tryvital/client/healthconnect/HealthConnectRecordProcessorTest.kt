@@ -70,7 +70,7 @@ class HealthConnectRecordProcessorTest {
 
     private suspend fun setupProcessor(): HealthConnectRecordProcessor {
         val recordAggregator = mock<RecordAggregator>()
-        whenever(recordAggregator.aggregateCalories(startTime, endTime)).thenReturn(101, 102)
+        whenever(recordAggregator.aggregateActiveEnergyBurned(startTime, endTime)).thenReturn(101, 102)
         whenever(recordAggregator.aggregateDistance(startTime, endTime)).thenReturn(301, 302)
 
         val recordReader = mock<RecordReader>()
@@ -85,7 +85,7 @@ class HealthConnectRecordProcessorTest {
         )
 
 
-        return HealthConnectRecordProcessor(recordReader, recordAggregator)
+        return HealthConnectRecordProcessor(recordReader, recordAggregator, mock())
     }
 }
 

@@ -13,5 +13,10 @@
         <item>androidx.health.permission.OxygenSaturation.READ</item>
         <item>androidx.health.permission.HeartRateVariabilitySdnn.READ</item>
         <item>androidx.health.permission.RestingHeartRate.READ</item>
+        <item>androidx.health.permission.ActiveCalories.READ</item>
+        <item>androidx.health.permission.BasalMetabolicRate.READ</item>
+        <item>androidx.health.permission.Steps.READ</item>
+        <item>androidx.health.permission.Distance.READ</item>
+        <item>androidx.health.permission.FloorsClimbed.READ</item>
     </array>
 </resources>

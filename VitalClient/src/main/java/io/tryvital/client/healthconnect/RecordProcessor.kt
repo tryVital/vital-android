@@ -3,7 +3,9 @@ package io.tryvital.client.healthconnect
 import android.annotation.SuppressLint
 import androidx.health.connect.client.records.*
 import io.tryvital.client.services.data.*
+import io.tryvital.client.utils.VitalLogger
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -31,11 +33,19 @@ interface RecordProcessor {
         endTime: Instant,
         fallbackDeviceModel: String
     ): List<SleepPayload>
+
+    suspend fun processActivities(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String,
+        hostTimeZone: TimeZone
+    ): List<ActivityPayload>
 }
 
 internal class HealthConnectRecordProcessor(
     private val recordReader: RecordReader,
-    private val recordAggregator: RecordAggregator
+    private val recordAggregator: RecordAggregator,
+    private val vitalLogger: VitalLogger
 ) :
     RecordProcessor {
 
@@ -46,19 +56,21 @@ internal class HealthConnectRecordProcessor(
     ): List<WorkoutPayload> {
         val exercises = recordReader.readExerciseSessions(startTime, endTime)
 
-        return exercises.map { exerciseRecord ->
+        vitalLogger.logI("Found ${exercises.size} workouts")
+
+        return exercises.map { exercise ->
             val aggregatedDistance = recordAggregator.aggregateDistance(startTime, endTime)
             val aggregatedActiveCaloriesBurned =
-                recordAggregator.aggregateCalories(startTime, endTime)
+                recordAggregator.aggregateActiveEnergyBurned(startTime, endTime)
             val heartRateRecord = recordReader.readHeartRate(startTime, endTime)
             val respiratoryRateRecord = recordReader.readRespiratoryRate(startTime, endTime)
 
             WorkoutPayload(
-                id = exerciseRecord.metadata.id,
-                startDate = Date.from(exerciseRecord.startTime),
-                endDate = Date.from(exerciseRecord.endTime),
-                sourceBundle = exerciseRecord.metadata.dataOrigin.packageName,
-                sport = exerciseRecord.exerciseType,
+                id = exercise.metadata.id,
+                startDate = Date.from(exercise.startTime),
+                endDate = Date.from(exercise.endTime),
+                sourceBundle = exercise.metadata.dataOrigin.packageName,
+                sport = exercise.exerciseType,
                 caloriesInKiloJules = aggregatedActiveCaloriesBurned,
                 distanceInMeter = aggregatedDistance,
                 heartRate = mapHearthRate(heartRateRecord, fallbackDeviceModel),
@@ -75,8 +87,8 @@ internal class HealthConnectRecordProcessor(
         val height = recordReader.readHeights(startTime, endTime)
 
         return ProfilePayload(
-            biologicalSex = "not_set",
-            dateOfBirth = Date(0),
+            biologicalSex = "not_set", // this is not available in Health Connect
+            dateOfBirth = Date(0), // this is not available in Health Connect
             heightInCm = (height.lastOrNull()?.height?.inMeters?.times(100))?.roundToInt() ?: 0
         )
     }
@@ -120,9 +132,11 @@ internal class HealthConnectRecordProcessor(
         endTime: Instant,
         fallbackDeviceModel: String
     ): List<SleepPayload> {
-        val sleepSession = recordReader.readSleepSession(startTime, endTime)
+        val sleepSessions = recordReader.readSleepSession(startTime, endTime)
 
-        return sleepSession.map { sleepSessionRecord ->
+        vitalLogger.logI("Found ${sleepSessions.size} sleepSessions")
+
+        return sleepSessions.map { sleepSession ->
             val heartRateRecord = recordReader.readHeartRate(startTime, endTime)
             val restingHeartRateRecord = recordReader.readRestingHeartRate(startTime, endTime)
             val respiratoryRateRecord = recordReader.readRespiratoryRate(startTime, endTime)
@@ -131,10 +145,10 @@ internal class HealthConnectRecordProcessor(
             val oxygenSaturationRecord = recordReader.readOxygenSaturation(startTime, endTime)
 
             SleepPayload(
-                id = sleepSessionRecord.metadata.id,
-                startDate = Date.from(sleepSessionRecord.startTime),
-                endDate = Date.from(sleepSessionRecord.endTime),
-                sourceBundle = sleepSessionRecord.metadata.dataOrigin.packageName,
+                id = sleepSession.metadata.id,
+                startDate = Date.from(sleepSession.startTime),
+                endDate = Date.from(sleepSession.endTime),
+                sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                 deviceModel = fallbackDeviceModel,
                 heartRate = mapHearthRate(heartRateRecord, fallbackDeviceModel),
                 restingHeartRate = mapRestingHearthRate(
@@ -152,6 +166,94 @@ internal class HealthConnectRecordProcessor(
                 ),
             )
         }
+    }
+
+    override suspend fun processActivities(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String,
+        hostTimeZone: TimeZone //TODO the day starts at a different time for everybody
+    ): List<ActivityPayload> {
+        val activities = mutableListOf<ActivityPayload>()
+        var rangeStart = startTime
+        var rangeEnd = nextDayOrRangeEnd(rangeStart, endTime)
+
+        while (rangeStart < rangeEnd) {
+            vitalLogger.logI(rangeStart.toString())
+            val activeEnergyBurned = recordReader.readActiveEnergyBurned(startTime, endTime)
+            val basalMetabolicRate = recordReader.readBasalMetabolicRate(startTime, endTime)
+            val stepsRate = recordReader.readSteps(startTime, endTime)
+            val distance = recordReader.readDistance(startTime, endTime)
+            val floorsClimbed = recordReader.readFloorsClimbed(startTime, endTime)
+            val vo2Max = recordReader.readVo2Max(startTime, endTime)
+
+            activities.add(
+                ActivityPayload(
+                    activeEnergyBurned = activeEnergyBurned.map {
+                        QuantitySample(
+                            id = "activeEnergyBurned-" + it.startTime,
+                            value = it.energy.inKilojoules.toString(),
+                            unit = SampleType.ActiveCaloriesBurned.unit,
+                            startDate = Date.from(it.startTime),
+                            endDate = Date.from(it.endTime),
+                        )
+                    },
+                    basalEnergyBurned = basalMetabolicRate.map {
+                        QuantitySample(
+                            id = "basalMetabolicRate-" + it.time,
+                            value = (it.basalMetabolicRate.inWatts/1000).toString(),
+                            unit = SampleType.BasalMetabolicRate.unit,
+                            startDate = Date.from(it.time),
+                            endDate = Date.from(it.time),
+                        )
+                    },
+                    steps = stepsRate.map {
+                        QuantitySample(
+                            id = "steps-" + it.startTime,
+                            value = it.count.toString(),
+                            unit = SampleType.Steps.unit,
+                            startDate = Date.from(it.startTime),
+                            endDate = Date.from(it.endTime),
+                        )
+
+                    },
+                    distanceWalkingRunning = distance.map {
+                        QuantitySample(
+                            id = "distance-" + it.startTime,
+                            value = it.distance.inMeters.toString(),
+                            unit = SampleType.Distance.unit,
+                            startDate = Date.from(it.startTime),
+                            endDate = Date.from(it.endTime),
+                        )
+                    },
+                    floorsClimbed = floorsClimbed.map {
+                        QuantitySample(
+                            id = "floorsClimbed-" + it.startTime,
+                            value = it.floors.toString(),
+                            unit = SampleType.FloorsClimbed.unit,
+                            startDate = Date.from(it.startTime),
+                            endDate = Date.from(it.endTime),
+                        )
+                    },
+                    vo2Max = vo2Max.map {
+                        QuantitySample(
+                            id = "vo2Max-" + it.time,
+                            value = it.vo2MillilitersPerMinuteKilogram.toString(),
+                            unit = SampleType.Vo2Max.unit,
+                            startDate = Date.from(it.time),
+                            endDate = Date.from(it.time),
+                        )
+                    },
+                )
+            )
+
+
+
+            rangeStart = rangeEnd
+            rangeEnd = nextDayOrRangeEnd(rangeStart, endTime)
+        }
+
+        return activities
     }
 
     private fun mapOxygenSaturationRecord(
@@ -173,9 +275,9 @@ internal class HealthConnectRecordProcessor(
     }
 
     /**
-    HeartRateVariabilitySdnnRecord is marked as RestrictedApi as the plugin is still alpha
+    HeartRateVariabilitySdnnRecord is marked as RestrictedApi. The plugin is still alpha therefor
     We assume it's a mistake, if later this stays the same we have to move to a different
-    hearth rate
+    hearth rate.
      */
     @SuppressLint("RestrictedApi")
     private fun mapHeartRateVariabilitySdnnRecord(
@@ -250,3 +352,13 @@ internal class HealthConnectRecordProcessor(
         }
     }
 }
+
+private fun nextDayOrRangeEnd(rangeStart: Instant, endTime: Instant) =
+    if (rangeStart.dayStart == endTime.dayStart)
+        endTime
+    else
+        rangeStart.dayStart.plus(1, ChronoUnit.DAYS)
+
+
+private val Instant.dayStart: Instant
+    get() = truncatedTo(ChronoUnit.DAYS)

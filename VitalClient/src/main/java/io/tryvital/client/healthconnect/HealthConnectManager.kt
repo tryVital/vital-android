@@ -10,7 +10,8 @@ import io.tryvital.client.services.LinkService
 import io.tryvital.client.services.SummaryService
 import io.tryvital.client.services.data.CreateLinkRequest
 import io.tryvital.client.services.data.ManualProviderRequest
-import io.tryvital.client.services.data.SummaryTimeframe
+import io.tryvital.client.services.data.SummaryPayload
+import io.tryvital.client.utils.VitalLogger
 import java.time.Instant
 import java.util.*
 
@@ -22,6 +23,7 @@ class HealthConnectManager private constructor(
     private val recordProcessor: RecordProcessor,
     private val summaryService: SummaryService,
     private val linkService: LinkService,
+    private val vitalLogger: VitalLogger,
 ) {
     private var userId: String? = null
 
@@ -39,6 +41,11 @@ class HealthConnectManager private constructor(
             HealthPermission.createReadPermission(OxygenSaturationRecord::class),
             HealthPermission.createReadPermission(HeartRateVariabilitySdnnRecord::class),
             HealthPermission.createReadPermission(RestingHeartRateRecord::class),
+            HealthPermission.createReadPermission(ActiveCaloriesBurnedRecord::class),
+            HealthPermission.createReadPermission(BasalMetabolicRateRecord::class),
+            HealthPermission.createReadPermission(StepsRecord::class),
+            HealthPermission.createReadPermission(DistanceRecord::class),
+            HealthPermission.createReadPermission(FloorsClimbedRecord::class),
         )
 
     fun isAvailable(context: Context): HealthConnectAvailability {
@@ -90,14 +97,17 @@ class HealthConnectManager private constructor(
             throw IllegalStateException("You need to call setUserId before you can read the health data")
         }
 
+        vitalLogger.enabled = true
+
         val currentDevice = Build.MODEL
         val startDate = Date.from(startTime)
         val endDate = Date.from(endTime)
         val stage = "daily"
+        val hostTimeZone = TimeZone.getDefault()
         val timeZoneInSecond = "0"
 
-        summaryService.addWorkout(
-            userId!!, SummaryTimeframe(
+        summaryService.addWorkouts(
+            userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
                 startDate = startDate,
@@ -107,8 +117,24 @@ class HealthConnectManager private constructor(
             )
         )
 
+        summaryService.addActivities(
+            userId!!, SummaryPayload(
+                stage = stage,
+                provider = providerId,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneInSecond = timeZoneInSecond,
+                data = recordProcessor.processActivities(
+                    startTime,
+                    endTime,
+                    currentDevice,
+                    hostTimeZone
+                ),
+            )
+        )
+
         summaryService.addProfile(
-            userId!!, SummaryTimeframe(
+            userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
                 startDate = startDate,
@@ -119,7 +145,7 @@ class HealthConnectManager private constructor(
         )
 
         summaryService.addBody(
-            userId!!, SummaryTimeframe(
+            userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
                 startDate = startDate,
@@ -129,8 +155,8 @@ class HealthConnectManager private constructor(
             )
         )
 
-        summaryService.addSleep(
-            userId!!, SummaryTimeframe(
+        summaryService.addSleeps(
+            userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
                 startDate = startDate,
@@ -146,13 +172,15 @@ class HealthConnectManager private constructor(
             healthConnectClientProvider: HealthConnectClientProvider,
             summaryService: SummaryService,
             linkService: LinkService,
-            recordProcessor: RecordProcessor
+            recordProcessor: RecordProcessor,
+            vitalLogger: VitalLogger
         ): HealthConnectManager =
             HealthConnectManager(
                 healthConnectClientProvider,
                 recordProcessor,
                 summaryService,
                 linkService,
+                vitalLogger,
             )
     }
 }
