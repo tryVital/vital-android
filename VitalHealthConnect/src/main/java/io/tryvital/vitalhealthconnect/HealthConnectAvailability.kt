@@ -1,4 +1,4 @@
-package io.tryvital.client.healthconnect
+package io.tryvital.vitalhealthconnect
 
 enum class HealthConnectAvailability {
     Installed,

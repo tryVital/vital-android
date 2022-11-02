@@ -4,6 +4,7 @@ import android.app.Application
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
+import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 
 class VitalApp : Application() {
     val client = VitalClient(
@@ -14,4 +15,6 @@ class VitalApp : Application() {
     )
 
     val userRepository = UserRepository.create()
+
+    val vitalHealthConnectManager = VitalHealthConnectManager.create(this, client)
 }

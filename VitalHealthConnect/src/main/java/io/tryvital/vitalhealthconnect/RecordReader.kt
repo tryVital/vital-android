@@ -1,10 +1,9 @@
-package io.tryvital.client.healthconnect
+package io.tryvital.vitalhealthconnect
 
 import android.content.Context
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import io.tryvital.client.dependencies.HealthConnectClientProvider
 import java.time.Instant
 
 interface RecordReader {

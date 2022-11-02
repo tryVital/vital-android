@@ -1,4 +1,4 @@
-package io.tryvital.client.healthconnect
+package io.tryvital.vitalhealthconnect
 
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.metadata.DataOrigin
 import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
+import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.QuantitySample
 import io.tryvital.client.services.data.WorkoutPayload
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -70,7 +71,10 @@ class HealthConnectRecordProcessorTest {
 
     private suspend fun setupProcessor(): HealthConnectRecordProcessor {
         val recordAggregator = mock<RecordAggregator>()
-        whenever(recordAggregator.aggregateActiveEnergyBurned(startTime, endTime)).thenReturn(101, 102)
+        whenever(recordAggregator.aggregateActiveEnergyBurned(startTime, endTime)).thenReturn(
+            101,
+            102
+        )
         whenever(recordAggregator.aggregateDistance(startTime, endTime)).thenReturn(301, 302)
 
         val recordReader = mock<RecordReader>()
@@ -84,8 +88,14 @@ class HealthConnectRecordProcessorTest {
             testRawRespiratoryRate, emptyList()
         )
 
+        val vitalClient = mock<VitalClient>()
+        whenever(vitalClient.vitalLogger).thenReturn(mock())
 
-        return HealthConnectRecordProcessor(recordReader, recordAggregator, mock())
+        return HealthConnectRecordProcessor(
+            recordReader,
+            recordAggregator,
+            vitalClient
+        )
     }
 }
 

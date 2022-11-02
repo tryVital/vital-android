@@ -4,12 +4,11 @@ plugins {
 }
 
 android {
+    namespace 'io.tryvital.vitalhealthconnect'
     compileSdk 33
 
-    namespace 'io.tryvital.client'
-
     defaultConfig {
-        minSdk 21
+        minSdk 26
         targetSdk 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -40,17 +39,9 @@ android {
 }
 
 dependencies {
-    implementation "androidx.browser:browser:$browser"
+    implementation project(':VitalClient')
 
-    implementation "com.squareup.retrofit2:retrofit:$retrofit"
-    implementation "com.squareup.retrofit2:converter-moshi:$retrofit"
-    implementation "com.squareup.moshi:moshi:$moshi"
-    implementation "com.squareup.moshi:moshi-kotlin:$moshi"
-    implementation "com.squareup.moshi:moshi-adapters:$moshi"
-    implementation "com.squareup.okhttp3:okhttp:$okhttp"
-    implementation "com.squareup.okhttp3:logging-interceptor:$okhttp"
-
-    implementation "com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:$retrofit2_kotlin_coroutines_adapter"
+    implementation "androidx.health.connect:connect-client:$health_connect"
 
     testImplementation "junit:junit:$junit"
     androidTestImplementation "androidx.test.ext:junit:$test_ext"

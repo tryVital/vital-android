@@ -1,4 +1,4 @@
-package io.tryvital.client.healthconnect
+package io.tryvital.vitalhealthconnect
 
 import android.content.Context
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
@@ -6,7 +6,6 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import io.tryvital.client.dependencies.HealthConnectClientProvider
 import java.time.Instant
 
 interface RecordAggregator {

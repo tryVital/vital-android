@@ -1,14 +1,12 @@
 package io.tryvital.client.dependencies
 
 import android.content.Context
-import androidx.health.connect.client.HealthConnectClient
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
-import io.tryvital.client.healthconnect.*
 import io.tryvital.client.utils.ApiKeyInterceptor
 import io.tryvital.client.utils.VitalLogger
 import okhttp3.Cache
@@ -36,14 +34,6 @@ class Dependencies(
         createMoshi()
     }
 
-    private val recordReader: RecordReader by lazy {
-        HealthConnectRecordReader(context, healthConnectClientProvider)
-    }
-
-    private val recordAggregator: RecordAggregator by lazy {
-        HealthConnectRecordAggregator(context, healthConnectClientProvider)
-    }
-
     val vitalLogger: VitalLogger by lazy {
         VitalLogger.create()
     }
@@ -52,13 +42,6 @@ class Dependencies(
         createRetrofit(resolveUrl(region, environment), httpClient, moshi)
     }
 
-    val healthConnectClientProvider: HealthConnectClientProvider by lazy {
-        HealthConnectClientProvider()
-    }
-
-    val recordProcessor: RecordProcessor by lazy {
-        HealthConnectRecordProcessor(recordReader, recordAggregator, vitalLogger)
-    }
 
     companion object {
         internal fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
@@ -144,11 +127,5 @@ class Dependencies(
                 return QueryConverterFactory()
             }
         }
-    }
-}
-
-class HealthConnectClientProvider {
-    fun getHealthConnectClient(context: Context): HealthConnectClient {
-        return HealthConnectClient.getOrCreate(context)
     }
 }

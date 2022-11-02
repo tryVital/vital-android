@@ -1,29 +1,24 @@
-package io.tryvital.client.healthconnect
+package io.tryvital.vitalhealthconnect
 
 import android.content.Context
 import android.os.Build
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
-import io.tryvital.client.dependencies.HealthConnectClientProvider
-import io.tryvital.client.services.LinkService
-import io.tryvital.client.services.SummaryService
+import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.CreateLinkRequest
 import io.tryvital.client.services.data.ManualProviderRequest
 import io.tryvital.client.services.data.SummaryPayload
-import io.tryvital.client.utils.VitalLogger
 import java.time.Instant
 import java.util.*
 
 private const val minSupportedSDK = Build.VERSION_CODES.P
 private const val providerId = "health_connect"
 
-class HealthConnectManager private constructor(
+class VitalHealthConnectManager private constructor(
     private val healthConnectClientProvider: HealthConnectClientProvider,
     private val recordProcessor: RecordProcessor,
-    private val summaryService: SummaryService,
-    private val linkService: LinkService,
-    private val vitalLogger: VitalLogger,
+    private val vitalClient: VitalClient,
 ) {
     private var userId: String? = null
 
@@ -70,7 +65,7 @@ class HealthConnectManager private constructor(
             throw IllegalStateException("You need to call setUserId before you can read the health data")
         }
 
-        val token = linkService
+        val token = vitalClient.linkService
             .createLink(
                 CreateLinkRequest(
                     userId!!,
@@ -79,7 +74,7 @@ class HealthConnectManager private constructor(
                 )
             )
 
-        linkService.manualProvider(
+        vitalClient.linkService.manualProvider(
             provider = providerId,
             linkToken = token.linkToken!!,
             ManualProviderRequest(
@@ -97,7 +92,7 @@ class HealthConnectManager private constructor(
             throw IllegalStateException("You need to call setUserId before you can read the health data")
         }
 
-        vitalLogger.enabled = true
+        vitalClient.vitalLogger.enabled = true
 
         val currentDevice = Build.MODEL
         val startDate = Date.from(startTime)
@@ -106,7 +101,7 @@ class HealthConnectManager private constructor(
         val hostTimeZone = TimeZone.getDefault()
         val timeZoneInSecond = "0"
 
-        summaryService.addWorkouts(
+        vitalClient.summaryService.addWorkouts(
             userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
@@ -117,7 +112,7 @@ class HealthConnectManager private constructor(
             )
         )
 
-        summaryService.addActivities(
+        vitalClient.summaryService.addActivities(
             userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
@@ -133,7 +128,7 @@ class HealthConnectManager private constructor(
             )
         )
 
-        summaryService.addProfile(
+        vitalClient.summaryService.addProfile(
             userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
@@ -144,7 +139,7 @@ class HealthConnectManager private constructor(
             )
         )
 
-        summaryService.addBody(
+        vitalClient.summaryService.addBody(
             userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
@@ -155,7 +150,7 @@ class HealthConnectManager private constructor(
             )
         )
 
-        summaryService.addSleeps(
+        vitalClient.summaryService.addSleeps(
             userId!!, SummaryPayload(
                 stage = stage,
                 provider = providerId,
@@ -169,18 +164,21 @@ class HealthConnectManager private constructor(
 
     companion object {
         fun create(
-            healthConnectClientProvider: HealthConnectClientProvider,
-            summaryService: SummaryService,
-            linkService: LinkService,
-            recordProcessor: RecordProcessor,
-            vitalLogger: VitalLogger
-        ): HealthConnectManager =
-            HealthConnectManager(
+            context: Context,
+            vitalClient: VitalClient
+        ): VitalHealthConnectManager {
+            val healthConnectClientProvider = HealthConnectClientProvider()
+
+            return VitalHealthConnectManager(
                 healthConnectClientProvider,
-                recordProcessor,
-                summaryService,
-                linkService,
-                vitalLogger,
+                HealthConnectRecordProcessor(
+                    HealthConnectRecordReader(context, healthConnectClientProvider),
+                    HealthConnectRecordAggregator(context, healthConnectClientProvider),
+                    vitalClient
+                ),
+                vitalClient,
             )
+        }
     }
 }
+
