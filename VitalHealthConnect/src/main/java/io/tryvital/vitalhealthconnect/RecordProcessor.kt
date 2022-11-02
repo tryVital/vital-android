@@ -1,9 +1,9 @@
-package io.tryvital.client.healthconnect
+package io.tryvital.vitalhealthconnect
 
 import android.annotation.SuppressLint
 import androidx.health.connect.client.records.*
+import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
-import io.tryvital.client.utils.VitalLogger
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -45,7 +45,7 @@ interface RecordProcessor {
 internal class HealthConnectRecordProcessor(
     private val recordReader: RecordReader,
     private val recordAggregator: RecordAggregator,
-    private val vitalLogger: VitalLogger
+    private val vitalClient: VitalClient
 ) :
     RecordProcessor {
 
@@ -56,7 +56,7 @@ internal class HealthConnectRecordProcessor(
     ): List<WorkoutPayload> {
         val exercises = recordReader.readExerciseSessions(startTime, endTime)
 
-        vitalLogger.logI("Found ${exercises.size} workouts")
+        vitalClient.vitalLogger.logI("Found ${exercises.size} workouts")
 
         return exercises.map { exercise ->
             val aggregatedDistance = recordAggregator.aggregateDistance(startTime, endTime)
@@ -134,7 +134,7 @@ internal class HealthConnectRecordProcessor(
     ): List<SleepPayload> {
         val sleepSessions = recordReader.readSleepSession(startTime, endTime)
 
-        vitalLogger.logI("Found ${sleepSessions.size} sleepSessions")
+        vitalClient.vitalLogger.logI("Found ${sleepSessions.size} sleepSessions")
 
         return sleepSessions.map { sleepSession ->
             val heartRateRecord = recordReader.readHeartRate(startTime, endTime)
@@ -179,7 +179,7 @@ internal class HealthConnectRecordProcessor(
         var rangeEnd = nextDayOrRangeEnd(rangeStart, endTime)
 
         while (rangeStart < rangeEnd) {
-            vitalLogger.logI(rangeStart.toString())
+            vitalClient.vitalLogger.logI(rangeStart.toString())
             val activeEnergyBurned = recordReader.readActiveEnergyBurned(startTime, endTime)
             val basalMetabolicRate = recordReader.readBasalMetabolicRate(startTime, endTime)
             val stepsRate = recordReader.readSteps(startTime, endTime)
@@ -201,7 +201,7 @@ internal class HealthConnectRecordProcessor(
                     basalEnergyBurned = basalMetabolicRate.map {
                         QuantitySample(
                             id = "basalMetabolicRate-" + it.time,
-                            value = (it.basalMetabolicRate.inWatts/1000).toString(),
+                            value = (it.basalMetabolicRate.inWatts / 1000).toString(),
                             unit = SampleType.BasalMetabolicRate.unit,
                             startDate = Date.from(it.time),
                             endDate = Date.from(it.time),

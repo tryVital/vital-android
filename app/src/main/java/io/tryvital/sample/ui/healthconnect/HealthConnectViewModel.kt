@@ -5,10 +5,9 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.tryvital.client.VitalClient
-import io.tryvital.client.healthconnect.HealthConnectAvailability
 import io.tryvital.client.services.data.User
 import io.tryvital.sample.UserRepository
+import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -17,7 +16,7 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 class HealthConnectViewModel(
-    private val vitalClient: VitalClient,
+    private val vitalHealthConnectManager: VitalHealthConnectManager,
     private val userRepository: UserRepository
 ) : ViewModel() {
 
@@ -27,11 +26,11 @@ class HealthConnectViewModel(
 
     fun init(context: Context) {
         viewModelScope.launch {
-            vitalClient.healthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
+            vitalHealthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
             viewModelState.update {
                 it.copy(
-                    available = vitalClient.healthConnectManager.isAvailable(context),
-                    permissionsGranted = vitalClient.healthConnectManager.hasAllPermissions(context)
+                    available = vitalHealthConnectManager.isAvailable(context),
+                    permissionsGranted = vitalHealthConnectManager.hasAllPermissions(context)
                 )
             }
         }
@@ -39,7 +38,7 @@ class HealthConnectViewModel(
 
     fun checkAvailability(context: Context) {
         viewModelState.update {
-            it.copy(available = vitalClient.healthConnectManager.isAvailable(context))
+            it.copy(available = vitalHealthConnectManager.isAvailable(context))
         }
     }
 
@@ -47,26 +46,25 @@ class HealthConnectViewModel(
         viewModelScope.launch {
             viewModelState.update {
                 it.copy(
-                    permissionsGranted = vitalClient.healthConnectManager.hasAllPermissions(context)
+                    permissionsGranted = vitalHealthConnectManager.hasAllPermissions(context)
                 )
             }
         }
     }
 
     fun getPermissions(): Set<HealthPermission> {
-        return vitalClient.healthConnectManager.requiredPermissions
+        return vitalHealthConnectManager.requiredPermissions
     }
 
     fun linkProvider() {
         viewModelScope.launch {
-            vitalClient.healthConnectManager
-                .linkUserHealthConnectProvider("vitalexample://callback")
+            vitalHealthConnectManager.linkUserHealthConnectProvider("vitalexample://callback")
         }
     }
 
     fun readAndUploadHealthData() {
         viewModelScope.launch {
-            vitalClient.healthConnectManager.readAndUploadHealthData(
+            vitalHealthConnectManager.readAndUploadHealthData(
                 Instant.now().plus(
                     -3,
                     ChronoUnit.HOURS
@@ -78,19 +76,19 @@ class HealthConnectViewModel(
 
     companion object {
         fun provideFactory(
-            client: VitalClient,
+            vitalHealthConnectManager: VitalHealthConnectManager,
             userRepository: UserRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return HealthConnectViewModel(client, userRepository) as T
+                return HealthConnectViewModel(vitalHealthConnectManager, userRepository) as T
             }
         }
     }
 }
 
 data class HealthConnectViewModelState(
-    val available: HealthConnectAvailability? = null,
+    val available: io.tryvital.vitalhealthconnect.HealthConnectAvailability? = null,
     val permissionsGranted: Boolean? = null,
     val user: User
 )

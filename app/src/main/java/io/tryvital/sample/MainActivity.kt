@@ -16,6 +16,7 @@ class MainActivity : ComponentActivity() {
         val vitalApp = application as VitalApp
         val client = vitalApp.client
         val userRepository = vitalApp.userRepository
+        val vitalHealthConnectManager = vitalApp.vitalHealthConnectManager
 
         setContent {
             val navController = rememberNavController()
@@ -31,7 +32,7 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(Screen.HealthConnect.route) {
                         HealthConnectScreen(
-                            client,
+                            vitalHealthConnectManager,
                             userRepository
                         )
                     }
