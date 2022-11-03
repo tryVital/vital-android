@@ -99,7 +99,7 @@ class VitalHealthConnectManager private constructor(
         val endDate = Date.from(endTime)
         val stage = "daily"
         val hostTimeZone = TimeZone.getDefault()
-        val timeZoneInSecond = "0"
+        val timeZoneId = hostTimeZone.id
 
         vitalClient.summaryService.addWorkouts(
             userId!!, SummaryPayload(
@@ -107,7 +107,7 @@ class VitalHealthConnectManager private constructor(
                 provider = providerId,
                 startDate = startDate,
                 endDate = endDate,
-                timeZoneInSecond = timeZoneInSecond,
+                timeZoneId = timeZoneId,
                 data = recordProcessor.processWorkouts(startTime, endTime, currentDevice),
             )
         )
@@ -118,7 +118,7 @@ class VitalHealthConnectManager private constructor(
                 provider = providerId,
                 startDate = startDate,
                 endDate = endDate,
-                timeZoneInSecond = timeZoneInSecond,
+                timeZoneId = timeZoneId,
                 data = recordProcessor.processActivities(
                     startTime,
                     endTime,
@@ -134,7 +134,7 @@ class VitalHealthConnectManager private constructor(
                 provider = providerId,
                 startDate = startDate,
                 endDate = endDate,
-                timeZoneInSecond = timeZoneInSecond,
+                timeZoneId = timeZoneId,
                 data = recordProcessor.processProfile(startTime, endTime)
             )
         )
@@ -145,7 +145,7 @@ class VitalHealthConnectManager private constructor(
                 provider = providerId,
                 startDate = startDate,
                 endDate = endDate,
-                timeZoneInSecond = timeZoneInSecond,
+                timeZoneId = timeZoneId,
                 data = recordProcessor.processBody(startTime, endTime, currentDevice)
             )
         )
@@ -156,7 +156,7 @@ class VitalHealthConnectManager private constructor(
                 provider = providerId,
                 startDate = startDate,
                 endDate = endDate,
-                timeZoneInSecond = timeZoneInSecond,
+                timeZoneId = timeZoneId,
                 data = recordProcessor.processSleep(startTime, endTime, currentDevice)
             )
         )

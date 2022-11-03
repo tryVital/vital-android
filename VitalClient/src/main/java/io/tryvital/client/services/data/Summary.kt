@@ -13,7 +13,7 @@ data class SummaryPayload<T>(
     @Json(name = "end_date")
     val endDate: Date?,
     @Json(name = "time_zone")
-    val timeZoneInSecond: String?,
+    val timeZoneId: String?,
     @Json(name = "data")
     val data: T
 )
