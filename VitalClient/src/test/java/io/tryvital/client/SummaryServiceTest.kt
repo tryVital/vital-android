@@ -48,7 +48,7 @@ class SummaryServiceTest {
                 provider = "manual",
                 startDate = null,
                 endDate = null,
-                timeZoneInSecond = null,
+                timeZoneId = null,
                 data = listOf(
                     WorkoutPayload(
                         id = "test raw supersize",
@@ -84,7 +84,7 @@ class SummaryServiceTest {
                 provider = "manual",
                 startDate = null,
                 endDate = null,
-                timeZoneInSecond = null,
+                timeZoneId = null,
                 data = ProfilePayload(
                     biologicalSex = "not_set",
                     dateOfBirth = Date(0),
@@ -112,7 +112,7 @@ class SummaryServiceTest {
                 provider = "manual",
                 startDate = null,
                 endDate = null,
-                timeZoneInSecond = null,
+                timeZoneId = null,
                 data = BodyPayload(
                     bodyMass = emptyList(),
                     bodyFatPercentage = emptyList()
@@ -139,7 +139,7 @@ class SummaryServiceTest {
                 provider = "manual",
                 startDate = null,
                 endDate = null,
-                timeZoneInSecond = null,
+                timeZoneId = null,
                 data = emptyList()
             )
         )
@@ -163,7 +163,7 @@ class SummaryServiceTest {
                 provider = "manual",
                 startDate = null,
                 endDate = null,
-                timeZoneInSecond = null,
+                timeZoneId = null,
                 data = emptyList()
             )
         )
