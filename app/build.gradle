@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId "io.tryvital.sample"
-        minSdk 21
+        minSdk 26
         targetSdk 33
         versionCode 1
         versionName "1.0"
@@ -61,18 +61,24 @@ android {
 
 dependencies {
     implementation project(':VitalClient')
-    implementation "androidx.core:core-ktx:1.9.0"
-    implementation "androidx.compose.ui:ui:$compose_version"
+    implementation project(':VitalDevices')
+    implementation project(':VitalHealthConnect')
+
+    implementation "androidx.core:core-ktx:$core"
+    implementation "androidx.navigation:navigation-compose:$nav"
+    implementation "androidx.compose.ui:ui:$compose"
     implementation "androidx.compose.material3:material3:$material3"
-    implementation "androidx.compose.ui:ui-tooling-preview:$compose_version"
+    implementation "androidx.compose.ui:ui-tooling-preview:$compose"
+    implementation "androidx.compose.material:material-icons-extended:$compose"
     implementation "androidx.activity:activity-compose:$activity_compose"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_runtime"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_viewmodel_compose"
+    implementation "androidx.health.connect:connect-client:$health_connect"
 
     testImplementation "junit:junit:$junit"
     androidTestImplementation "androidx.test.ext:junit:$test_ext"
     androidTestImplementation "androidx.test.espresso:espresso-core:$test_espresso"
-    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
-    debugImplementation "androidx.compose.ui:ui-tooling:$compose_version"
-    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose_version"
+    androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose"
+    debugImplementation "androidx.compose.ui:ui-tooling:$compose"
+    debugImplementation "androidx.compose.ui:ui-test-manifest:$compose"
 }

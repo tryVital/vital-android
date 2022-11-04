@@ -43,4 +43,12 @@ class VitalClient(
     val userService by lazy {
         UserService.create(dependencies.retrofit)
     }
+
+    val summaryService by lazy {
+        SummaryService.create(dependencies.retrofit)
+    }
+
+    val vitalLogger by lazy {
+        dependencies.vitalLogger
+    }
 }

@@ -1,4 +1,4 @@
-package io.tryvital.client.dependencies.utils
+package io.tryvital.client.utils
 
 import okhttp3.Interceptor
 import okhttp3.Response

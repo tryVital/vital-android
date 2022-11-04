@@ -24,6 +24,13 @@ data class EmailProviderRequest(
     val region: Region,
 )
 
+data class ManualProviderRequest(
+    @Json(name = "user_id")
+    val userId: String,
+    @Json(name = "provider_id")
+    val providerId: String,
+)
+
 data class CreateLinkResponse(
     @Json(name = "link_token")
     val linkToken: String?,
@@ -48,4 +55,9 @@ data class EmailProviderResponse(
     val success: Boolean,
     @Json(name = "redirect_url")
     val redirectUrl: String?,
+)
+
+data class ManualProviderResponse(
+    @Json(name = "success")
+    val success: Boolean,
 )

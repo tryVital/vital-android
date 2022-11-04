@@ -1,9 +1,9 @@
-package io.tryvital.sample.ui
+package io.tryvital.sample.ui.users
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.*
@@ -14,20 +14,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import io.tryvital.client.VitalClient
-import io.tryvital.client.services.data.User
-import io.tryvital.sample.R
+import io.tryvital.sample.UserRepository
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun UsersScreen(client: VitalClient) {
+fun UsersScreen(
+    client: VitalClient,
+    @Suppress("UNUSED_PARAMETER") navController: NavHostController,
+    userRepository: UserRepository
+) {
     val viewModel: UsersViewModel = viewModel(
-        factory = UsersViewModel.provideFactory(client)
+        factory = UsersViewModel.provideFactory(client, userRepository)
     )
     val openDialog = remember { mutableStateOf(false) }
 
@@ -49,7 +50,7 @@ fun UsersScreen(client: VitalClient) {
                 title = { Text("Vital sample") },
                 actions = {
                     IconAction(
-                        painter = painterResource(id = R.drawable.ic_baseline_person_add_24),
+                        painter = rememberVectorPainter(image = Icons.Default.Person),
                         description = "Add user",
                         onClick = {
                             openDialog.value = true
@@ -65,9 +66,11 @@ fun UsersScreen(client: VitalClient) {
                 },
                 colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0))
             )
-        }
+        },
     ) { padding ->
-        Box(modifier = Modifier.padding(padding)) {
+        Box(modifier = Modifier
+            .padding(padding)
+            .fillMaxSize()) {
             if (state.loading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -78,71 +81,76 @@ fun UsersScreen(client: VitalClient) {
             } else if (state.users != null) {
                 val context = LocalContext.current
                 LazyColumn(contentPadding = PaddingValues(vertical = 16.dp)) {
-                    items(state.users.size) { idx ->
-                        UserRow(
-                            user = state.users[idx],
+                    items(state.users.size) { index ->
+                        val user = state.users[index]
+
+                        UserListItem(
+                            user = user,
+                            isSelected = state.selectedUser == user,
                             onCreateLink = {
-                                viewModel.linkProvider(context, it)
+                                viewModel.linkUserWithProvider(context, it)
                             },
                             onRemove = {
                                 viewModel.removeUser(it)
+                            },
+                            onSelect = {
+                                viewModel.selectUser(it)
                             }
                         )
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-fun UserRow(user: User, onCreateLink: (User) -> Unit, onRemove: (User) -> Unit) {
-    Row(
-        modifier = Modifier
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .height(56.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = rememberVectorPainter(image = Icons.Default.Person),
-            contentDescription = "Person",
-            tint = Color.Gray
-        )
-        Spacer(modifier = Modifier.width(12.dp))
+            //Not ready
+//            Box(Modifier.align(Alignment.BottomCenter)) {
+//                AnimatedVisibility(
+//                    visible = state.selectedUser != null,
+//                    enter = slideInVertically(
+//                        initialOffsetY = { 40 }
+//                    ) + expandVertically(
+//                        expandFrom = Alignment.Bottom
+//                    ) + fadeIn(initialAlpha = 0.3f),
+//                    exit = slideOutVertically() + shrinkVertically() + fadeOut(),
+//                ) {
+//                    Card(
+//                        modifier = Modifier
+//                            .align(Alignment.BottomCenter)
+//                            .height(80.dp)
+//                            .fillMaxWidth()
+//                    ) {
+//                        Row(
+//                            Modifier.padding(16.dp),
+//                            verticalAlignment = Alignment.CenterVertically
+//                        ) {
+//                            Text(
+//                                "Health Connect",
+//                                fontSize = 18.sp,
+//                                fontWeight = FontWeight.Bold,
+//                            )
+//                            Spacer(Modifier.weight(1f))
+//                            Button(
+//                                onClick = { navController.navigate(Screen.HealthConnect.route) },
+//                                contentPadding = PaddingValues(
+//                                    start = 20.dp,
+//                                    top = 12.dp,
+//                                    end = 20.dp,
+//                                    bottom = 12.dp
+//                                )
+//                            ) {
+//                                Icon(
+//                                    Icons.Outlined.Sync,
+//                                    contentDescription = null,
+//                                    modifier = Modifier.size(ButtonDefaults.IconSize)
+//                                )
+//                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+//                                Text("Connect")
+//                            }
+//                        }
+//                    }
+//
+//                }
+//            }
 
-
-        Text(
-            text = user.clientUserId ?: "",
-            style = TextStyle(fontSize = 18.sp),
-            modifier = Modifier.weight(1f)
-        )
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        IconButton(
-            onClick = {
-                onCreateLink(user)
-            },
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_baseline_content_copy_24),
-                contentDescription = "Link provider",
-                tint = Color.Gray
-            )
-        }
-
-        Spacer(modifier = Modifier.width(12.dp))
-
-        IconButton(
-            onClick = {
-                onRemove(user)
-            },
-        ) {
-            Icon(
-                painter = rememberVectorPainter(image = Icons.Default.Delete),
-                contentDescription = "Remove",
-                tint = Color.Gray
-            )
         }
     }
 }

@@ -7,7 +7,8 @@ import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
-import io.tryvital.client.dependencies.utils.ApiKeyInterceptor
+import io.tryvital.client.utils.ApiKeyInterceptor
+import io.tryvital.client.utils.VitalLogger
 import okhttp3.Cache
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -33,12 +34,17 @@ class Dependencies(
         createMoshi()
     }
 
+    val vitalLogger: VitalLogger by lazy {
+        VitalLogger.create()
+    }
+
     val retrofit: Retrofit by lazy {
         createRetrofit(resolveUrl(region, environment), httpClient, moshi)
     }
 
+
     companion object {
-        fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
+        internal fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
             val cacheSizeInMB: Long = 2 * 1024 * 1024
 
             val loggingInterceptor = HttpLoggingInterceptor()
@@ -55,7 +61,7 @@ class Dependencies(
                 .build()
         }
 
-        fun createRetrofit(
+        internal fun createRetrofit(
             baseUrl: String,
             okHttpClient: OkHttpClient,
             moshi: Moshi
@@ -68,12 +74,12 @@ class Dependencies(
                 .client(okHttpClient)
                 .build()
 
-        fun createMoshi(): Moshi = Moshi.Builder()
+        internal fun createMoshi(): Moshi = Moshi.Builder()
             .add(KotlinJsonAdapterFactory())
             .add(Date::class.java, Rfc3339DateJsonAdapter().nullSafe())
             .build()
 
-        private fun resolveUrl(region: Region, environment: Environment): String {
+        internal fun resolveUrl(region: Region, environment: Environment): String {
             val urls = mapOf(
                 Region.EU to mapOf(
                     Environment.Production to "https://api.eu.tryvital.io",

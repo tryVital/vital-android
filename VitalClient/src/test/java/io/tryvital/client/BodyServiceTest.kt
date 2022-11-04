@@ -15,7 +15,6 @@ import retrofit2.Retrofit
 import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("BlockingMethodInNonBlockingContext")
 class BodyServiceTest {
     @Before
     fun setUp() {

@@ -21,7 +21,6 @@ import java.util.*
 
 
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("BlockingMethodInNonBlockingContext")
 class TestkitServiceTest {
     @Before
     fun setUp() {
