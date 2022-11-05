@@ -4,6 +4,7 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.*
@@ -18,6 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import io.tryvital.client.VitalClient
+import io.tryvital.sample.Screen
 import io.tryvital.sample.UserRepository
 
 @Composable
@@ -50,6 +52,13 @@ fun UsersScreen(
                 title = { Text("Vital sample") },
                 actions = {
                     IconAction(
+                        painter = rememberVectorPainter(image = Icons.Default.Bluetooth),
+                        description = "Add user",
+                        onClick = {
+                            navController.navigate(Screen.Devices.route)
+                        }
+                    )
+                    IconAction(
                         painter = rememberVectorPainter(image = Icons.Default.Person),
                         description = "Add user",
                         onClick = {
@@ -68,9 +77,11 @@ fun UsersScreen(
             )
         },
     ) { padding ->
-        Box(modifier = Modifier
-            .padding(padding)
-            .fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+        ) {
             if (state.loading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),

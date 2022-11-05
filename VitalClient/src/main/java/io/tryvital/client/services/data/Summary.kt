@@ -130,4 +130,7 @@ sealed class SampleType(val unit: String) {
     object FloorsClimbed : SampleType("")
     object Vo2Max : SampleType("mL/kg/min")
     object BasalMetabolicRate : SampleType("kJ")
+    object GlucoseConcentration : SampleType("mg/dL")
+    object BloodPressureSystolic : SampleType("mmHg")
+    object BloodPressureDiastolic : SampleType("mmHg")
 }

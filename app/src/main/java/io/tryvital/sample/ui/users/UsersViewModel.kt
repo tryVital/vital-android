@@ -27,6 +27,7 @@ class UsersViewModel(
             val response = vitalClient.userService.getAll()
             viewModelState.update { it.copy(loading = false, users = response.users) }
         }
+
     }
 
     fun addUser(name: String) {
@@ -56,7 +57,12 @@ class UsersViewModel(
 
     fun linkUserWithProvider(context: Context, user: User) {
         viewModelScope.launch {
-            vitalClient.linkUserWithOauthProvider(context, user, "strava", "vitalexample://callback")
+            vitalClient.linkUserWithOauthProvider(
+                context,
+                user,
+                "strava",
+                "vitalexample://callback"
+            )
         }
     }
 

@@ -2,6 +2,8 @@ package io.tryvital.sample.ui.healthconnect
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -11,6 +13,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 
@@ -18,9 +21,9 @@ import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 @OptIn(ExperimentalMaterial3Api::class)
 fun HealthConnectScreen(
     vitalHealthConnectManager: VitalHealthConnectManager,
-    userRepository: UserRepository
+    userRepository: UserRepository,
+    navController: NavHostController
 ) {
-
     val viewModel: HealthConnectViewModel = viewModel(
         factory = HealthConnectViewModel.provideFactory(vitalHealthConnectManager, userRepository)
     )
@@ -53,7 +56,15 @@ fun HealthConnectScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Health Connect") },
-                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0))
+                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0)),
+                navigationIcon = {
+                    IconButton(onClick = {
+                        navController.popBackStack()
+                    }) {
+                        Icon(Icons.Filled.ArrowBack, "backIcon")
+                    }
+                }
+
             )
         },
     ) { padding ->

@@ -1,0 +1,81 @@
+package io.tryvital.sample.ui.device
+
+import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.vitaldevices.*
+import io.tryvital.vitaldevices.devices.BloodPressureSample
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+class DeviceViewModel(
+    private val vitalDeviceManager: VitalDeviceManager,
+    private val deviceId: String
+) :
+    ViewModel() {
+    private val viewModelState =
+        MutableStateFlow(
+            BluetoothViewModelState(
+                device = devices().first { it.id == deviceId },
+                scannedDevices = emptyList(),
+                samples = emptyList(),
+                bloodPressureSamples = emptyList(),
+                isConnected = false
+            )
+        )
+    val uiState = viewModelState.asStateFlow()
+
+    fun scan() {
+        viewModelScope.launch {
+            vitalDeviceManager.search(uiState.value.device)
+                .collect { scannedDevice ->
+                    viewModelState.update { it.copy(scannedDevices = it.scannedDevices.toMutableList() + scannedDevice) }
+
+                    vitalDeviceManager.monitorConnection(scannedDevice).collect { connectionState ->
+                        viewModelState.update { it.copy(isConnected = connectionState) }
+                    }
+                }
+        }
+    }
+
+    fun connect(context: Context, scannedDevice: ScannedDevice) {
+        viewModelScope.launch {
+            when (uiState.value.device.kind) {
+                Kind.BloodPressure -> vitalDeviceManager.bloodPressure(context, scannedDevice)
+                    .collect { sample ->
+                        viewModelState.update { it.copy(bloodPressureSamples = it.bloodPressureSamples + sample) }
+                    }
+                Kind.GlucoseMeter -> vitalDeviceManager.glucoseMeter(context, scannedDevice)
+                    .collect { sample ->
+                        viewModelState.update { it.copy(samples = it.samples + sample) }
+                    }
+            }
+        }
+    }
+
+    companion object {
+        fun provideFactory(
+            vitalDeviceManager: VitalDeviceManager,
+            deviceId: String
+        ): ViewModelProvider.Factory =
+            object : ViewModelProvider.Factory {
+                @Suppress("UNCHECKED_CAST")
+                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                    return DeviceViewModel(vitalDeviceManager, deviceId) as T
+                }
+            }
+    }
+
+}
+
+data class BluetoothViewModelState(
+    val device: DeviceModel,
+    val scannedDevices: List<ScannedDevice>,
+    val samples: List<QuantitySample>,
+    val bloodPressureSamples: List<BloodPressureSample>,
+    val isConnected: Boolean,
+)

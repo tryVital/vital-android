@@ -74,6 +74,7 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_runtime"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_viewmodel_compose"
     implementation "androidx.health.connect:connect-client:$health_connect"
+    implementation "io.coil-kt:coil-compose:${coil_compose}"
 
     testImplementation "junit:junit:$junit"
     androidTestImplementation "androidx.test.ext:junit:$test_ext"

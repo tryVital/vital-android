@@ -6,6 +6,8 @@ import androidx.activity.compose.setContent
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import io.tryvital.sample.ui.device.DeviceScreen
+import io.tryvital.sample.ui.devices.DevicesScreen
 import io.tryvital.sample.ui.healthconnect.HealthConnectScreen
 import io.tryvital.sample.ui.theme.VitalSampleTheme
 import io.tryvital.sample.ui.users.UsersScreen
@@ -15,14 +17,18 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val vitalApp = application as VitalApp
         val client = vitalApp.client
-        val userRepository = vitalApp.userRepository
+        val vitalDeviceManager = vitalApp.vitalDeviceManager
         val vitalHealthConnectManager = vitalApp.vitalHealthConnectManager
+        val userRepository = vitalApp.userRepository
 
         setContent {
             val navController = rememberNavController()
 
             VitalSampleTheme {
-                NavHost(navController = navController, startDestination = "users") {
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.Users.route
+                ) {
                     composable(Screen.Users.route) {
                         UsersScreen(
                             client,
@@ -33,10 +39,21 @@ class MainActivity : ComponentActivity() {
                     composable(Screen.HealthConnect.route) {
                         HealthConnectScreen(
                             vitalHealthConnectManager,
-                            userRepository
+                            userRepository,
+                            navController,
                         )
                     }
-                    /*...*/
+                    composable(Screen.Device.route + "{deviceId}") {
+                        DeviceScreen(
+                            vitalDeviceManager,
+                            navController,
+                        )
+                    }
+                    composable(Screen.Devices.route) {
+                        DevicesScreen(
+                            navController,
+                        )
+                    }
                 }
             }
         }
@@ -46,4 +63,6 @@ class MainActivity : ComponentActivity() {
 sealed class Screen(val route: String) {
     object Users : Screen("users")
     object HealthConnect : Screen("healthConnect")
+    object Devices : Screen("devices")
+    object Device : Screen("device")
 }

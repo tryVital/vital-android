@@ -2,6 +2,7 @@ package io.tryvital.vitalhealthconnect
 
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
@@ -88,6 +89,7 @@ class VitalHealthConnectManager private constructor(
         startTime: Instant,
         endTime: Instant,
     ) {
+        Log.e("asd","asd2")
         if (userId == null) {
             throw IllegalStateException("You need to call setUserId before you can read the health data")
         }

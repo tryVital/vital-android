@@ -8,7 +8,7 @@ android {
     compileSdk 33
 
     defaultConfig {
-        minSdk 21
+        minSdk 26
         targetSdk 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -41,6 +41,11 @@ android {
 dependencies {
     implementation project(':VitalClient')
 
+    implementation "androidx.annotation:annotation:$annotation"
+    implementation "androidx.core:core:$core"
+    implementation "no.nordicsemi.android:ble-ktx:$ble"
+    implementation "no.nordicsemi.android:ble-common:$ble"
+    
     testImplementation "junit:junit:$junit"
     androidTestImplementation "androidx.test.ext:junit:$test_ext"
     androidTestImplementation "androidx.test.espresso:espresso-core:$test_espresso"
