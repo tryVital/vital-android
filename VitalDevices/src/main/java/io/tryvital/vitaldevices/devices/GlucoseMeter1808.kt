@@ -9,6 +9,7 @@ import io.tryvital.client.services.data.QuantitySample
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.ScannedDevice
+import io.tryvital.vitaldevices.chunked
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -27,7 +28,7 @@ private val recordAccessControlPointCharacteristicUUID =
 
 interface GlucoseMeter {
     fun connect()
-    fun read(): Flow<QuantitySample>
+    fun read(): Flow<List<QuantitySample>>
 }
 
 class GlucoseMeter1808(
@@ -53,7 +54,7 @@ class GlucoseMeter1808(
             }.enqueue()
     }
 
-    override fun read() = measurements.filterNotNull()
+    override fun read() = measurements.filterNotNull().chunked(50, 300)
 
     @SuppressLint("MissingPermission")
     private fun bond() {

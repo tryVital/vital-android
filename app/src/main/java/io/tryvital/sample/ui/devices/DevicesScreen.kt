@@ -124,5 +124,4 @@ fun deviceImageUrl(device: DeviceModel): String {
         "beurer" -> "https://storage.googleapis.com/vital-assets/beurer.png"
         else -> "http://placekitten.com/200/200"
     }
-
 }

@@ -115,7 +115,7 @@ class VitalDeviceManager(
         }.map { it.second }
     }
 
-    fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): Flow<QuantitySample> {
+    fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): Flow<List<QuantitySample>> {
         bluetoothAdapter.cancelDiscovery()
 
         when (scannedDevice.deviceModel.brand) {
@@ -133,7 +133,7 @@ class VitalDeviceManager(
         }
     }
 
-    fun bloodPressure(context: Context, scannedDevice: ScannedDevice): Flow<BloodPressureSample> {
+    fun bloodPressure(context: Context, scannedDevice: ScannedDevice): Flow<List<BloodPressureSample>> {
         bluetoothAdapter.cancelDiscovery()
 
         when (scannedDevice.deviceModel.brand) {
