@@ -35,6 +35,7 @@ class VitalDeviceManager(
     }
 
     fun search(deviceModel: DeviceModel) = callbackFlow {
+        vitalLogger.logI("searching for ${deviceModel.name}")
         if (permissionsGranted()) {
             throw IllegalStateException("Missing permission for BLUETOOTH_SCAN")
         } else if (!bluetoothAdapter.isEnabled) {
@@ -104,7 +105,8 @@ class VitalDeviceManager(
             }
         }, filter)
 
-        bluetoothAdapter.startDiscovery()
+        val result = bluetoothAdapter.startDiscovery()
+        vitalLogger.logI("Discovery result $result")
 
         awaitClose { }
     }
@@ -133,7 +135,10 @@ class VitalDeviceManager(
         }
     }
 
-    fun bloodPressure(context: Context, scannedDevice: ScannedDevice): Flow<List<BloodPressureSample>> {
+    fun bloodPressure(
+        context: Context,
+        scannedDevice: ScannedDevice
+    ): Flow<List<BloodPressureSample>> {
         bluetoothAdapter.cancelDiscovery()
 
         when (scannedDevice.deviceModel.brand) {
