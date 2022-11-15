@@ -1,6 +1,8 @@
 package io.tryvital.vitaldevices
 
-sealed class Brand(val name: String) {
+import java.io.Serializable
+
+sealed class Brand(val name: String): Serializable {
     object Omron : Brand("Omron")
     object AccuChek : Brand("Accu-Chek")
     object Contour : Brand("Contour")

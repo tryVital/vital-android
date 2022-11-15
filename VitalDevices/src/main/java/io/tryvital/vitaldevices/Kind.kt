@@ -1,5 +1,7 @@
 package io.tryvital.vitaldevices
 
-enum class Kind {
+import java.io.Serializable
+
+enum class Kind: Serializable {
     BloodPressure, GlucoseMeter
 }
