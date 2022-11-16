@@ -10,8 +10,10 @@ import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.ScannedDevice
 import io.tryvital.vitaldevices.chunked
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.filterNotNull
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.common.callback.bps.BloodPressureMeasurementResponse
@@ -24,7 +26,7 @@ private val bloodPressureMeasurementCharacteristicUUID =
     UUID.fromString("00002A35-0000-1000-8000-00805f9b34fb")
 
 interface BloodPressureReader {
-    fun connect()
+    fun pair(): Flow<Boolean>
     fun read(): Flow<List<BloodPressureSample>>
 }
 
@@ -38,15 +40,22 @@ class BloodPressureReader1810(
 
     private var bloodPressureMeasurementCharacteristic: BluetoothGattCharacteristic? = null
 
-    override fun connect() {
+    override fun pair() = callbackFlow {
         connect(scannedBluetoothDevice).retry(3, 100).timeout(15000).useAutoConnect(false)
-            .fail { _, status -> logError("connect", status) }.done {
+            .fail { _, status ->
+                logError("connect", status)
+                trySend(false)
+            }.done {
                 vitalLogger.logI("Successfully connected to ${scannedDevice.name}")
                 vitalLogger.logI("Bonded state: $isBonded to ${scannedDevice.name}")
                 if (!isBonded) {
                     bond()
                 }
+                trySend(true)
+                close()
             }.enqueue()
+
+        awaitClose { }
     }
 
     override fun read() = measurements.filterNotNull().chunked(50, 300)

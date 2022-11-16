@@ -6,7 +6,6 @@ import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -37,151 +36,145 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
 
     val state = viewModel.uiState.collectAsState().value
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Device") },
-                colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0)),
-                navigationIcon = {
-                    IconButton(onClick = {
-                        navController.popBackStack()
-                    }) {
-                        Icon(Icons.Filled.ArrowBack, "backIcon")
+    Scaffold(topBar = {
+        TopAppBar(title = { Text("Device") },
+            colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0)),
+            navigationIcon = {
+                IconButton(onClick = {
+                    navController.popBackStack()
+                }) {
+                    Icon(Icons.Filled.ArrowBack, "backIcon")
+                }
+            })
+    }, content = { padding ->
+        Column(modifier = Modifier
+            .padding(padding)
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            content = {
+
+                Image(
+                    painter = rememberAsyncImagePainter(deviceImageUrl(state.device)),
+                    contentDescription = null,
+                    modifier = Modifier.size(200.dp)
+                )
+                Text(text = state.device.name, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    text = "IsConnected " + state.isConnected,
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Box(modifier = Modifier.height(24.dp))
+
+                val launcher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { isGranted: Boolean ->
+                    if (isGranted) {
+                        Log.d("vital", "PERMISSION GRANTED")
+
+                    } else {
+                        Log.d("vital", "PERMISSION DENIED")
                     }
                 }
-            )
-        },
-        content = { padding ->
-            Column(modifier = Modifier
-                .padding(padding)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                content = {
 
-                    Image(
-                        painter = rememberAsyncImagePainter(deviceImageUrl(state.device)),
-                        contentDescription = null,
-                        modifier = Modifier.size(200.dp)
-                    )
-                    Text(text = state.device.name, style = MaterialTheme.typography.titleLarge)
-                    Text(
-                        text = "IsConnected " + state.isConnected,
-                        style = MaterialTheme.typography.titleSmall
-                    )
-                    Box(modifier = Modifier.height(24.dp))
+                val context = LocalContext.current
 
-                    val launcher = rememberLauncherForActivityResult(
-                        ActivityResultContracts.RequestPermission()
-                    ) { isGranted: Boolean ->
-                        if (isGranted) {
-                            Log.d("vital", "PERMISSION GRANTED")
-
-                        } else {
-                            Log.d("vital", "PERMISSION DENIED")
-                        }
-                    }
-
-                    val context = LocalContext.current
-
-                    Row {
-
-                        Button(onClick = {
-                            val bluetoothScan = Manifest.permission.ACCESS_FINE_LOCATION
-                            when (PERMISSION_GRANTED) {
-                                ContextCompat.checkSelfPermission(
-                                    context,
-                                    bluetoothScan
-                                ) -> {
-                                    Log.d("vital", "Got permission")
-                                }
-                                else -> {
-                                    launcher.launch(bluetoothScan)
-                                }
+                Row {
+                    Button(onClick = {
+                        val bluetoothScan = Manifest.permission.ACCESS_FINE_LOCATION
+                        when (PERMISSION_GRANTED) {
+                            ContextCompat.checkSelfPermission(
+                                context, bluetoothScan
+                            ) -> {
+                                Log.d("vital", "Got permission")
                             }
-                        }) {
-                            Text("Request Permission")
+                            else -> {
+                                launcher.launch(bluetoothScan)
+                            }
                         }
-                        Box(modifier = Modifier.width(16.dp))
-                        Button(onClick = {
-                            viewModel.scan()
-                        }) {
-                            Text("Scan")
-                        }
+                    }) {
+                        Text("Request Permission")
                     }
-
-                    Box(modifier = Modifier.height(24.dp))
-
-                    Text(text = "Discovered Devices", style = MaterialTheme.typography.titleMedium)
-                    if (state.scannedDevices.isEmpty()) {
-                        Box(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "No devices found yet",
-                            style = MaterialTheme.typography.labelMedium
-                        )
-                        Box(modifier = Modifier.height(12.dp))
+                    Box(modifier = Modifier.width(16.dp))
+                    Button(onClick = {
+                        viewModel.scan()
+                    }) {
+                        Text("Scan")
                     }
-                    Column {
-                        state.scannedDevices.forEach { scannedDevice ->
-                            ListItem(
-                                modifier = Modifier.clickable(onClick = {
-                                    viewModel.connect(
-                                        context,
-                                        scannedDevice
-                                    )
-                                }),
-                                headlineText = {
-                                    Text(text = scannedDevice.deviceModel.name)
-                                },
-                                supportingText = {
-                                    Text(text = scannedDevice.name)
-                                },
-
-                                )
-                        }
-                    }
-
-                    Text(text = "Reading from device", style = MaterialTheme.typography.titleMedium)
-                    if (state.samples.isEmpty()) {
-                        Box(modifier = Modifier.height(12.dp))
-                        Text(text = "No samples yet", style = MaterialTheme.typography.labelMedium)
-                        Box(modifier = Modifier.height(12.dp))
-                    }
-                    Column {
-                        state.samples.forEach { sample ->
-                            ListItem(
-                                headlineText = {
-                                    Text(text = sample.value + " " + sample.unit)
-                                },
-                                supportingText = {
-                                    Text(text = sample.startDate.toString())
-                                },
-
-                                )
-
-                        }
-                    }
-                    Column {
-                        state.bloodPressureSamples.forEach { sample ->
-                            ListItem(
-                                headlineText = {
-                                    Text(
-                                        text = "Systolic: " + sample.systolic + " ${sample.systolic.unit} " +
-                                                "Diastolic: " + sample.diastolic + " ${sample.diastolic.unit} " +
-                                                "Pulse: " + sample.pulse + " ${sample.pulse.unit}"
-                                    )
-                                },
-                                supportingText = {
-                                    Text(text = sample.systolic.startDate.toString())
-                                },
-
-                                )
-
-                        }
-                    }
-
                 }
-            )
-        }
-    )
+
+                Box(modifier = Modifier.height(24.dp))
+
+                Text(text = "Discovered Devices", style = MaterialTheme.typography.titleMedium)
+                if (state.scannedDevices.isEmpty()) {
+                    Box(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "No devices found yet", style = MaterialTheme.typography.labelMedium
+                    )
+                    Box(modifier = Modifier.height(12.dp))
+                }
+                Column {
+                    state.scannedDevices.forEach { scannedDevice ->
+                        ListItem(
+                            headlineText = {
+                                Text(text = scannedDevice.deviceModel.name)
+                            },
+                            supportingText = {
+                                Text(text = scannedDevice.name)
+                            },
+                            trailingContent = {
+                                Row {
+                                    Button(onClick = {
+                                        viewModel.pair(context, scannedDevice)
+                                    }) {
+                                        Text("Pair")
+                                    }
+                                    Box(modifier = Modifier.width(4.dp))
+                                    Button(onClick = {
+                                        viewModel.connect(context, scannedDevice)
+                                    }) {
+                                        Text("Read")
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+
+                Text(text = "Reading from device", style = MaterialTheme.typography.titleMedium)
+                if (state.samples.isEmpty()) {
+                    Box(modifier = Modifier.height(12.dp))
+                    Text(text = "No samples yet", style = MaterialTheme.typography.labelMedium)
+                    Box(modifier = Modifier.height(12.dp))
+                }
+                Column {
+                    state.samples.forEach { sample ->
+                        ListItem(
+                            headlineText = {
+                                Text(text = sample.value + " " + sample.unit)
+                            },
+                            supportingText = {
+                                Text(text = sample.startDate.toString())
+                            },
+
+                            )
+
+                    }
+                }
+                Column {
+                    state.bloodPressureSamples.forEach { sample ->
+                        ListItem(
+                            headlineText = {
+                                Text(
+                                    text = "Systolic: " + sample.systolic + " ${sample.systolic.unit} " + "Diastolic: " + sample.diastolic + " ${sample.diastolic.unit} " + "Pulse: " + sample.pulse + " ${sample.pulse.unit}"
+                                )
+                            },
+                            supportingText = {
+                                Text(text = sample.systolic.startDate.toString())
+                            },
+                        )
+                    }
+                }
+            })
+    })
 }

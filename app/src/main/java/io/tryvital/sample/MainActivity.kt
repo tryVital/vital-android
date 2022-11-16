@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import io.tryvital.client.utils.VitalLogger
 import io.tryvital.sample.ui.device.DeviceScreen
 import io.tryvital.sample.ui.devices.DevicesScreen
 import io.tryvital.sample.ui.healthconnect.HealthConnectScreen
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
         val vitalDeviceManager = vitalApp.vitalDeviceManager
         val vitalHealthConnectManager = vitalApp.vitalHealthConnectManager
         val userRepository = vitalApp.userRepository
+        VitalLogger.create().enabled = true
 
         setContent {
             val navController = rememberNavController()

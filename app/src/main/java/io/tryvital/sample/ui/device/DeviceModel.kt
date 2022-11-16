@@ -1,6 +1,7 @@
 package io.tryvital.sample.ui.device
 
 import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -53,6 +54,19 @@ class DeviceViewModel(
                     .collect { sample ->
                         viewModelState.update { it.copy(samples = it.samples + sample) }
                     }
+            }
+        }
+    }
+
+
+    fun pair(context: Context, scannedDevice: ScannedDevice) {
+        viewModelScope.launch {
+            vitalDeviceManager.pair(scannedDevice).collect{
+                if(it){
+                    Toast.makeText(context, "Paired", Toast.LENGTH_SHORT).show()
+                }else{
+                    Toast.makeText(context, "Pairing failed", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }

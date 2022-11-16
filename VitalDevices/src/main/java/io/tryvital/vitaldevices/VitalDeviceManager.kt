@@ -17,6 +17,7 @@ import io.tryvital.vitaldevices.devices.GlucoseMeter1808
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 
+@Suppress("OPT_IN_USAGE")
 @SuppressLint("MissingPermission")
 class VitalDeviceManager(
     private val context: Context
@@ -29,10 +30,6 @@ class VitalDeviceManager(
 
     private val vitalLogger = VitalLogger.create()
     private val deviceStateChange = MutableStateFlow<Pair<String, Boolean>?>(null)
-
-    init {
-        vitalLogger.enabled = true
-    }
 
     fun search(deviceModel: DeviceModel) = callbackFlow {
         vitalLogger.logI("searching for ${deviceModel.name}")
@@ -111,6 +108,21 @@ class VitalDeviceManager(
         awaitClose { }
     }
 
+    fun pair(scannedDevice: ScannedDevice): Flow<Boolean> {
+        return when (scannedDevice.deviceModel.kind) {
+            Kind.GlucoseMeter -> GlucoseMeter1808(
+                context,
+                bluetoothAdapter.getRemoteDevice(scannedDevice.address),
+                scannedDevice,
+            ).pair()
+            Kind.BloodPressure -> BloodPressureReader1810(
+                context,
+                bluetoothAdapter.getRemoteDevice(scannedDevice.address),
+                scannedDevice,
+            ).pair()
+        }
+    }
+
     fun monitorConnection(scannedDevice: ScannedDevice): Flow<Boolean> {
         return deviceStateChange.filterNotNull().filter {
             it.first == scannedDevice.address
@@ -128,8 +140,8 @@ class VitalDeviceManager(
                     bluetoothAdapter.getRemoteDevice(scannedDevice.address),
                     scannedDevice,
                 )
-                glucoseMeter1808?.connect()
-                return glucoseMeter1808!!.read()
+                return glucoseMeter1808!!.pair().filter { it }
+                    .flatMapConcat { glucoseMeter1808!!.read() }
             }
             else -> throw IllegalStateException("${scannedDevice.deviceModel.brand} is not supported")
         }
@@ -149,8 +161,9 @@ class VitalDeviceManager(
                     bluetoothAdapter.getRemoteDevice(scannedDevice.address),
                     scannedDevice,
                 )
-                bloodPressureReader1810?.connect()
-                return bloodPressureReader1810!!.read()
+
+                return bloodPressureReader1810!!.pair().filter { it }
+                    .flatMapConcat { bloodPressureReader1810!!.read() }
             }
             else -> throw IllegalStateException("${scannedDevice.deviceModel.brand} is not supported")
         }
