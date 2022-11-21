@@ -41,11 +41,15 @@ class BloodPressureReader1810(
     private var bloodPressureMeasurementCharacteristic: BluetoothGattCharacteristic? = null
 
     override fun pair() = callbackFlow {
+        var inError = false
         connect(scannedBluetoothDevice).retry(3, 100).timeout(15000).useAutoConnect(false)
             .fail { _, status ->
                 logError("connect", status)
                 trySend(false)
+                inError = true
+                close()
             }.done {
+                if (inError) return@done
                 vitalLogger.logI("Successfully connected to ${scannedDevice.name}")
                 vitalLogger.logI("Bonded state: $isBonded to ${scannedDevice.name}")
                 if (!isBonded) {

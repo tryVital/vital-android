@@ -46,11 +46,15 @@ class GlucoseMeter1808(
     private var recordAccessControlPointCharacteristic: BluetoothGattCharacteristic? = null
 
     override fun pair() = callbackFlow {
+        var inError = false
         connect(scannedBluetoothDevice).retry(3, 100).timeout(15000).useAutoConnect(false)
             .fail { _, status ->
                 logError("connect", status)
                 trySend(false)
+                inError = true
+                close()
             }.done {
+                if (inError) return@done
                 vitalLogger.logI("Successfully connected to ${scannedDevice.name}")
                 vitalLogger.logI("Bonded state: $isBonded to ${scannedDevice.name}")
                 if (!isBonded) {
@@ -64,7 +68,18 @@ class GlucoseMeter1808(
     }
 
 
-    override fun read() = measurements.filterNotNull().chunked(50, 300)
+    override fun read(): Flow<List<QuantitySample>> {
+        writeCharacteristic(
+            recordAccessControlPointCharacteristic,
+            RecordAccessControlPointData.reportAllStoredRecords(),
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
+        )
+            .fail { _, status -> logError("writeCharacteristic", status) }
+            .done { vitalLogger.logI("Successfully requested all data from ${scannedDevice.name}") }
+            .enqueue()
+
+        return measurements.filterNotNull().chunked(50, 300)
+    }
 
     @SuppressLint("MissingPermission")
     private fun bond() {
@@ -76,8 +91,7 @@ class GlucoseMeter1808(
         return GattCallbackImpl()
     }
 
-    private inner class GattCallbackImpl :
-        BleManagerGattCallback() {
+    private inner class GattCallbackImpl : BleManagerGattCallback() {
 
         override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
             val service = gatt.getService(glsServiceUUID)
@@ -97,14 +111,11 @@ class GlucoseMeter1808(
             }
 
             enableNotifications(glucoseMeasurementCharacteristic).enqueue()
-
-            writeCharacteristic(
-                recordAccessControlPointCharacteristic,
-                RecordAccessControlPointData.reportAllStoredRecords(),
-                BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-            ).fail { _, status -> logError("writeCharacteristic", status) }.done {
-                vitalLogger.logI("Successfully requested all data from ${scannedDevice.name}")
-            }.enqueue()
+            enableIndications(recordAccessControlPointCharacteristic)
+                .fail { _, status: Int ->
+                    vitalLogger.logI("Failed to enabled RAC indications (error $status)")
+                }
+                .enqueue()
         }
 
         override fun onServicesInvalidated() {
