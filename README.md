@@ -28,9 +28,9 @@ for the components you want to use.
 The min version of the SDK is `21` for VitalClient but for VitalHealthConnect and VitalDevices it is
 `26`.
 
-### VitalHealthClient installation
+### VitalClient installation
 
-You have no additional steps to take to use VitalHealthClient.
+You have no additional steps to take to use VitalClient.
 
 ### VitalHealthConnect installation
 
@@ -39,7 +39,7 @@ need to be on `28` or higher.
 
 ### VitalDevices installation
 
-Vital Devices uses bluetooth and it requires different permissions based on you apps min version.
+Vital Devices uses bluetooth and it requires different permissions based on your apps min version.
 Here is an example of a `AndroidManifest.xml` file that uses Vital Devices:
 
 ```xml  
@@ -63,7 +63,7 @@ First you need to get an instance of `VitalClient`:
     context = this,
     region = Region.EU,
     environment = Environment.Sandbox,
-    apiKey = "sk_eu_S5LdXTS_CAtdFrkX9OYsiVq_jGHaIXtZyBPbBtPkzhA" //your key from the dashboard
+    apiKey = "sk_eu_S5LdX..." //your key from the dashboard
 )
 ```
 
