@@ -130,8 +130,6 @@ class VitalDeviceManager(
     }
 
     fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): Flow<List<QuantitySample>> {
-        bluetoothAdapter.cancelDiscovery()
-
         when (scannedDevice.deviceModel.brand) {
             Brand.AccuChek,
             Brand.Contour -> {
@@ -151,8 +149,6 @@ class VitalDeviceManager(
         context: Context,
         scannedDevice: ScannedDevice
     ): Flow<List<BloodPressureSample>> {
-        bluetoothAdapter.cancelDiscovery()
-
         when (scannedDevice.deviceModel.brand) {
             Brand.Omron,
             Brand.Beurer -> {
