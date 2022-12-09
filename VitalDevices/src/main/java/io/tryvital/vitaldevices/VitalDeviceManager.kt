@@ -30,6 +30,7 @@ class VitalDeviceManager(
 
     private val vitalLogger = VitalLogger.create()
     private val deviceStateChange = MutableStateFlow<Pair<String, Boolean>?>(null)
+    private var repeatSearch = false
 
     fun search(deviceModel: DeviceModel) = callbackFlow {
         vitalLogger.logI("searching for ${deviceModel.name}")
@@ -39,6 +40,7 @@ class VitalDeviceManager(
             throw IllegalStateException("Bluetooth is not enabled on this device")
         }
 
+        repeatSearch = true
         val codes = codes(deviceModel.id)
 
         val filter = IntentFilter().also {
@@ -96,7 +98,11 @@ class VitalDeviceManager(
                     BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
                         vitalLogger.logI("Discovery finished")
 
-                        channel.close()
+                        if (repeatSearch) {
+                            bluetoothAdapter.startDiscovery()
+                        } else {
+                            channel.close()
+                        }
                     }
                 }
             }
@@ -106,6 +112,11 @@ class VitalDeviceManager(
         vitalLogger.logI("Discovery result $result")
 
         awaitClose { }
+    }
+
+    fun stopSearch() {
+        repeatSearch = false
+        bluetoothAdapter.cancelDiscovery()
     }
 
     fun pair(scannedDevice: ScannedDevice): Flow<Boolean> {

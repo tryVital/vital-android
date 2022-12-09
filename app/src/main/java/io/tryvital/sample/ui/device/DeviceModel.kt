@@ -61,14 +61,19 @@ class DeviceViewModel(
 
     fun pair(context: Context, scannedDevice: ScannedDevice) {
         viewModelScope.launch {
-            vitalDeviceManager.pair(scannedDevice).collect{
-                if(it){
+            vitalDeviceManager.pair(scannedDevice).collect {
+                if (it) {
                     Toast.makeText(context, "Paired", Toast.LENGTH_SHORT).show()
-                }else{
+                } else {
                     Toast.makeText(context, "Pairing failed", Toast.LENGTH_SHORT).show()
                 }
             }
         }
+    }
+
+    override fun onCleared() {
+        vitalDeviceManager.stopSearch()
+        super.onCleared()
     }
 
     companion object {

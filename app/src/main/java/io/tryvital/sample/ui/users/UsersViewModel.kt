@@ -23,11 +23,14 @@ class UsersViewModel(
 
     fun update() {
         viewModelScope.launch {
-            viewModelState.update { it.copy(loading = true) }
-            val response = vitalClient.userService.getAll()
-            viewModelState.update { it.copy(loading = false, users = response.users) }
+            try {
+                viewModelState.update { it.copy(loading = true) }
+                val response = vitalClient.userService.getAll()
+                viewModelState.update { it.copy(loading = false, users = response.users) }
+            } catch (e: Exception) {
+                viewModelState.update { it.copy(loading = false, users = null) }
+            }
         }
-
     }
 
     fun addUser(name: String) {
