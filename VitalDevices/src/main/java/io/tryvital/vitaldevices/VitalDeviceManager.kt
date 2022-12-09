@@ -111,7 +111,11 @@ class VitalDeviceManager(
         val result = bluetoothAdapter.startDiscovery()
         vitalLogger.logI("Discovery result $result")
 
-        awaitClose { }
+        awaitClose {
+            vitalLogger.logI("Closing search")
+            repeatSearch = false
+            bluetoothAdapter.cancelDiscovery()
+        }
     }
 
     fun stopSearch() {
