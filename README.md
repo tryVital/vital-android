@@ -14,7 +14,14 @@ and `VitalDevices`.
 
 ## Installation
 
-You can install the Vital SDK by adding the following to your `build.gradle` file:
+You can install the Vital SDK by adding the followings to your `build.gradle` file:
+
+```groovy
+repositories {
+  ...
+  maven { url 'https://jitpack.io' }
+}
+```
 
 ```groovy
 implementation 'com.github.tryVital.vital-android:VitalClient:$vital_version'
