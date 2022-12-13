@@ -2,6 +2,8 @@ package io.tryvital.vitalhealthconnect
 
 import android.annotation.SuppressLint
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_INT_TO_STRING_MAP
+import androidx.health.connect.client.records.metadata.Device
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
 import java.time.Instant
@@ -70,7 +72,7 @@ internal class HealthConnectRecordProcessor(
                 startDate = Date.from(exercise.startTime),
                 endDate = Date.from(exercise.endTime),
                 sourceBundle = exercise.metadata.dataOrigin.packageName,
-                sport = exercise.exerciseType,
+                sport = EXERCISE_TYPE_INT_TO_STRING_MAP[exercise.exerciseType] ?: "workout",
                 caloriesInKiloJules = aggregatedActiveCaloriesBurned,
                 distanceInMeter = aggregatedDistance,
                 heartRate = mapHearthRate(heartRateRecord, fallbackDeviceModel),
@@ -329,7 +331,8 @@ internal class HealthConnectRecordProcessor(
                         startDate = Date.from(it.time),
                         endDate = Date.from(it.time),
                         sourceBundle = heartRateRecord.metadata.dataOrigin.packageName,
-                        deviceModel = heartRateRecord.metadata.device?.type ?: fallbackDeviceModel,
+                        deviceModel = heartRateRecord.metadata.device?.type.toQuantitySampleDeviceModel()
+                            ?: fallbackDeviceModel,
                     )
                 }
         }.flatten()
@@ -347,9 +350,25 @@ internal class HealthConnectRecordProcessor(
                 startDate = Date.from(it.time),
                 endDate = Date.from(it.time),
                 sourceBundle = it.metadata.dataOrigin.packageName,
-                deviceModel = it.metadata.device?.type ?: fallbackDeviceModel,
+                deviceModel = it.metadata.device?.type?.toQuantitySampleDeviceModel()
+                    ?: fallbackDeviceModel,
             )
         }
+    }
+}
+
+private fun Int?.toQuantitySampleDeviceModel(): String? {
+    return when (this) {
+        Device.TYPE_WATCH -> "watch"
+        Device.TYPE_PHONE -> "phone"
+        Device.TYPE_SCALE -> "scale"
+        Device.TYPE_RING -> "ring"
+        Device.TYPE_HEAD_MOUNTED -> "headMounted"
+        Device.TYPE_FITNESS_BAND -> "fitnessBand"
+        Device.TYPE_CHEST_STRAP -> "chestStrap"
+        Device.TYPE_SMART_DISPLAY -> "smartDisplay"
+        Device.TYPE_UNKNOWN -> null
+        else -> null
     }
 }
 

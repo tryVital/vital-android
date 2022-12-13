@@ -23,38 +23,38 @@ class VitalHealthConnectManager private constructor(
 ) {
     private var userId: String? = null
 
-    val requiredPermissions =
-        setOf(
-            HealthPermission.createReadPermission(ExerciseSessionRecord::class),
-            HealthPermission.createReadPermission(DistanceRecord::class),
-            HealthPermission.createReadPermission(ActiveCaloriesBurnedRecord::class),
-            HealthPermission.createReadPermission(HeartRateRecord::class),
-            HealthPermission.createReadPermission(RespiratoryRateRecord::class),
-            HealthPermission.createReadPermission(HeightRecord::class),
-            HealthPermission.createReadPermission(BodyFatRecord::class),
-            HealthPermission.createReadPermission(WeightRecord::class),
-            HealthPermission.createReadPermission(SleepSessionRecord::class),
-            HealthPermission.createReadPermission(OxygenSaturationRecord::class),
-            HealthPermission.createReadPermission(HeartRateVariabilitySdnnRecord::class),
-            HealthPermission.createReadPermission(RestingHeartRateRecord::class),
-            HealthPermission.createReadPermission(ActiveCaloriesBurnedRecord::class),
-            HealthPermission.createReadPermission(BasalMetabolicRateRecord::class),
-            HealthPermission.createReadPermission(StepsRecord::class),
-            HealthPermission.createReadPermission(DistanceRecord::class),
-            HealthPermission.createReadPermission(FloorsClimbedRecord::class),
-        )
+    val requiredPermissions = setOf(
+        HealthPermission.createReadPermission(ExerciseSessionRecord::class),
+        HealthPermission.createReadPermission(DistanceRecord::class),
+        HealthPermission.createReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.createReadPermission(HeartRateRecord::class),
+        HealthPermission.createReadPermission(RespiratoryRateRecord::class),
+        HealthPermission.createReadPermission(HeightRecord::class),
+        HealthPermission.createReadPermission(BodyFatRecord::class),
+        HealthPermission.createReadPermission(WeightRecord::class),
+        HealthPermission.createReadPermission(SleepSessionRecord::class),
+        HealthPermission.createReadPermission(OxygenSaturationRecord::class),
+        HealthPermission.createReadPermission(HeartRateVariabilitySdnnRecord::class),
+        HealthPermission.createReadPermission(RestingHeartRateRecord::class),
+        HealthPermission.createReadPermission(ActiveCaloriesBurnedRecord::class),
+        HealthPermission.createReadPermission(BasalMetabolicRateRecord::class),
+        HealthPermission.createReadPermission(StepsRecord::class),
+        HealthPermission.createReadPermission(DistanceRecord::class),
+        HealthPermission.createReadPermission(FloorsClimbedRecord::class),
+    )
 
     fun isAvailable(context: Context): HealthConnectAvailability {
         return when {
             Build.VERSION.SDK_INT < minSupportedSDK -> HealthConnectAvailability.NotSupportedSDK
-            HealthConnectClient.isAvailable(context) -> HealthConnectAvailability.Installed
+            HealthConnectClient.isProviderAvailable(context) -> HealthConnectAvailability.Installed
             else -> HealthConnectAvailability.NotInstalled
         }
     }
 
     suspend fun hasAllPermissions(context: Context): Boolean {
-        return requiredPermissions == healthConnectClientProvider.getHealthConnectClient(context)
-            .permissionController.getGrantedPermissions(requiredPermissions)
+        return requiredPermissions == healthConnectClientProvider.getHealthConnectClient(context).permissionController.getGrantedPermissions(
+                requiredPermissions
+            )
     }
 
     fun setUserId(userId: String) {
@@ -66,21 +66,15 @@ class VitalHealthConnectManager private constructor(
             throw IllegalStateException("You need to call setUserId before you can read the health data")
         }
 
-        val token = vitalClient.linkService
-            .createLink(
+        val token = vitalClient.linkService.createLink(
                 CreateLinkRequest(
-                    userId!!,
-                    providerId,
-                    callbackURI
+                    userId!!, providerId, callbackURI
                 )
             )
 
         vitalClient.linkService.manualProvider(
-            provider = providerId,
-            linkToken = token.linkToken!!,
-            ManualProviderRequest(
-                userId = userId!!,
-                providerId = providerId
+            provider = providerId, linkToken = token.linkToken!!, ManualProviderRequest(
+                userId = userId!!, providerId = providerId
             )
         )
     }
@@ -89,7 +83,7 @@ class VitalHealthConnectManager private constructor(
         startTime: Instant,
         endTime: Instant,
     ) {
-        Log.e("asd","asd2")
+        Log.e("asd", "asd2")
         if (userId == null) {
             throw IllegalStateException("You need to call setUserId before you can read the health data")
         }
@@ -122,10 +116,7 @@ class VitalHealthConnectManager private constructor(
                 endDate = endDate,
                 timeZoneId = timeZoneId,
                 data = recordProcessor.processActivities(
-                    startTime,
-                    endTime,
-                    currentDevice,
-                    hostTimeZone
+                    startTime, endTime, currentDevice, hostTimeZone
                 ),
             )
         )
@@ -166,8 +157,7 @@ class VitalHealthConnectManager private constructor(
 
     companion object {
         fun create(
-            context: Context,
-            vitalClient: VitalClient
+            context: Context, vitalClient: VitalClient
         ): VitalHealthConnectManager {
             val healthConnectClientProvider = HealthConnectClientProvider()
 

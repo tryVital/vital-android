@@ -20,7 +20,7 @@ buildscript {
         mockito_inline = "4.6.1"
         mockwebserver = "4.10.0"
         kotlinx_coroutines_test = "1.6.4"
-        health_connect = "1.0.0-alpha07"
+        health_connect = "1.0.0-alpha08"
         coil_compose = "2.0.0"
         ble = "2.5.1"
         annotation = "1.5.0"
