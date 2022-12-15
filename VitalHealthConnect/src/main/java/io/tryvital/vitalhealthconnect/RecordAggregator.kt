@@ -6,6 +6,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import io.tryvital.vitalhealthconnect.ext.returnZeroIfException
 import java.time.Instant
 
 interface RecordAggregator {
@@ -61,13 +62,5 @@ internal class HealthConnectRecordAggregator(
 
             (response[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilojoules ?: 0L).toLong()
         }
-    }
-}
-
-private suspend fun returnZeroIfException(block: suspend () -> Long): Long {
-    return try {
-        block()
-    } catch (exception: Exception) {
-        0
     }
 }

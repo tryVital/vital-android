@@ -26,7 +26,11 @@ class HealthConnectRecordProcessorTest {
     fun `process workouts heart rate`() = runTest {
         val healthConnectRecordProcessor = setupProcessor()
         val response =
-            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
+            healthConnectRecordProcessor.processWorkoutsFromTimeRange(
+                startTime,
+                endTime,
+                "not Iphone"
+            )
 
         assertEquals(2, response.size)
         assertEquals(
@@ -39,7 +43,11 @@ class HealthConnectRecordProcessorTest {
     fun `process workouts respiratory rate`() = runTest {
         val healthConnectRecordProcessor = setupProcessor()
         val response =
-            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
+            healthConnectRecordProcessor.processWorkoutsFromTimeRange(
+                startTime,
+                endTime,
+                "not Iphone"
+            )
 
         assertEquals(2, response.size)
         assertEquals(
@@ -53,7 +61,11 @@ class HealthConnectRecordProcessorTest {
     fun `process workouts with samples`() = runTest {
         val healthConnectRecordProcessor = setupProcessor()
         val response =
-            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
+            healthConnectRecordProcessor.processWorkoutsFromTimeRange(
+                startTime,
+                endTime,
+                "not Iphone"
+            )
 
         assertEquals(2, response.size)
         assertEquals(expectedData, response[0])
@@ -63,7 +75,11 @@ class HealthConnectRecordProcessorTest {
     fun `process workouts without samples`() = runTest {
         val healthConnectRecordProcessor = setupProcessor()
         val response =
-            healthConnectRecordProcessor.processWorkouts(startTime, endTime, "not Iphone")
+            healthConnectRecordProcessor.processWorkoutsFromTimeRange(
+                startTime,
+                endTime,
+                "not Iphone"
+            )
 
         assertEquals(2, response.size)
         assertEquals(expectedData2, response[1])
@@ -174,7 +190,7 @@ val testRawExercise = listOf(
         startTime,
         null,
         endTime.minus(5, ChronoUnit.DAYS), null,
-        "walking",
+        79,
         "exercise 1",
         null,
         metadata = Metadata(
@@ -186,7 +202,7 @@ val testRawExercise = listOf(
         startTime.plus(5, ChronoUnit.DAYS),
         null,
         endTime, null,
-        "running",
+        56,
         "exercise 2",
         metadata = Metadata(
             "test raw supersize2",

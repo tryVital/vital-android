@@ -15,9 +15,15 @@ class VitalApp : Application() {
         apiKey = "sk_eu_S5Ld..." //TODO replace it with your own api key
     )
 
-    val userRepository = UserRepository.create()
+    val userRepository by lazy {
+        UserRepository.create()
+    }
 
-    val vitalHealthConnectManager = VitalHealthConnectManager.create(this, client)
+    val vitalHealthConnectManager by lazy {
+        VitalHealthConnectManager.create(this, client)
+    }
 
-    val vitalDeviceManager = VitalDeviceManager.create(this)
+    val vitalDeviceManager by lazy {
+        VitalDeviceManager.create(this)
+    }
 }

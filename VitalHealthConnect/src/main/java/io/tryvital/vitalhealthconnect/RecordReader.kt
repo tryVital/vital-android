@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import io.tryvital.vitalhealthconnect.ext.returnEmptyIfException
 import java.time.Instant
 
 interface RecordReader {
@@ -173,13 +174,5 @@ internal class HealthConnectRecordReader(
                 )
             ).records
         }
-    }
-}
-
-private suspend fun <T> returnEmptyIfException(block: suspend () -> List<T>): List<T> {
-    return try {
-        block()
-    } catch (exception: Exception) {
-        emptyList()
     }
 }

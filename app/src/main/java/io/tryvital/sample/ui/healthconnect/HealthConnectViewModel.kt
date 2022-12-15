@@ -12,8 +12,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 
 class HealthConnectViewModel(
     private val vitalHealthConnectManager: VitalHealthConnectManager,
@@ -26,7 +24,11 @@ class HealthConnectViewModel(
 
     fun init(context: Context) {
         viewModelScope.launch {
-            vitalHealthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
+            vitalHealthConnectManager.apply {
+                setUserId(userRepository.selectedUser!!.userId!!)
+                configureHealthConnectClient(true)
+            }
+
             viewModelState.update {
                 it.copy(
                     available = vitalHealthConnectManager.isAvailable(context),
@@ -64,13 +66,7 @@ class HealthConnectViewModel(
 
     fun readAndUploadHealthData() {
         viewModelScope.launch {
-            vitalHealthConnectManager.readAndUploadHealthData(
-                Instant.now().plus(
-                    -3,
-                    ChronoUnit.HOURS
-                ),
-                Instant.now(),
-            )
+            vitalHealthConnectManager.syncData()
         }
     }
 

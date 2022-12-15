@@ -10,6 +10,12 @@ class VitalLogger private constructor(var enabled: Boolean = false) {
         }
     }
 
+    fun logE(message: String, source: String? = null, throwable: Throwable? = null) {
+        if (enabled) {
+            Log.e(source ?: "vital-logger", message, throwable)
+        }
+    }
+
     companion object {
         private val instance: VitalLogger = VitalLogger()
 
