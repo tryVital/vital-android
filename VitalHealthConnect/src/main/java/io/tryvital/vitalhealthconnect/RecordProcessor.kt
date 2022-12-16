@@ -7,6 +7,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
 import io.tryvital.vitalhealthconnect.ext.dayStart
 import io.tryvital.vitalhealthconnect.ext.toDate
+import io.tryvital.vitalhealthconnect.model.HCQuantitySample
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*

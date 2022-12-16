@@ -16,6 +16,10 @@ import androidx.security.crypto.MasterKeys
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
 import io.tryvital.vitalhealthconnect.ext.toDate
+import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.model.SyncStatus
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
@@ -67,7 +71,15 @@ class VitalHealthConnectManager private constructor(
 
     val requiredPermissions = recordTypes.map { HealthPermission.createReadPermission(it) }.toSet()
 
-    val vitalLogger = vitalClient.vitalLogger
+    private val vitalLogger = vitalClient.vitalLogger
+
+    private val _status = MutableSharedFlow<SyncStatus>(replay = 1)
+    val status: SharedFlow<SyncStatus> = _status
+
+    init {
+        vitalLogger.logI("VitalHealthConnectManager initialized")
+        _status.tryEmit(SyncStatus.Unknown)
+    }
 
     fun isAvailable(context: Context): HealthConnectAvailability {
         return when {
@@ -110,7 +122,7 @@ class VitalHealthConnectManager private constructor(
     @SuppressLint("ApplySharedPref")
     suspend fun configureHealthConnectClient(
         logsEnabled: Boolean = false,
-        numberOfDaysToBackFill: Int = 30,
+        numberOfDaysToBackFill: Int = 1,
     ) {
         checkUserId()
 
@@ -121,6 +133,7 @@ class VitalHealthConnectManager private constructor(
 
     suspend fun syncData() {
         checkUserId()
+        _status.tryEmit(SyncStatus.Syncing)
 
         try {
             val changeToken = sharedPreferences.getString(changeTokenKey, null)
@@ -135,6 +148,8 @@ class VitalHealthConnectManager private constructor(
                     ),
                     endTime = Instant.now()
                 )
+
+                _status.tryEmit(SyncStatus.SyncingCompleted)
             } else {
                 val changes =
                     healthConnectClientProvider.getHealthConnectClient(context)
@@ -150,8 +165,11 @@ class VitalHealthConnectManager private constructor(
                         ),
                         endTime = Instant.now()
                     )
+
+                    _status.tryEmit(SyncStatus.SyncingCompleted)
                 } else if (changes.changes.isEmpty()) {
                     vitalLogger.logI("No changes to sync")
+                    _status.tryEmit(SyncStatus.NothingToSync)
                 } else {
                     vitalLogger.logI("Syncing ${changes.changes.size} changes")
 
@@ -170,6 +188,8 @@ class VitalHealthConnectManager private constructor(
                             currentChanges = null
                         }
                     }
+
+                    _status.tryEmit(SyncStatus.SyncingCompleted)
                 }
             }
 
@@ -182,6 +202,7 @@ class VitalHealthConnectManager private constructor(
             ).apply()
         } catch (e: Exception) {
             vitalLogger.logE("Error syncing data", e.message, e)
+            _status.tryEmit(SyncStatus.FailedSyncing)
         }
     }
 
@@ -447,16 +468,16 @@ class VitalHealthConnectManager private constructor(
         workoutPayloads: List<WorkoutPayload>,
     ) {
         if (workoutPayloads.isNotEmpty()) {
-//            vitalClient.summaryService.addWorkouts(
-//                userId, SummaryPayload(
-//                    stage = stage,
-//                    provider = providerId,
-//                    startDate = startDate,
-//                    endDate = endDate,
-//                    timeZoneId = timeZoneId,
-//                    data = workoutPayloads,
-//                )
-//            )
+            vitalClient.summaryService.addWorkouts(
+                userId, SummaryPayload(
+                    stage = stage,
+                    provider = providerId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    timeZoneId = timeZoneId,
+                    data = workoutPayloads,
+                )
+            )
         }
     }
 
@@ -484,3 +505,4 @@ class VitalHealthConnectManager private constructor(
         }
     }
 }
+

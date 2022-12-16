@@ -115,55 +115,54 @@ fun UsersScreen(
                 }
             }
 
-            //Not ready
-//            Box(Modifier.align(Alignment.BottomCenter)) {
-//                AnimatedVisibility(
-//                    visible = state.selectedUser != null,
-//                    enter = slideInVertically(
-//                        initialOffsetY = { 40 }
-//                    ) + expandVertically(
-//                        expandFrom = Alignment.Bottom
-//                    ) + fadeIn(initialAlpha = 0.3f),
-//                    exit = slideOutVertically() + shrinkVertically() + fadeOut(),
-//                ) {
-//                    Card(
-//                        modifier = Modifier
-//                            .align(Alignment.BottomCenter)
-//                            .height(80.dp)
-//                            .fillMaxWidth()
-//                    ) {
-//                        Row(
-//                            Modifier.padding(16.dp),
-//                            verticalAlignment = Alignment.CenterVertically
-//                        ) {
-//                            Text(
-//                                "Health Connect",
-//                                fontSize = 18.sp,
-//                                fontWeight = FontWeight.Bold,
-//                            )
-//                            Spacer(Modifier.weight(1f))
-//                            Button(
-//                                onClick = { navController.navigate(Screen.HealthConnect.route) },
-//                                contentPadding = PaddingValues(
-//                                    start = 20.dp,
-//                                    top = 12.dp,
-//                                    end = 20.dp,
-//                                    bottom = 12.dp
-//                                )
-//                            ) {
-//                                Icon(
-//                                    Icons.Outlined.Sync,
-//                                    contentDescription = null,
-//                                    modifier = Modifier.size(ButtonDefaults.IconSize)
-//                                )
-//                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-//                                Text("Connect")
-//                            }
-//                        }
-//                    }
-//
-//                }
-//            }
+            Box(Modifier.align(Alignment.BottomCenter)) {
+                AnimatedVisibility(
+                    visible = state.selectedUser != null,
+                    enter = slideInVertically(
+                        initialOffsetY = { 40 }
+                    ) + expandVertically(
+                        expandFrom = Alignment.Bottom
+                    ) + fadeIn(initialAlpha = 0.3f),
+                    exit = slideOutVertically() + shrinkVertically() + fadeOut(),
+                ) {
+                    Card(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .height(80.dp)
+                            .fillMaxWidth()
+                    ) {
+                        Row(
+                            Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Health Connect",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            Button(
+                                onClick = { navController.navigate(Screen.HealthConnect.route) },
+                                contentPadding = PaddingValues(
+                                    start = 20.dp,
+                                    top = 12.dp,
+                                    end = 20.dp,
+                                    bottom = 12.dp
+                                )
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Sync,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                                )
+                                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                                Text("Connect")
+                            }
+                        }
+                    }
+
+                }
+            }
 
         }
     }

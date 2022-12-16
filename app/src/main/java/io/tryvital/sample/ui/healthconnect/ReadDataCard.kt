@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun ReadDataCard(
+    state: HealthConnectViewModelState,
     viewModel: HealthConnectViewModel,
 ) {
     Card(Modifier.padding(16.dp)) {
@@ -20,7 +21,15 @@ fun ReadDataCard(
                 .padding(16.dp)
                 .fillMaxWidth()
         ) {
-            Text("Read data", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Read data", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = state.syncStatus.toString())
+            }
             Spacer(modifier = Modifier.height(12.dp))
             Row {
                 Button(

@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.health.connect.client.PermissionController
-import io.tryvital.vitalhealthconnect.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 
 @Composable
 fun HealthConnectCard(

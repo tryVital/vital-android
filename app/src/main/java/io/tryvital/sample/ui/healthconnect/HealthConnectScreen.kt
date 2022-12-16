@@ -71,7 +71,7 @@ fun HealthConnectScreen(
         Column(modifier = Modifier.padding(padding), content = {
             UserDetailsCard(state)
             HealthConnectCard(state, viewModel)
-            ReadDataCard(viewModel)
+            ReadDataCard(state,viewModel)
         })
     }
 }
