@@ -97,8 +97,6 @@ internal class HealthConnectRecordProcessor(
         endTime: Instant,
         fallbackDeviceModel: String,
     ) = processWorkout(
-        startTime,
-        endTime,
         fallbackDeviceModel,
         recordReader.readExerciseSessions(startTime, endTime),
     )
@@ -108,23 +106,22 @@ internal class HealthConnectRecordProcessor(
         endTime: Instant,
         fallbackDeviceModel: String,
         exerciseRecords: List<ExerciseSessionRecord>
-    ) =
-        processWorkout(startTime, endTime, fallbackDeviceModel, exerciseRecords)
+    ) = processWorkout(fallbackDeviceModel, exerciseRecords)
 
     private suspend fun processWorkout(
-        startTime: Instant,
-        endTime: Instant,
         fallbackDeviceModel: String,
         exercises: List<ExerciseSessionRecord>,
     ): List<WorkoutPayload> {
         vitalClient.vitalLogger.logI("Found ${exercises.size} workouts")
 
         return exercises.map { exercise ->
-            val aggregatedDistance = recordAggregator.aggregateDistance(startTime, endTime)
+            val aggregatedDistance =
+                recordAggregator.aggregateDistance(exercise.startTime, exercise.endTime)
             val aggregatedActiveCaloriesBurned =
-                recordAggregator.aggregateActiveEnergyBurned(startTime, endTime)
-            val heartRateRecord = recordReader.readHeartRate(startTime, endTime)
-            val respiratoryRateRecord = recordReader.readRespiratoryRate(startTime, endTime)
+                recordAggregator.aggregateActiveEnergyBurned(exercise.startTime, exercise.endTime)
+            val heartRateRecord = recordReader.readHeartRate(exercise.startTime, exercise.endTime)
+            val respiratoryRateRecord =
+                recordReader.readRespiratoryRate(exercise.startTime, exercise.endTime)
 
             WorkoutPayload(
                 id = exercise.metadata.id,
@@ -445,13 +442,16 @@ internal class HealthConnectRecordProcessor(
         fallbackDeviceModel: String
     ): List<QuantitySample> {
         return heartRateRecords.map { heartRateRecord ->
-            heartRateRecord.samples
+            heartRateRecord.samples.windowed(5)
                 .map {
+                    val averagedSample =
+                        it.fold(0L) { acc, sample -> acc + sample.beatsPerMinute } / it.size
+
                     HCQuantitySample(
-                        value = it.beatsPerMinute.toString(),
+                        value = averagedSample.toString(),
                         unit = SampleType.HeartRate.unit,
-                        startDate = it.time.toDate(),
-                        endDate = it.time.toDate(),
+                        startDate = it.first().time.toDate(),
+                        endDate = it.last().time.toDate(),
                         metadata = heartRateRecord.metadata,
                     ).toQuantitySample(fallbackDeviceModel)
                 }
@@ -475,8 +475,9 @@ internal class HealthConnectRecordProcessor(
 }
 
 private fun nextDayOrRangeEnd(rangeStart: Instant, endTime: Instant) =
-    if (rangeStart.dayStart == endTime.dayStart)
+    if (rangeStart.dayStart == endTime.dayStart) {
         endTime
-    else
+    } else {
         rangeStart.dayStart.plus(1, ChronoUnit.DAYS)
+    }
 

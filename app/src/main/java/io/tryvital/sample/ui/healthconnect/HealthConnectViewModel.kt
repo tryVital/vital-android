@@ -10,6 +10,7 @@ import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.model.SyncStatus
+import io.tryvital.vitalhealthconnect.vitalRequiredPermissions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -60,7 +61,7 @@ class HealthConnectViewModel(
     }
 
     fun getPermissions(): Set<HealthPermission> {
-        return vitalHealthConnectManager.requiredPermissions
+        return vitalRequiredPermissions
     }
 
     fun linkProvider() {

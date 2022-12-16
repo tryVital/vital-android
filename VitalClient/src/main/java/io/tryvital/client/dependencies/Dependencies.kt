@@ -5,9 +5,11 @@ import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterF
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import io.tryvital.client.BuildConfig
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.utils.ApiKeyInterceptor
+import io.tryvital.client.utils.GzipRequestInterceptor
 import io.tryvital.client.utils.VitalLogger
 import okhttp3.Cache
 import okhttp3.OkHttpClient
@@ -19,6 +21,7 @@ import java.lang.reflect.Type
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.concurrent.TimeUnit
 
 class Dependencies(
     context: Context,
@@ -48,7 +51,12 @@ class Dependencies(
             val cacheSizeInMB: Long = 2 * 1024 * 1024
 
             val loggingInterceptor = HttpLoggingInterceptor()
-            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+            if (BuildConfig.DEBUG) {
+                loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
+            } else {
+                loggingInterceptor.level = HttpLoggingInterceptor.Level.NONE
+            }
+
             return OkHttpClient.Builder()
                 .apply {
                     context?.let {
@@ -56,8 +64,11 @@ class Dependencies(
                         cache(cache)
                     }
                 }
-                .addInterceptor(loggingInterceptor)
+                .writeTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60, TimeUnit.SECONDS)
+                .addInterceptor(GzipRequestInterceptor())
                 .addNetworkInterceptor(ApiKeyInterceptor(apiKey))
+                .addInterceptor(loggingInterceptor)
                 .build()
         }
 

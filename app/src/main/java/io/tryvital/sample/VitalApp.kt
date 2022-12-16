@@ -12,7 +12,7 @@ class VitalApp : Application() {
         context = this,
         region = Region.EU,
         environment = Environment.Sandbox,
-        apiKey = "sk_eu_S5Ld..." //TODO replace it with your own api key
+        apiKey = "sk_eu_S5LdXTS_CAtdFrkX9OYsiVq_jGHaIXtZyBPbBtPkzhA"
     )
 
     val userRepository by lazy {

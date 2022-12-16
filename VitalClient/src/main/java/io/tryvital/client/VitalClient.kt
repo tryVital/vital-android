@@ -7,9 +7,9 @@ import io.tryvital.client.services.*
 @Suppress("unused")
 class VitalClient(
     context: Context,
-    region: Region,
-    environment: Environment = Environment.Sandbox,
-    apiKey: String,
+    val region: Region,
+    val environment: Environment = Environment.Sandbox,
+    val apiKey: String,
 ) {
 
     private val dependencies: Dependencies by lazy {
