@@ -7,7 +7,6 @@ import android.os.Build
 import androidx.health.connect.client.changes.Change
 import androidx.health.connect.client.changes.UpsertionChange
 import androidx.health.connect.client.records.*
-import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -18,6 +17,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
 import io.tryvital.vitalhealthconnect.ext.toDate
+import io.tryvital.vitalhealthconnect.records.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.*
@@ -68,24 +68,24 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
     override suspend fun doWork(): Result {
         return withContext(Dispatchers.IO) {
             try {
-                val changes =
+                val originalChanges =
                     HealthConnectClientProvider().getHealthConnectClient(applicationContext)
                         .getChanges(sharedPreferences.getString(changeTokenKey, null)!!)
 
 
-                var currentChanges: ChangesResponse? = changes
+                var currentChanges: ChangesResponse? = originalChanges
                 while (currentChanges != null) {
                     readAndUploadHealthDataFromChange(
                         inputData.getString(userIdKey)!!,
                         currentChanges.changes
                     )
 
-                    if (changes.hasMore) {
+                    if (currentChanges.hasMore) {
                         currentChanges =
                             HealthConnectClientProvider().getHealthConnectClient(applicationContext)
-                                .getChanges(changes.nextChangesToken)
+                                .getChanges(currentChanges.nextChangesToken)
                         sharedPreferences.edit()
-                            .putString(changeTokenKey, changes.nextChangesToken)
+                            .putString(changeTokenKey, currentChanges.nextChangesToken)
                             .apply()
                     } else {
                         currentChanges = null
@@ -93,15 +93,11 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 }
 
                 vitalLogger.logI("Updating changes token")
-                sharedPreferences.edit().putString(
-                    changeTokenKey,
-                    HealthConnectClientProvider().getHealthConnectClient(applicationContext)
-                        .getChangesToken(ChangesTokenRequest(vitalRecordTypes))
-                ).commit()
+                saveNewChangeToken(applicationContext)
 
                 Result.success()
             } catch (e: Exception) {
-                vitalLogger.logE("Error uploading data", e.message, e)
+                vitalLogger.logE("Error uploading data", e)
                 Result.failure()
             }
         }

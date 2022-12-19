@@ -1,7 +1,8 @@
-package io.tryvital.vitalhealthconnect
+package io.tryvital.vitalhealthconnect.records
 
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
+import io.tryvital.vitalhealthconnect.providerId
 import java.util.*
 
 private const val stage = "daily"

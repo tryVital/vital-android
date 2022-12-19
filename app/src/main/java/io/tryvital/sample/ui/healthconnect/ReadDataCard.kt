@@ -54,7 +54,7 @@ fun ReadDataCard(
                 Spacer(modifier = Modifier.weight(1f))
                 Button(
                     onClick = {
-                        viewModel.readAndUploadHealthData()
+                        viewModel.sync()
                     },
                     contentPadding = PaddingValues(
                         start = 20.dp,
@@ -69,7 +69,7 @@ fun ReadDataCard(
                         modifier = Modifier.size(ButtonDefaults.IconSize)
                     )
                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                    Text("Read")
+                    Text("Sync")
                 }
             }
         }

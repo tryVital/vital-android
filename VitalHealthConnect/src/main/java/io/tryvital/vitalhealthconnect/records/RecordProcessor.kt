@@ -1,4 +1,4 @@
-package io.tryvital.vitalhealthconnect
+package io.tryvital.vitalhealthconnect.records
 
 import android.annotation.SuppressLint
 import androidx.health.connect.client.records.*

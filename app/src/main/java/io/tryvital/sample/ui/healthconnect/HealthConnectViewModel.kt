@@ -8,9 +8,9 @@ import androidx.lifecycle.viewModelScope
 import io.tryvital.client.services.data.User
 import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
+import io.tryvital.vitalhealthconnect.VitalHealthConnectManager.Companion.vitalRequiredPermissions
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.model.SyncStatus
-import io.tryvital.vitalhealthconnect.vitalRequiredPermissions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -30,7 +30,8 @@ class HealthConnectViewModel(
             viewModelState.update {
                 it.copy(
                     available = vitalHealthConnectManager.isAvailable(context),
-                    permissionsGranted = vitalHealthConnectManager.hasAllPermissions(context)
+                    permissionsGranted = vitalHealthConnectManager.getGrantedPermissions(context)
+                        .containsAll(vitalRequiredPermissions)
                 )
             }
         }
@@ -54,7 +55,7 @@ class HealthConnectViewModel(
         viewModelScope.launch {
             viewModelState.update {
                 it.copy(
-                    permissionsGranted = vitalHealthConnectManager.hasAllPermissions(context)
+                    permissionsGranted = vitalHealthConnectManager.getGrantedPermissions(context) == vitalRequiredPermissions
                 )
             }
         }
@@ -70,7 +71,7 @@ class HealthConnectViewModel(
         }
     }
 
-    fun readAndUploadHealthData() {
+    fun sync() {
         viewModelScope.launch {
             vitalHealthConnectManager.apply {
                 setUserId(userRepository.selectedUser!!.userId!!)

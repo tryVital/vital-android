@@ -13,6 +13,8 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.Operation
 import androidx.work.WorkManager
+import io.tryvital.client.Environment
+import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.*
+import kotlin.reflect.KClass
 
 internal const val providerId = "health_connect"
 internal const val prefsFileName: String = "vital_health_connect_prefs"
@@ -35,7 +38,7 @@ private const val userIdKey = "userId"
 private const val numberOfDaysToBackFillKey = "numberOfDaysToBackFill"
 private const val encryptedPrefsFileName: String = "safe_vital_health_connect_prefs"
 
-internal val vitalRecordTypes = setOf(
+internal val vitalRequiredRecordTypes = setOf(
     ExerciseSessionRecord::class,
     DistanceRecord::class,
     ActiveCaloriesBurnedRecord::class,
@@ -55,26 +58,36 @@ internal val vitalRecordTypes = setOf(
     FloorsClimbedRecord::class,
 )
 
-val vitalRequiredPermissions =
-    vitalRecordTypes.map { HealthPermission.createReadPermission(it) }.toSet()
+internal fun vitalRecordTypes(healthPermission: Set<HealthPermission>): Set<KClass<out Record>> {
+    return vitalRequiredRecordTypes.filter { recordType ->
+        healthPermission.contains(HealthPermission.createReadPermission(recordType))
+    }.toSet()
+}
 
 @Suppress("MemberVisibilityCanBePrivate")
 class VitalHealthConnectManager private constructor(
+    private val context: Context,
     private val healthConnectClientProvider: HealthConnectClientProvider,
-    private val vitalClient: VitalClient,
-    private val context: Context
+    apiKey: String,
+    region: Region,
+    environment: Environment
 ) {
-    private val encryptedSharedPreferences: SharedPreferences = EncryptedSharedPreferences.create(
-        encryptedPrefsFileName,
-        MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
-        context,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
+    private val vitalClient: VitalClient = VitalClient(context, region, environment, apiKey)
+
+    private val encryptedSharedPreferences: SharedPreferences by lazy {
+        try {
+            createEncryptedSharedPreferences()
+        } catch (e: Exception) {
+            vitalLogger.logE(
+                "Failed to decrypt shared preferences, creating new encrypted shared preferences", e
+            )
+            context.deleteSharedPreferences(encryptedPrefsFileName)
+            return@lazy createEncryptedSharedPreferences()
+        }
+    }
 
     private val sharedPreferences: SharedPreferences = context.getSharedPreferences(
-        prefsFileName,
-        Context.MODE_PRIVATE
+        prefsFileName, Context.MODE_PRIVATE
     )
 
     private val vitalLogger = vitalClient.vitalLogger
@@ -95,12 +108,9 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
-    suspend fun hasAllPermissions(context: Context): Boolean {
-        return vitalRequiredPermissions == healthConnectClientProvider.getHealthConnectClient(
-            context
-        ).permissionController.getGrantedPermissions(
-            vitalRequiredPermissions
-        )
+    suspend fun getGrantedPermissions(context: Context): Set<HealthPermission> {
+        return healthConnectClientProvider.getHealthConnectClient(context)
+            .permissionController.getGrantedPermissions(vitalRequiredPermissions)
     }
 
     @SuppressLint("ApplySharedPref")
@@ -138,10 +148,13 @@ class VitalHealthConnectManager private constructor(
         encryptedSharedPreferences.edit().putInt(numberOfDaysToBackFillKey, numberOfDaysToBackFill)
             .commit()
         vitalLogger.enabled = logsEnabled
-        syncData()
+
+
+        syncData(getGrantedPermissions(context))
     }
 
-    suspend fun syncData() {
+    //TODO we should respect the requested permissions. It will always sync all the permitted data
+    suspend fun syncData(@Suppress("UNUSED_PARAMETER") healthPermission: Set<HealthPermission>) {
         val userId = checkUserId()
         _status.tryEmit(SyncStatus.Syncing)
 
@@ -155,50 +168,48 @@ class VitalHealthConnectManager private constructor(
 
                 _status.tryEmit(SyncStatus.SyncingCompleted)
             } else {
-                val changes =
+                val changes = try {
                     healthConnectClientProvider.getHealthConnectClient(context)
                         .getChanges(changeToken)
+                } catch (e: Exception) {
+                    vitalLogger.logE("Failed to get changes", e)
+                    sharedPreferences.edit().remove(changeTokenKey).apply()
+                    null
+                }
 
-                if (changes.changesTokenExpired) {
-                    vitalLogger.logI("Changes token expired, reading all data")
-
+                if (changes == null) {
+                    vitalLogger.logI("Change token problem, syncing all data")
                     startWorkerForAllData(userId)
-
-                    _status.tryEmit(SyncStatus.SyncingCompleted)
+                } else if (changes.changesTokenExpired) {
+                    vitalLogger.logI("Changes token expired, reading all data")
+                    startWorkerForAllData(userId)
                 } else if (changes.changes.isEmpty()) {
                     vitalLogger.logI("No changes to sync")
                     _status.tryEmit(SyncStatus.NothingToSync)
                 } else {
                     vitalLogger.logI("Syncing ${changes.changes.size} changes")
-
                     startWorkerForChanges(userId)
-                    vitalLogger.logI("aaaaaa")
                 }
             }
         } catch (e: Exception) {
-            vitalLogger.logE("Error syncing data", e.message, e)
+            vitalLogger.logE("Error syncing data", e)
             _status.tryEmit(SyncStatus.FailedSyncing)
         }
     }
 
     private fun startWorkerForChanges(userId: String) {
-        val operation = WorkManager
-            .getInstance(context)
-            .beginUniqueWork(
-                "UploadChangesWorker",
-                ExistingWorkPolicy.REPLACE,
-                OneTimeWorkRequestBuilder<UploadChangesWorker>()
-                    .setInputData(
-                        UploadChangesWorker.createInputData(
-                            userId = userId,
-                            region = vitalClient.region,
-                            environment = vitalClient.environment,
-                            apiKey = vitalClient.apiKey,
-                        )
-                    )
-                    .build()
-            )
-            .enqueue()
+        val operation = WorkManager.getInstance(context).beginUniqueWork(
+            "UploadChangesWorker",
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<UploadChangesWorker>().setInputData(
+                UploadChangesWorker.createInputData(
+                    userId = userId,
+                    region = vitalClient.region,
+                    environment = vitalClient.environment,
+                    apiKey = vitalClient.apiKey,
+                )
+            ).build()
+        ).enqueue()
 
 
         operation.state.observeForever {
@@ -215,26 +226,23 @@ class VitalHealthConnectManager private constructor(
     }
 
     private fun startWorkerForAllData(userId: String) {
-        val operation = WorkManager
-            .getInstance(context)
-            .enqueue(
-                OneTimeWorkRequestBuilder<UploadAllDataWorker>()
-                    .setInputData(
-                        UploadAllDataWorker.createInputData(
-                            startTime = Instant.now().minus(
-                                encryptedSharedPreferences.getInt(numberOfDaysToBackFillKey, 30)
-                                    .toLong(),
-                                ChronoUnit.DAYS
-                            ),
-                            endTime = Instant.now(),
-                            userId = userId,
-                            region = vitalClient.region,
-                            environment = vitalClient.environment,
-                            apiKey = vitalClient.apiKey,
-                        )
-                    )
-                    .build()
-            )
+        val operation = WorkManager.getInstance(context).beginUniqueWork(
+            "UploadAllDataWorker",
+            ExistingWorkPolicy.REPLACE,
+            OneTimeWorkRequestBuilder<UploadAllDataWorker>().setInputData(
+                UploadAllDataWorker.createInputData(
+                    startTime = Instant.now().minus(
+                        encryptedSharedPreferences.getInt(numberOfDaysToBackFillKey, 30)
+                            .toLong(), ChronoUnit.DAYS
+                    ),
+                    endTime = Instant.now(),
+                    userId = userId,
+                    region = vitalClient.region,
+                    environment = vitalClient.environment,
+                    apiKey = vitalClient.apiKey,
+                )
+            ).build()
+        ).enqueue()
 
         operation.state.observeForever {
             when (it) {
@@ -250,22 +258,40 @@ class VitalHealthConnectManager private constructor(
     }
 
     private fun checkUserId(): String {
-        return encryptedSharedPreferences.getString(userIdKey, null)
-            ?: throw IllegalStateException("You need to call setUserId before you can read the health data")
+        return encryptedSharedPreferences.getString(userIdKey, null) ?: throw IllegalStateException(
+            "You need to call setUserId before you can read the health data"
+        )
     }
+
+    private fun createEncryptedSharedPreferences() = EncryptedSharedPreferences.create(
+        encryptedPrefsFileName,
+        MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
+        context,
+        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+    )
+
 
     companion object {
         fun create(
-            context: Context, vitalClient: VitalClient
+            context: Context,
+            apiKey: String,
+            region: Region,
+            environment: Environment,
         ): VitalHealthConnectManager {
             val healthConnectClientProvider = HealthConnectClientProvider()
 
             return VitalHealthConnectManager(
+                context,
                 healthConnectClientProvider,
-                vitalClient,
-                context
+                apiKey,
+                region,
+                environment,
             )
         }
+
+        val vitalRequiredPermissions =
+            vitalRequiredRecordTypes.map { HealthPermission.createReadPermission(it) }.toSet()
     }
 }
 

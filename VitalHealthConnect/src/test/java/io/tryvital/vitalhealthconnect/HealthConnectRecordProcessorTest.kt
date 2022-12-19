@@ -9,6 +9,9 @@ import androidx.health.connect.client.records.metadata.Metadata
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.QuantitySample
 import io.tryvital.client.services.data.WorkoutPayload
+import io.tryvital.vitalhealthconnect.records.HealthConnectRecordProcessor
+import io.tryvital.vitalhealthconnect.records.RecordAggregator
+import io.tryvital.vitalhealthconnect.records.RecordReader
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals

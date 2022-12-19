@@ -7,12 +7,17 @@ import io.tryvital.client.VitalClient
 import io.tryvital.vitaldevices.VitalDeviceManager
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 
+const val apiKey = "sk_eu_S5LdXTS_CAtdFrkX9OYsiVq_jGHaIXtZyBPbBtPkzhA"
+
+val region = Region.EU
+val environment = Environment.Sandbox
+
 class VitalApp : Application() {
     val client = VitalClient(
         context = this,
-        region = Region.EU,
-        environment = Environment.Sandbox,
-        apiKey = "sk_eu_S5LdXTS_CAtdFrkX9OYsiVq_jGHaIXtZyBPbBtPkzhA"
+        region = region,
+        environment = environment,
+        apiKey = apiKey
     )
 
     val userRepository by lazy {
@@ -20,7 +25,7 @@ class VitalApp : Application() {
     }
 
     val vitalHealthConnectManager by lazy {
-        VitalHealthConnectManager.create(this, client)
+        VitalHealthConnectManager.create(this, apiKey, region, environment)
     }
 
     val vitalDeviceManager by lazy {

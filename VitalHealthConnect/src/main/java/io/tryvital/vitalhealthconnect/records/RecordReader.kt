@@ -1,9 +1,10 @@
-package io.tryvital.vitalhealthconnect
+package io.tryvital.vitalhealthconnect.records
 
 import android.content.Context
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.ext.returnEmptyIfException
 import java.time.Instant
 

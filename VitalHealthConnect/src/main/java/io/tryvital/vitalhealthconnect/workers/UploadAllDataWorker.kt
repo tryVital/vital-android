@@ -2,10 +2,7 @@ package io.tryvital.vitalhealthconnect.workers
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.content.SharedPreferences
 import android.os.Build
-import android.util.Log
-import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
@@ -15,6 +12,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
 import io.tryvital.vitalhealthconnect.ext.toDate
+import io.tryvital.vitalhealthconnect.records.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.Instant
@@ -29,11 +27,6 @@ private const val apiKeyKey = "apiKey"
 
 class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
-
-    private val sharedPreferences: SharedPreferences = appContext.getSharedPreferences(
-        prefsFileName,
-        Context.MODE_PRIVATE
-    )
 
     private val vitalClient: VitalClient by lazy {
         VitalClient(
@@ -75,15 +68,11 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
                 )
 
                 vitalLogger.logI("Updating changes token")
-                sharedPreferences.edit().putString(
-                    changeTokenKey,
-                    HealthConnectClientProvider().getHealthConnectClient(applicationContext)
-                        .getChangesToken(ChangesTokenRequest(vitalRecordTypes))
-                ).commit()
+                saveNewChangeToken(applicationContext)
 
                 Result.success()
             } catch (e: Exception) {
-                vitalLogger.logE("Error uploading data", e.message, e)
+                vitalLogger.logE("Error uploading data", e)
                 Result.failure()
             }
         }
@@ -94,7 +83,6 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         endTime: Instant,
         userId: String,
     ) {
-
         val currentDevice = Build.MODEL
         val startDate = startTime.toDate()
         val endDate = endTime.toDate()
@@ -104,7 +92,6 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         vitalLogger.logI("getting workouts")
         val workoutPayloads =
             recordProcessor.processWorkoutsFromTimeRange(startTime, endTime, currentDevice)
-        Log.e("asd", workoutPayloads.toString())
         vitalLogger.logI("uploading workouts")
         recordUploader.uploadWorkouts(userId, startDate, endDate, timeZoneId, workoutPayloads)
 

@@ -2,17 +2,19 @@ package io.tryvital.client.utils
 
 import android.util.Log
 
+private const val VITAL_LOGGER = "vital-logger"
+
 class VitalLogger private constructor(var enabled: Boolean = false) {
 
-    fun logI(message: String, source: String? = null) {
+    fun logI(message: String) {
         if (enabled) {
-            Log.i(source ?: "vital-logger", message)
+            Log.i(VITAL_LOGGER, message)
         }
     }
 
-    fun logE(message: String, source: String? = null, throwable: Throwable? = null) {
+    fun logE(message: String, throwable: Throwable? = null) {
         if (enabled) {
-            Log.e(source ?: "vital-logger", message, throwable)
+            Log.e(VITAL_LOGGER, message, throwable)
         }
     }
 
