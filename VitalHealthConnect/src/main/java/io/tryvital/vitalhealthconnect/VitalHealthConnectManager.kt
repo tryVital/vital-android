@@ -7,8 +7,6 @@ import android.os.Build
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKeys
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.Operation
@@ -21,6 +19,7 @@ import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.model.SyncStatus
 import io.tryvital.vitalhealthconnect.workers.UploadAllDataWorker
 import io.tryvital.vitalhealthconnect.workers.UploadChangesWorker
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import java.time.Instant
@@ -29,14 +28,10 @@ import java.util.*
 import kotlin.reflect.KClass
 
 internal const val providerId = "health_connect"
-internal const val prefsFileName: String = "vital_health_connect_prefs"
-internal const val changeTokenKey = "changeToken"
 
 private const val minSupportedSDK = Build.VERSION_CODES.P
 
 private const val userIdKey = "userId"
-private const val numberOfDaysToBackFillKey = "numberOfDaysToBackFill"
-private const val encryptedPrefsFileName: String = "safe_vital_health_connect_prefs"
 
 internal val vitalRequiredRecordTypes = setOf(
     ExerciseSessionRecord::class,
@@ -68,21 +63,21 @@ internal fun vitalRecordTypes(healthPermission: Set<HealthPermission>): Set<KCla
 class VitalHealthConnectManager private constructor(
     private val context: Context,
     private val healthConnectClientProvider: HealthConnectClientProvider,
-    apiKey: String,
-    region: Region,
-    environment: Environment
+    private val apiKey: String,
+    private val region: Region,
+    private val environment: Environment
 ) {
     private val vitalClient: VitalClient = VitalClient(context, region, environment, apiKey)
 
     private val encryptedSharedPreferences: SharedPreferences by lazy {
         try {
-            createEncryptedSharedPreferences()
+            createEncryptedSharedPreferences(context)
         } catch (e: Exception) {
             vitalLogger.logE(
                 "Failed to decrypt shared preferences, creating new encrypted shared preferences", e
             )
             context.deleteSharedPreferences(encryptedPrefsFileName)
-            return@lazy createEncryptedSharedPreferences()
+            return@lazy createEncryptedSharedPreferences(context)
         }
     }
 
@@ -94,6 +89,8 @@ class VitalHealthConnectManager private constructor(
 
     private val _status = MutableSharedFlow<SyncStatus>(replay = 1)
     val status: SharedFlow<SyncStatus> = _status
+
+    private var observerJob: Job? = null
 
     init {
         vitalLogger.logI("VitalHealthConnectManager initialized")
@@ -117,7 +114,7 @@ class VitalHealthConnectManager private constructor(
     fun setUserId(userId: String) {
         encryptedSharedPreferences.edit().apply {
             putString(userIdKey, userId)
-            remove(changeTokenKey)
+            remove(UnSecurePrefKeys.changeTokenKey)
             commit()
         }
     }
@@ -141,25 +138,35 @@ class VitalHealthConnectManager private constructor(
     @SuppressLint("ApplySharedPref")
     suspend fun configureHealthConnectClient(
         logsEnabled: Boolean = false,
+        syncOnAppStart: Boolean = true,
         numberOfDaysToBackFill: Int = 30,
     ) {
         checkUserId()
 
-        encryptedSharedPreferences.edit().putInt(numberOfDaysToBackFillKey, numberOfDaysToBackFill)
-            .commit()
         vitalLogger.enabled = logsEnabled
 
+        encryptedSharedPreferences.edit()
+            .putString(SecurePrefKeys.apiKeyKey, apiKey)
+            .putString(SecurePrefKeys.regionKey, region.name)
+            .putString(SecurePrefKeys.environmentKey, environment.name)
+            .commit()
+
+        sharedPreferences.edit()
+            .putBoolean(UnSecurePrefKeys.loggerEnabledKey, logsEnabled)
+            .putBoolean(UnSecurePrefKeys.syncOnAppStartKey, syncOnAppStart)
+            .putInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, numberOfDaysToBackFill)
+            .commit()
 
         syncData(getGrantedPermissions(context))
     }
 
     //TODO we should respect the requested permissions. It will always sync all the permitted data
-    suspend fun syncData(@Suppress("UNUSED_PARAMETER") healthPermission: Set<HealthPermission>) {
+    suspend fun syncData(@Suppress("UNUSED_PARAMETER") healthPermission: Set<HealthPermission>? = null) {
         val userId = checkUserId()
         _status.tryEmit(SyncStatus.Syncing)
 
         try {
-            val changeToken = sharedPreferences.getString(changeTokenKey, null)
+            val changeToken = sharedPreferences.getString(UnSecurePrefKeys.changeTokenKey, null)
 
             if (changeToken == null) {
                 vitalLogger.logI("No change token found, syncing all data")
@@ -173,7 +180,7 @@ class VitalHealthConnectManager private constructor(
                         .getChanges(changeToken)
                 } catch (e: Exception) {
                     vitalLogger.logE("Failed to get changes", e)
-                    sharedPreferences.edit().remove(changeTokenKey).apply()
+                    sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
                     null
                 }
 
@@ -197,6 +204,7 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun startWorkerForChanges(userId: String) {
         val operation = WorkManager.getInstance(context).beginUniqueWork(
             "UploadChangesWorker",
@@ -211,20 +219,25 @@ class VitalHealthConnectManager private constructor(
             ).build()
         ).enqueue()
 
-
-        operation.state.observeForever {
-            when (it) {
-                is Operation.State.SUCCESS -> {
-                    _status.tryEmit(SyncStatus.SyncingCompleted)
+        observerJob?.cancel()
+        observerJob = GlobalScope.launch(Dispatchers.Main) {
+            operation.state.observeForever {
+                when (it) {
+                    is Operation.State.SUCCESS -> {
+                        _status.tryEmit(SyncStatus.SyncingCompleted)
+                        observerJob?.cancel()
+                    }
+                    is Operation.State.FAILURE -> {
+                        _status.tryEmit(SyncStatus.FailedSyncing)
+                        observerJob?.cancel()
+                    }
+                    is Operation.State.IN_PROGRESS -> {}
                 }
-                is Operation.State.FAILURE -> {
-                    _status.tryEmit(SyncStatus.FailedSyncing)
-                }
-                is Operation.State.IN_PROGRESS -> {}
             }
         }
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun startWorkerForAllData(userId: String) {
         val operation = WorkManager.getInstance(context).beginUniqueWork(
             "UploadAllDataWorker",
@@ -232,7 +245,10 @@ class VitalHealthConnectManager private constructor(
             OneTimeWorkRequestBuilder<UploadAllDataWorker>().setInputData(
                 UploadAllDataWorker.createInputData(
                     startTime = Instant.now().minus(
-                        encryptedSharedPreferences.getInt(numberOfDaysToBackFillKey, 30)
+                        encryptedSharedPreferences.getInt(
+                            UnSecurePrefKeys.numberOfDaysToBackFillKey,
+                            30
+                        )
                             .toLong(), ChronoUnit.DAYS
                     ),
                     endTime = Instant.now(),
@@ -244,15 +260,20 @@ class VitalHealthConnectManager private constructor(
             ).build()
         ).enqueue()
 
-        operation.state.observeForever {
-            when (it) {
-                is Operation.State.SUCCESS -> {
-                    _status.tryEmit(SyncStatus.SyncingCompleted)
+        observerJob?.cancel()
+        observerJob = GlobalScope.launch(Dispatchers.Main) {
+            operation.state.observeForever {
+                when (it) {
+                    is Operation.State.SUCCESS -> {
+                        _status.tryEmit(SyncStatus.SyncingCompleted)
+                        observerJob?.cancel()
+                    }
+                    is Operation.State.FAILURE -> {
+                        _status.tryEmit(SyncStatus.FailedSyncing)
+                        observerJob?.cancel()
+                    }
+                    is Operation.State.IN_PROGRESS -> {}
                 }
-                is Operation.State.FAILURE -> {
-                    _status.tryEmit(SyncStatus.FailedSyncing)
-                }
-                is Operation.State.IN_PROGRESS -> {}
             }
         }
     }
@@ -262,15 +283,6 @@ class VitalHealthConnectManager private constructor(
             "You need to call setUserId before you can read the health data"
         )
     }
-
-    private fun createEncryptedSharedPreferences() = EncryptedSharedPreferences.create(
-        encryptedPrefsFileName,
-        MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
-        context,
-        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-    )
-
 
     companion object {
         fun create(

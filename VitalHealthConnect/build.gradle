@@ -42,10 +42,11 @@ dependencies {
     implementation project(':VitalClient')
 
     implementation "androidx.health.connect:connect-client:$health_connect"
-    implementation "androidx.security:security-crypto:1.0.0"
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
-    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:1.6.4"
-    implementation "androidx.work:work-runtime-ktx:2.7.1"
+    implementation "androidx.startup:startup-runtime:$startup_runtime"
+    implementation "androidx.security:security-crypto:$security_crypto"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:$kotlinx_coroutines"
+    implementation "androidx.work:work-runtime-ktx:$work_runtime"
 
     testImplementation "junit:junit:$junit"
     androidTestImplementation "androidx.test.ext:junit:$test_ext"

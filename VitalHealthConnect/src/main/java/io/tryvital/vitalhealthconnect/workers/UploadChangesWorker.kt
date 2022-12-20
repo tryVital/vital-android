@@ -70,7 +70,12 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             try {
                 val originalChanges =
                     HealthConnectClientProvider().getHealthConnectClient(applicationContext)
-                        .getChanges(sharedPreferences.getString(changeTokenKey, null)!!)
+                        .getChanges(
+                            sharedPreferences.getString(
+                                UnSecurePrefKeys.changeTokenKey,
+                                null
+                            )!!
+                        )
 
 
                 var currentChanges: ChangesResponse? = originalChanges
@@ -85,7 +90,10 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                             HealthConnectClientProvider().getHealthConnectClient(applicationContext)
                                 .getChanges(currentChanges.nextChangesToken)
                         sharedPreferences.edit()
-                            .putString(changeTokenKey, currentChanges.nextChangesToken)
+                            .putString(
+                                UnSecurePrefKeys.changeTokenKey,
+                                currentChanges.nextChangesToken
+                            )
                             .apply()
                     } else {
                         currentChanges = null

@@ -59,6 +59,15 @@
                 android:name="health_permissions"
                 android:resource="@array/health_permissions" />
         </activity>
-    </application>
 
+    <provider
+        android:name="androidx.startup.InitializationProvider"
+        android:authorities="${applicationId}.androidx-startup"
+        android:exported="false"
+        tools:node="merge">
+        <meta-data  android:name="io.tryvital.vitalhealthconnect.VitalHealthInitializer"
+            android:value="androidx.startup" />
+    </provider>
+
+    </application>
 </manifest>
