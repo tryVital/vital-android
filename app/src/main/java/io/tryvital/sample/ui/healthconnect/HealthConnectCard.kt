@@ -37,10 +37,12 @@ fun HealthConnectCard(
             }
             AvailabilityInfo(state.available)
             Spacer(modifier = Modifier.height(12.dp))
-            Box(Modifier.align(Alignment.CenterHorizontally)) {
-                Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            if (state.available == HealthConnectAvailability.Installed) {
+                Box(Modifier.align(Alignment.CenterHorizontally)) {
+                    Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
+                PermissionInfo(state.permissionsGranted, viewModel)
             }
-            PermissionInfo(state.permissionsGranted, viewModel)
         }
     }
 }

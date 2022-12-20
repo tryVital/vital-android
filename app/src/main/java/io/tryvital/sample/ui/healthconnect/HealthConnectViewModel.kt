@@ -28,10 +28,17 @@ class HealthConnectViewModel(
     fun init(context: Context) {
         viewModelScope.launch {
             viewModelState.update {
+                val available = vitalHealthConnectManager.isAvailable(context)
+
+                val permissionsGranted =
+                    if (available == HealthConnectAvailability.Installed) vitalHealthConnectManager.getGrantedPermissions(
+                        context
+                    )
+                        .containsAll(vitalRequiredPermissions) else false
+
                 it.copy(
-                    available = vitalHealthConnectManager.isAvailable(context),
-                    permissionsGranted = vitalHealthConnectManager.getGrantedPermissions(context)
-                        .containsAll(vitalRequiredPermissions)
+                    available = available,
+                    permissionsGranted = permissionsGranted
                 )
             }
         }
