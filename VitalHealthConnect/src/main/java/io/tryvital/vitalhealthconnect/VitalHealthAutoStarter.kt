@@ -47,35 +47,45 @@ class VitalHealthAutoStarter(private val context: Context) {
     }
 
     private fun startSync() {
-        if (sharedPreferences.contains(UnSecurePrefKeys.syncOnAppStartKey)) {
-            val region = encryptedSharedPreferences.getString(SecurePrefKeys.regionKey, null)
-            val environment =
-                encryptedSharedPreferences.getString(SecurePrefKeys.environmentKey, null)
-            val apiKey = encryptedSharedPreferences.getString(SecurePrefKeys.apiKeyKey, null)
+        try {
+            if (sharedPreferences.contains(UnSecurePrefKeys.syncOnAppStartKey)) {
+                val region = encryptedSharedPreferences.getString(SecurePrefKeys.regionKey, null)
+                val environment =
+                    encryptedSharedPreferences.getString(SecurePrefKeys.environmentKey, null)
+                val apiKey = encryptedSharedPreferences.getString(SecurePrefKeys.apiKeyKey, null)
+                val userIdKey = encryptedSharedPreferences.getString(SecurePrefKeys.userIdKey, null)
 
-            if (region == null) {
-                vitalLogger.logI("No region is saved, will not start sync on startup")
-                return
-            }
-            if (environment == null) {
-                vitalLogger.logI("No environment is saved, will not start sync on startup")
-                return
-            }
-            if (apiKey == null) {
-                vitalLogger.logI("No api key is saved, will not start sync on startup")
-                return
-            }
+                if (region == null) {
+                    vitalLogger.logI("No region is saved, will not start sync on startup")
+                    return
+                }
+                if (environment == null) {
+                    vitalLogger.logI("No environment is saved, will not start sync on startup")
+                    return
+                }
+                if (apiKey == null) {
+                    vitalLogger.logI("No api key is saved, will not start sync on startup")
+                    return
+                }
 
-            CoroutineScope(Job() + Dispatchers.IO).launch {
-                VitalHealthConnectManager.create(
-                    context,
-                    apiKey,
-                    Region.valueOf(region),
-                    Environment.valueOf(environment)
-                ).syncData()
+                if (userIdKey == null) {
+                    vitalLogger.logI("No user id is saved, will not start sync on startup")
+                    return
+                }
+
+                CoroutineScope(Job() + Dispatchers.IO).launch {
+                    VitalHealthConnectManager.create(
+                        context,
+                        apiKey,
+                        Region.valueOf(region),
+                        Environment.valueOf(environment)
+                    ).syncData()
+                }
+            } else {
+                vitalLogger.logI("Sync on app start is not enabled, will not start sync on startup")
             }
-        } else {
-            vitalLogger.logI("Sync on app start is not enabled, will not start sync on startup")
+        } catch (e: Exception) {
+            vitalLogger.logE("Failed to start sync on startup", e)
         }
     }
 }

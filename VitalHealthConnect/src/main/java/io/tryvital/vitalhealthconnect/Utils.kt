@@ -12,6 +12,7 @@ object SecurePrefKeys{
     internal const val regionKey = "region"
     internal const val environmentKey = "environment"
     internal const val apiKeyKey = "apiKey"
+    internal const val userIdKey = "userId"
 }
 
 object UnSecurePrefKeys{

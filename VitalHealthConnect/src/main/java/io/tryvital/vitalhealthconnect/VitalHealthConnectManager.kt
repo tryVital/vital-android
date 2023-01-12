@@ -31,9 +31,7 @@ internal const val providerId = "health_connect"
 
 private const val minSupportedSDK = Build.VERSION_CODES.P
 
-private const val userIdKey = "userId"
-
-val vitalHealthRecordTypes = setOf(
+internal val vitalHealthRecordTypes = setOf(
     ExerciseSessionRecord::class,
     DistanceRecord::class,
     ActiveCaloriesBurnedRecord::class,
@@ -114,12 +112,10 @@ class VitalHealthConnectManager private constructor(
     @SuppressLint("ApplySharedPref")
     suspend fun setUserId(userId: String) {
         encryptedSharedPreferences.edit().apply {
-            putString(userIdKey, userId)
+            putString(SecurePrefKeys.userIdKey, userId)
             remove(UnSecurePrefKeys.changeTokenKey)
             commit()
         }
-
-        resetChangeToken()
 
         if (hasConfigSet()) {
             vitalLogger.logI("User ID set, starting sync")
@@ -213,6 +209,7 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
+    @Suppress("unused")
     fun resetChangeToken() {
         vitalLogger.logI("Resetting change token")
         sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
@@ -291,13 +288,13 @@ class VitalHealthConnectManager private constructor(
     }
 
     private fun checkUserId(): String {
-        return encryptedSharedPreferences.getString(userIdKey, null) ?: throw IllegalStateException(
+        return encryptedSharedPreferences.getString(SecurePrefKeys.userIdKey, null) ?: throw IllegalStateException(
             "You need to call setUserId before you can read the health data"
         )
     }
 
     private fun hasUserId(): Boolean {
-        return encryptedSharedPreferences.getString(userIdKey, null) != null
+        return encryptedSharedPreferences.getString(SecurePrefKeys.userIdKey, null) != null
     }
 
     private fun hasConfigSet(): Boolean {
