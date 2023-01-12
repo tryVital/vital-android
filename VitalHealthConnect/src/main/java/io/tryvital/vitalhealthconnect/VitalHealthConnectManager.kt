@@ -106,16 +106,24 @@ class VitalHealthConnectManager private constructor(
     }
 
     suspend fun getGrantedPermissions(context: Context): Set<HealthPermission> {
-        return healthConnectClientProvider.getHealthConnectClient(context)
-            .permissionController.getGrantedPermissions(vitalRequiredPermissions)
+        return healthConnectClientProvider.getHealthConnectClient(context).permissionController.getGrantedPermissions(
+            vitalRequiredPermissions
+        )
     }
 
     @SuppressLint("ApplySharedPref")
-    fun setUserId(userId: String) {
+    suspend fun setUserId(userId: String) {
         encryptedSharedPreferences.edit().apply {
             putString(userIdKey, userId)
             remove(UnSecurePrefKeys.changeTokenKey)
             commit()
+        }
+
+        resetChangeToken()
+
+        if (hasConfigSet()) {
+            vitalLogger.logI("User ID set, starting sync")
+            syncData(getGrantedPermissions(context))
         }
     }
 
@@ -141,8 +149,6 @@ class VitalHealthConnectManager private constructor(
         syncOnAppStart: Boolean = true,
         numberOfDaysToBackFill: Int = 30,
     ) {
-        checkUserId()
-
         vitalLogger.enabled = logsEnabled
 
         encryptedSharedPreferences.edit()
@@ -157,7 +163,10 @@ class VitalHealthConnectManager private constructor(
             .putInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, numberOfDaysToBackFill)
             .commit()
 
-        syncData(getGrantedPermissions(context))
+        if (hasUserId()) {
+            vitalLogger.logI("Configuration set, starting sync")
+            syncData(getGrantedPermissions(context))
+        }
     }
 
     //TODO we should respect the requested permissions. It will always sync all the permitted data
@@ -204,6 +213,11 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
+    fun resetChangeToken() {
+        vitalLogger.logI("Resetting change token")
+        sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
+    }
+
     @OptIn(DelicateCoroutinesApi::class)
     private fun startWorkerForChanges(userId: String) {
         val operation = WorkManager.getInstance(context).beginUniqueWork(
@@ -246,10 +260,8 @@ class VitalHealthConnectManager private constructor(
                 UploadAllDataWorker.createInputData(
                     startTime = Instant.now().minus(
                         encryptedSharedPreferences.getInt(
-                            UnSecurePrefKeys.numberOfDaysToBackFillKey,
-                            30
-                        )
-                            .toLong(), ChronoUnit.DAYS
+                            UnSecurePrefKeys.numberOfDaysToBackFillKey, 30
+                        ).toLong(), ChronoUnit.DAYS
                     ),
                     endTime = Instant.now(),
                     userId = userId,
@@ -282,6 +294,16 @@ class VitalHealthConnectManager private constructor(
         return encryptedSharedPreferences.getString(userIdKey, null) ?: throw IllegalStateException(
             "You need to call setUserId before you can read the health data"
         )
+    }
+
+    private fun hasUserId(): Boolean {
+        return encryptedSharedPreferences.getString(userIdKey, null) != null
+    }
+
+    private fun hasConfigSet(): Boolean {
+        return encryptedSharedPreferences.getString(SecurePrefKeys.apiKeyKey, null) != null &&
+                encryptedSharedPreferences.getString(SecurePrefKeys.regionKey, null) != null &&
+                encryptedSharedPreferences.getString(SecurePrefKeys.environmentKey, null) != null
     }
 
     companion object {
