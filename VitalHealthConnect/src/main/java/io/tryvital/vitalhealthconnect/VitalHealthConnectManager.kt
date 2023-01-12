@@ -33,7 +33,7 @@ private const val minSupportedSDK = Build.VERSION_CODES.P
 
 private const val userIdKey = "userId"
 
-internal val vitalRequiredRecordTypes = setOf(
+val vitalHealthRecordTypes = setOf(
     ExerciseSessionRecord::class,
     DistanceRecord::class,
     ActiveCaloriesBurnedRecord::class,
@@ -54,7 +54,7 @@ internal val vitalRequiredRecordTypes = setOf(
 )
 
 internal fun vitalRecordTypes(healthPermission: Set<HealthPermission>): Set<KClass<out Record>> {
-    return vitalRequiredRecordTypes.filter { recordType ->
+    return vitalHealthRecordTypes.filter { recordType ->
         healthPermission.contains(HealthPermission.createReadPermission(recordType))
     }.toSet()
 }
@@ -325,7 +325,7 @@ class VitalHealthConnectManager private constructor(
         }
 
         val vitalRequiredPermissions =
-            vitalRequiredRecordTypes.map { HealthPermission.createReadPermission(it) }.toSet()
+            vitalHealthRecordTypes.map { HealthPermission.createReadPermission(it) }.toSet()
     }
 }
 
