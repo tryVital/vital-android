@@ -173,8 +173,6 @@ class VitalHealthConnectManager private constructor(
                 vitalLogger.logI("No change token found, syncing all data")
 
                 startWorkerForAllData(userId)
-
-                _status.tryEmit(SyncStatus.SyncingCompleted)
             } else {
                 val changes = try {
                     healthConnectClientProvider.getHealthConnectClient(context)
@@ -211,7 +209,7 @@ class VitalHealthConnectManager private constructor(
             }
         } catch (e: Exception) {
             vitalLogger.logE("Error syncing data", e)
-            _status.tryEmit(SyncStatus.SyncingCompleted)
+            _status.tryEmit(SyncStatus.Unknown)
         }
     }
 
@@ -264,7 +262,7 @@ class VitalHealthConnectManager private constructor(
                         observerJob?.cancel()
                     }
                     is Operation.State.FAILURE -> {
-                        _status.tryEmit(SyncStatus.SyncingCompleted)
+                        _status.tryEmit(SyncStatus.Unknown)
                         observerJob?.cancel()
                     }
                     is Operation.State.IN_PROGRESS -> {}
@@ -322,7 +320,7 @@ class VitalHealthConnectManager private constructor(
                         observerJob?.cancel()
                     }
                     is Operation.State.FAILURE -> {
-                        _status.tryEmit(SyncStatus.SyncingCompleted)
+                        _status.tryEmit(SyncStatus.Unknown)
                         observerJob?.cancel()
                     }
                     is Operation.State.IN_PROGRESS -> {}

@@ -54,7 +54,11 @@ class Dependencies(
             if (BuildConfig.DEBUG) {
                 loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
             } else {
-                loggingInterceptor.level = HttpLoggingInterceptor.Level.NONE
+                if (VitalLogger.create().enabled) {
+                    loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
+                } else {
+                    loggingInterceptor.level = HttpLoggingInterceptor.Level.NONE
+                }
             }
 
             return OkHttpClient.Builder()
