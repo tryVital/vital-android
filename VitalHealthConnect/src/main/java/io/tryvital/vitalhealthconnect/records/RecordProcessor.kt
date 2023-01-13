@@ -269,7 +269,6 @@ internal class HealthConnectRecordProcessor(
         var rangeEnd = nextDayOrRangeEnd(rangeStart, endTime)
 
         while (rangeStart < rangeEnd) {
-            vitalClient.vitalLogger.logI(rangeStart.toString())
             val activeEnergyBurned = recordReader.readActiveEnergyBurned(startTime, endTime)
             val basalMetabolicRate = recordReader.readBasalMetabolicRate(startTime, endTime)
             val stepsRate = recordReader.readSteps(startTime, endTime)

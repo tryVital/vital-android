@@ -255,7 +255,6 @@ class VitalHealthConnectManager private constructor(
                             )
                         }
                     }
-
                 }
             }
             operation.state.observeForever {
