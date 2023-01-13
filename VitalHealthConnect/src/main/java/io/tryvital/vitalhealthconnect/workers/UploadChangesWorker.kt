@@ -17,6 +17,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
 import io.tryvital.vitalhealthconnect.ext.toDate
+import io.tryvital.vitalhealthconnect.model.HealthResource
 import io.tryvital.vitalhealthconnect.records.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -153,6 +154,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         val hostTimeZone = TimeZone.getDefault()
         val timeZoneId = hostTimeZone.id
 
+        reportStatus(HealthResource.Sleep, syncing)
         if (sleeps.isNotEmpty()) {
             val sleepStartTime = sleeps.minOf { it.startTime }
             val sleepEndTime = sleeps.maxOf { it.endTime }
@@ -166,8 +168,12 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     sleeps
                 )
             )
+            reportStatus(HealthResource.Sleep, synced)
+        } else {
+            reportStatus(HealthResource.Sleep, nothingToSync)
         }
 
+        reportStatus(HealthResource.Workout, syncing)
         if (exercises.isNotEmpty()) {
             val exercisesStartTime = exercises.minOf { it.startTime }
             val exercisesEndTime = exercises.maxOf { it.endTime }
@@ -178,8 +184,13 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     exercisesStartTime, exercisesEndTime, currentDevice, exercises
                 )
             )
+
+            reportStatus(HealthResource.Workout, synced)
+        } else {
+            reportStatus(HealthResource.Workout, nothingToSync)
         }
 
+        reportStatus(HealthResource.Profile, syncing)
         if (heights.isNotEmpty()) {
             val height = heights.last()
 
@@ -187,8 +198,12 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 userId, height.time.toDate(), height.time.toDate(), timeZoneId,
                 recordProcessor.processProfileFromRecords(height.time, height.time, height)
             )
+            reportStatus(HealthResource.Profile, synced)
+        } else {
+            reportStatus(HealthResource.Profile, nothingToSync)
         }
 
+        reportStatus(HealthResource.Body, syncing)
         if (bodyFats.isNotEmpty() || weights.isNotEmpty()) {
             val bodyStartTime = bodyFats.map { it.time }.plus(weights.map { it.time }).minOf { it }
             val bodyEndTime = bodyFats.map { it.time }.plus(weights.map { it.time }).maxOf { it }
@@ -203,8 +218,12 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     bodyFats
                 )
             )
+            reportStatus(HealthResource.Body, synced)
+        } else {
+            reportStatus(HealthResource.Body, nothingToSync)
         }
 
+        reportStatus(HealthResource.Activity, syncing)
         if (activeEnergyBurned.isNotEmpty() || basalMetabolicRate.isNotEmpty() || stepsRate.isNotEmpty() ||
             distance.isNotEmpty() || floorsClimbed.isNotEmpty() || vo2Max.isNotEmpty()
         ) {
@@ -235,9 +254,19 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     vo2Max
                 )
             )
+            reportStatus(HealthResource.Activity, synced)
+        } else {
+            reportStatus(HealthResource.Activity, nothingToSync)
         }
     }
 
+    private suspend fun reportStatus(resource: HealthResource, status: String) {
+        setProgress(
+            Data.Builder().putString(statusTypeKey, resource.name)
+                .putString(syncStatusKey, status)
+                .build()
+        )
+    }
 
     companion object {
         fun createInputData(
