@@ -240,15 +240,22 @@ class VitalHealthConnectManager private constructor(
 
         observerJob?.cancel()
         observerJob = GlobalScope.launch(Dispatchers.Main) {
-            work.workInfosLiveData.observeForever {
-                it.forEach {
-                    val resource = HealthResource.valueOf(it.progress.getString(statusTypeKey)!!)
+            work.workInfosLiveData.observeForever { workInfos ->
+                workInfos.forEach {
+                    it.progress.getString(statusTypeKey)?.run {
+                        val resource = HealthResource.valueOf(this)
 
-                    when (it.progress.getString(syncStatusKey)!!) {
-                        synced -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
-                        syncing -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
-                        nothingToSync -> _status.tryEmit(SyncStatus.ResourceNothingToSync(resource))
+                        when (it.progress.getString(syncStatusKey)!!) {
+                            synced -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
+                            syncing -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
+                            nothingToSync -> _status.tryEmit(
+                                SyncStatus.ResourceNothingToSync(
+                                    resource
+                                )
+                            )
+                        }
                     }
+
                 }
             }
             operation.state.observeForever {
@@ -291,14 +298,20 @@ class VitalHealthConnectManager private constructor(
 
         observerJob?.cancel()
         observerJob = GlobalScope.launch(Dispatchers.Main) {
-            work.workInfosLiveData.observeForever {
-                it.forEach {
-                    val resource = HealthResource.valueOf(it.progress.getString(statusTypeKey)!!)
+            work.workInfosLiveData.observeForever { workInfos ->
+                workInfos.forEach {
+                    it.progress.getString(statusTypeKey)?.run {
+                        val resource = HealthResource.valueOf(this)
 
-                    when (it.progress.getString(syncStatusKey)!!) {
-                        synced -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
-                        syncing -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
-                        nothingToSync -> _status.tryEmit(SyncStatus.ResourceNothingToSync(resource))
+                        when (it.progress.getString(syncStatusKey)!!) {
+                            synced -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
+                            syncing -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
+                            nothingToSync -> _status.tryEmit(
+                                SyncStatus.ResourceNothingToSync(
+                                    resource
+                                )
+                            )
+                        }
                     }
                 }
             }
