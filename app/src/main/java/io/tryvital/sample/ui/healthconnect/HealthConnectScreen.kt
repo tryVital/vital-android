@@ -2,6 +2,8 @@ package io.tryvital.sample.ui.healthconnect
 
 import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -68,10 +70,14 @@ fun HealthConnectScreen(
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.padding(padding), content = {
-            UserDetailsCard(state)
-            HealthConnectCard(state, viewModel)
-            ReadDataCard(state,viewModel)
-        })
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .verticalScroll(rememberScrollState()),
+            content = {
+                UserDetailsCard(state)
+                HealthConnectCard(state, viewModel)
+                ReadDataCard(state, viewModel)
+            })
     }
 }

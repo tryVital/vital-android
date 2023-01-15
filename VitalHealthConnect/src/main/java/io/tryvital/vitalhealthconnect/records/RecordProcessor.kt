@@ -83,6 +83,37 @@ interface RecordProcessor {
         floorsClimbed: List<FloorsClimbedRecord>,
         vo2Max: List<Vo2MaxRecord>,
     ): List<ActivityPayload>
+
+    suspend fun processGlucoseFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<QuantitySample>
+
+    suspend fun processBloodPressureFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<BloodPressureSample>
+
+    suspend fun processHeartRateFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<QuantitySample>
+
+    suspend fun processStepsFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<QuantitySample>
+
+    suspend fun processWaterFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<QuantitySample>
+
 }
 
 internal class HealthConnectRecordProcessor(
@@ -316,6 +347,89 @@ internal class HealthConnectRecordProcessor(
             vo2Max
         )
     )
+
+    override suspend fun processGlucoseFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<QuantitySample> {
+        return recordReader.readBloodGlucose(startTime, endTime).map {
+            HCQuantitySample(
+                value = it.level.inMilligramsPerDeciliter.toString(),
+                unit = SampleType.GlucoseConcentration.unit,
+                startDate = Date.from(it.time),
+                endDate = Date.from(it.time),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+        }
+    }
+
+    override suspend fun processBloodPressureFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<BloodPressureSample> {
+        return recordReader.readBloodPressure(startTime, endTime).map {
+            BloodPressureSample(
+                systolic = HCQuantitySample(
+                    value = it.systolic.inMillimetersOfMercury.toString(),
+                    unit = SampleType.BloodPressureSystolic.unit,
+                    startDate = Date.from(it.time),
+                    endDate = Date.from(it.time),
+                    metadata = it.metadata,
+                ).toQuantitySample(currentDevice),
+                diastolic = HCQuantitySample(
+                    value = it.diastolic.inMillimetersOfMercury.toString(),
+                    unit = SampleType.BloodPressureDiastolic.unit,
+                    startDate = Date.from(it.time),
+                    endDate = Date.from(it.time),
+                    metadata = it.metadata,
+                ).toQuantitySample(currentDevice),
+                pulse = null,
+            )
+        }
+    }
+
+    override suspend fun processHeartRateFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<QuantitySample> {
+        val heartRateRecord = recordReader.readHeartRate(startTime, endTime)
+        return mapHearthRate(heartRateRecord, currentDevice)
+    }
+
+    override suspend fun processStepsFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<QuantitySample> {
+        return recordReader.readSteps(startTime, endTime).map {
+            HCQuantitySample(
+                value = it.count.toString(),
+                unit = SampleType.Steps.unit,
+                startDate = Date.from(it.startTime),
+                endDate = Date.from(it.endTime),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+        }
+    }
+
+    override suspend fun processWaterFromTimeRange(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String
+    ): List<QuantitySample> {
+        return recordReader.readWater(startTime, endTime).map {
+            HCQuantitySample(
+                value = it.volume.inMilliliters.toString(),
+                unit = SampleType.Water.unit,
+                startDate = Date.from(it.startTime),
+                endDate = Date.from(it.endTime),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+        }
+    }
 
     private fun processActivityPayload(
         activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,

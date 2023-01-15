@@ -1,5 +1,20 @@
 package io.tryvital.vitalhealthconnect.model
 
+val healthResources = setOf(
+    HealthResource.Profile,
+    HealthResource.Body,
+    HealthResource.Workout,
+    HealthResource.Activity,
+    HealthResource.Sleep,
+    HealthResource.Glucose,
+    HealthResource.BloodPressure,
+    HealthResource.HeartRate,
+    HealthResource.Steps,
+    HealthResource.ActiveEnergyBurned,
+    HealthResource.BasalEnergyBurned,
+    HealthResource.Water,
+)
+
 sealed class HealthResource(val name: String) {
     object Profile : HealthResource("profile")
     object Body : HealthResource("body")
@@ -14,7 +29,12 @@ sealed class HealthResource(val name: String) {
     object BasalEnergyBurned : HealthResource("basalEnergyBurned")
     object Water : HealthResource("water")
 
+    override fun toString(): String {
+        return name
+    }
+
     companion object {
+        @Suppress("unused")
         fun values(): Array<HealthResource> {
             return arrayOf(
                 Profile,

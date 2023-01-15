@@ -18,5 +18,10 @@
         <item>androidx.health.permission.Steps.READ</item>
         <item>androidx.health.permission.Distance.READ</item>
         <item>androidx.health.permission.FloorsClimbed.READ</item>
+        <item>androidx.health.permission.Hydration.READ</item>
+        <item>androidx.health.permission.Hydration.WRITE</item>
+        <item>androidx.health.permission.BloodGlucose.READ</item>
+        <item>androidx.health.permission.BloodGlucose.WRITE</item>
+        <item>androidx.health.permission.BloodPressure.READ</item>
     </array>
 </resources>

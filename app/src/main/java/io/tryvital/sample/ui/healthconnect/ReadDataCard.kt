@@ -32,8 +32,8 @@ fun ReadDataCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("Read data", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                    Text(text = state.syncStatus.toString())
                 }
+                Text(text = state.syncStatus)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row {
                     Button(
@@ -75,6 +75,44 @@ fun ReadDataCard(
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                         Text("Sync")
                     }
+                }
+                Button(
+                    onClick = {
+                        viewModel.addGlucose()
+                    },
+                    contentPadding = PaddingValues(
+                        start = 20.dp,
+                        top = 12.dp,
+                        end = 20.dp,
+                        bottom = 12.dp
+                    )
+                ) {
+                    Icon(
+                        Icons.Outlined.Healing,
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text("Add Glucose")
+                }
+                Button(
+                    onClick = {
+                        viewModel.addWater()
+                    },
+                    contentPadding = PaddingValues(
+                        start = 20.dp,
+                        top = 12.dp,
+                        end = 20.dp,
+                        bottom = 12.dp
+                    )
+                ) {
+                    Icon(
+                        Icons.Outlined.Healing,
+                        contentDescription = null,
+                        modifier = Modifier.size(ButtonDefaults.IconSize)
+                    )
+                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                    Text("Add Water")
                 }
             }
         }

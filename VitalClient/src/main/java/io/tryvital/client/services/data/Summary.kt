@@ -93,8 +93,7 @@ data class SleepPayload(
     val oxygenSaturation: List<QuantitySample>,
     @Json(name = "respiratory_rate")
     val respiratoryRate: List<QuantitySample>,
-
-    )
+)
 
 data class QuantitySample(
     @Json(name = "id")
@@ -117,6 +116,16 @@ data class QuantitySample(
     val metadata: String? = null,
 )
 
+data class BloodPressureSample(
+    @Json(name = "systolic")
+    val systolic: QuantitySample,
+    @Json(name = "diastolic")
+    val diastolic: QuantitySample,
+    @Json(name = "pulse")
+    val pulse: QuantitySample?,
+)
+
+
 sealed class SampleType(val unit: String) {
     object HeartRate : SampleType("bpm")
     object RespiratoryRate : SampleType("bpm")
@@ -133,4 +142,5 @@ sealed class SampleType(val unit: String) {
     object GlucoseConcentration : SampleType("mg/dL")
     object BloodPressureSystolic : SampleType("mmHg")
     object BloodPressureDiastolic : SampleType("mmHg")
+    object Water : SampleType("ml")
 }

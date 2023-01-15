@@ -49,6 +49,38 @@ interface RecordUploader {
         timeZoneId: String?,
         workoutPayloads: List<WorkoutPayload>,
     )
+
+    suspend fun uploadGlucose(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        glucosePayloads: List<QuantitySample>
+    )
+
+    suspend fun uploadBloodPressure(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        bloodPressurePayloads: List<BloodPressureSample>
+    )
+
+    suspend fun uploadHeartRate(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        heartRatePayloads: List<QuantitySample>
+    )
+
+    suspend fun uploadWater(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        waterPayloads: List<QuantitySample>
+    )
 }
 
 class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUploader {
@@ -148,6 +180,90 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                     endDate = endDate,
                     timeZoneId = timeZoneId,
                     data = workoutPayloads,
+                )
+            )
+        }
+    }
+
+    override suspend fun uploadGlucose(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        glucosePayloads: List<QuantitySample>
+    ) {
+        if (glucosePayloads.isNotEmpty()) {
+            vitalClient.vitalsService.sendGlucose(
+                userId, TimeseriesPayload(
+                    stage = stage,
+                    provider = providerId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    timeZoneId = timeZoneId,
+                    data = glucosePayloads,
+                )
+            )
+        }
+    }
+
+    override suspend fun uploadBloodPressure(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        bloodPressurePayloads: List<BloodPressureSample>
+    ) {
+        if (bloodPressurePayloads.isNotEmpty()) {
+            vitalClient.vitalsService.sendBloodPressure(
+                userId, TimeseriesPayload(
+                    stage = stage,
+                    provider = providerId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    timeZoneId = timeZoneId,
+                    data = bloodPressurePayloads,
+                )
+            )
+        }
+    }
+
+    override suspend fun uploadHeartRate(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        heartRatePayloads: List<QuantitySample>
+    ) {
+        if (heartRatePayloads.isNotEmpty()) {
+            vitalClient.vitalsService.sendHeartRate(
+                userId, TimeseriesPayload(
+                    stage = stage,
+                    provider = providerId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    timeZoneId = timeZoneId,
+                    data = heartRatePayloads,
+                )
+            )
+        }
+    }
+
+    override suspend fun uploadWater(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        waterPayloads: List<QuantitySample>
+    ) {
+        if (waterPayloads.isNotEmpty()) {
+            vitalClient.vitalsService.sendWater(
+                userId, TimeseriesPayload(
+                    stage = stage,
+                    provider = providerId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    timeZoneId = timeZoneId,
+                    data = waterPayloads,
                 )
             )
         }

@@ -1,6 +1,7 @@
 package io.tryvital.sample.ui.healthconnect
 
 import android.content.Context
+import android.util.Log
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -10,11 +11,12 @@ import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager.Companion.vitalRequiredPermissions
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
-import io.tryvital.vitalhealthconnect.model.SyncStatus
+import io.tryvital.vitalhealthconnect.model.HealthResource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 class HealthConnectViewModel(
     private val vitalHealthConnectManager: VitalHealthConnectManager,
@@ -46,7 +48,8 @@ class HealthConnectViewModel(
         viewModelScope.launch {
             vitalHealthConnectManager.status.collect {
                 viewModelState.update { state ->
-                    state.copy(syncStatus = it)
+                    Log.e("asd vital", "status: $it")
+                    state.copy(syncStatus = state.syncStatus.plus("\n${it}"))
                 }
             }
         }
@@ -87,6 +90,29 @@ class HealthConnectViewModel(
         }
     }
 
+    fun addWater() {
+        viewModelScope.launch {
+            vitalHealthConnectManager.addHealthResource(
+                HealthResource.Water,
+                Instant.now(),
+                Instant.now(),
+                100.0
+            )
+        }
+    }
+
+    fun addGlucose() {
+        viewModelScope.launch {
+            vitalHealthConnectManager.addHealthResource(
+                HealthResource.Glucose,
+                Instant.now(),
+                Instant.now(),
+                15.0
+            )
+        }
+
+    }
+
     companion object {
         fun provideFactory(
             vitalHealthConnectManager: VitalHealthConnectManager,
@@ -104,5 +130,5 @@ data class HealthConnectViewModelState(
     val available: HealthConnectAvailability? = null,
     val permissionsGranted: Boolean? = null,
     val user: User,
-    val syncStatus: SyncStatus = SyncStatus.Unknown,
+    val syncStatus: String = "",
 )

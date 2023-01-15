@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.units.BloodGlucose
+import androidx.health.connect.client.units.Volume
 import androidx.work.*
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
@@ -15,11 +17,13 @@ import io.tryvital.client.services.data.*
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.model.HealthResource
 import io.tryvital.vitalhealthconnect.model.SyncStatus
+import io.tryvital.vitalhealthconnect.model.healthResources
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import java.time.Instant
+import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.reflect.KClass
@@ -28,7 +32,7 @@ internal const val providerId = "health_connect"
 
 private const val minSupportedSDK = Build.VERSION_CODES.P
 
-internal val vitalHealthRecordTypes = setOf(
+internal val readRecordTypes = setOf(
     ExerciseSessionRecord::class,
     DistanceRecord::class,
     ActiveCaloriesBurnedRecord::class,
@@ -46,10 +50,19 @@ internal val vitalHealthRecordTypes = setOf(
     StepsRecord::class,
     DistanceRecord::class,
     FloorsClimbedRecord::class,
+    HydrationRecord::class,
+    BloodGlucoseRecord::class,
+    BloodPressureRecord::class,
+    HeartRateRecord::class,
+)
+
+internal val writeRecordTypes = setOf(
+    HydrationRecord::class,
+    BloodGlucoseRecord::class,
 )
 
 internal fun vitalRecordTypes(healthPermission: Set<HealthPermission>): Set<KClass<out Record>> {
-    return vitalHealthRecordTypes.filter { recordType ->
+    return readRecordTypes.filter { recordType ->
         healthPermission.contains(HealthPermission.createReadPermission(recordType))
     }.toSet()
 }
@@ -116,7 +129,7 @@ class VitalHealthConnectManager private constructor(
 
         if (hasConfigSet()) {
             vitalLogger.logI("User ID set, starting sync")
-            syncData(getGrantedPermissions(context))
+            syncData(healthResources)
         }
     }
 
@@ -158,12 +171,11 @@ class VitalHealthConnectManager private constructor(
 
         if (hasUserId()) {
             vitalLogger.logI("Configuration set, starting sync")
-            syncData(getGrantedPermissions(context))
+            syncData(healthResources)
         }
     }
 
-    //TODO we should respect the requested permissions. It will always sync all the permitted data
-    suspend fun syncData(@Suppress("UNUSED_PARAMETER") healthPermission: Set<HealthPermission>? = null) {
+    suspend fun syncData(healthResource: Set<HealthResource> = healthResources) {
         val userId = checkUserId()
 
         try {
@@ -172,7 +184,7 @@ class VitalHealthConnectManager private constructor(
             if (changeToken == null) {
                 vitalLogger.logI("No change token found, syncing all data")
 
-                startWorkerForAllData(userId)
+                startWorkerForAllData(userId, healthResource)
             } else {
                 val changes = try {
                     healthConnectClientProvider.getHealthConnectClient(context)
@@ -185,26 +197,16 @@ class VitalHealthConnectManager private constructor(
 
                 if (changes == null) {
                     vitalLogger.logI("Change token problem, syncing all data")
-                    startWorkerForAllData(userId)
+                    startWorkerForAllData(userId, healthResource)
                 } else if (changes.changesTokenExpired) {
                     vitalLogger.logI("Changes token expired, reading all data")
-                    startWorkerForAllData(userId)
+                    startWorkerForAllData(userId, healthResource)
                 } else if (changes.changes.isEmpty()) {
                     vitalLogger.logI("No changes to sync")
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.HeartRate))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.Workout))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.Sleep))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.BloodPressure))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.BasalEnergyBurned))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.Steps))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.Activity))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.Body))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.Profile))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.Glucose))
-                    _status.tryEmit(SyncStatus.ResourceNothingToSync(HealthResource.ActiveEnergyBurned))
+                    healthResources.map { _status.tryEmit(SyncStatus.ResourceNothingToSync(it)) }
                 } else {
                     vitalLogger.logI("Syncing ${changes.changes.size} changes")
-                    startWorkerForChanges(userId)
+                    startWorkerForChanges(userId, healthResource)
                 }
             }
         } catch (e: Exception) {
@@ -219,8 +221,7 @@ class VitalHealthConnectManager private constructor(
         sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun startWorkerForChanges(userId: String) {
+    private fun startWorkerForChanges(userId: String, healthResource: Set<HealthResource>) {
         val work = WorkManager.getInstance(context).beginUniqueWork(
             "UploadChangesWorker",
             ExistingWorkPolicy.REPLACE,
@@ -230,49 +231,25 @@ class VitalHealthConnectManager private constructor(
                     region = vitalClient.region,
                     environment = vitalClient.environment,
                     apiKey = vitalClient.apiKey,
+                    resource = healthResource
                 )
             ).build()
         )
 
-        val operation = work.enqueue()
-
         observerJob?.cancel()
-        observerJob = GlobalScope.launch(Dispatchers.Main) {
-            work.workInfosLiveData.observeForever { workInfos ->
-                workInfos.forEach {
-                    it.progress.getString(statusTypeKey)?.run {
-                        val resource = HealthResource.valueOf(this)
-
-                        when (it.progress.getString(syncStatusKey)!!) {
-                            synced -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
-                            syncing -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
-                            nothingToSync -> _status.tryEmit(
-                                SyncStatus.ResourceNothingToSync(
-                                    resource
-                                )
-                            )
-                        }
-                    }
+        observerJob = CoroutineScope(Dispatchers.Main).launch {
+            launch {
+                work.workInfosLiveData.observeForever { workInfos ->
+                    updateStatusFromJob(workInfos)
                 }
             }
-            operation.state.observeForever {
-                when (it) {
-                    is Operation.State.SUCCESS -> {
-                        _status.tryEmit(SyncStatus.SyncingCompleted)
-                        observerJob?.cancel()
-                    }
-                    is Operation.State.FAILURE -> {
-                        _status.tryEmit(SyncStatus.Unknown)
-                        observerJob?.cancel()
-                    }
-                    is Operation.State.IN_PROGRESS -> {}
-                }
-            }
+            work.enqueue()
         }
+
+        work.enqueue()
     }
 
-    @OptIn(DelicateCoroutinesApi::class)
-    private fun startWorkerForAllData(userId: String) {
+    private fun startWorkerForAllData(userId: String, healthResource: Set<HealthResource>) {
         val work = WorkManager.getInstance(context).beginUniqueWork(
             "UploadAllDataWorker",
             ExistingWorkPolicy.REPLACE,
@@ -288,42 +265,57 @@ class VitalHealthConnectManager private constructor(
                     region = vitalClient.region,
                     environment = vitalClient.environment,
                     apiKey = vitalClient.apiKey,
+                    resource = healthResource
                 )
             ).build()
         )
-        val operation = work.enqueue()
 
         observerJob?.cancel()
-        observerJob = GlobalScope.launch(Dispatchers.Main) {
-            work.workInfosLiveData.observeForever { workInfos ->
-                workInfos.forEach {
+        observerJob = CoroutineScope(Dispatchers.Main).launch {
+            launch {
+                work.workInfosLiveData.observeForever { workInfos ->
+                    updateStatusFromJob(workInfos)
+                }
+            }
+            work.enqueue()
+        }
+    }
+
+    private fun updateStatusFromJob(workInfos: MutableList<WorkInfo>) {
+        workInfos.forEach {
+            when (it.state) {
+                WorkInfo.State.RUNNING -> {
                     it.progress.getString(statusTypeKey)?.run {
                         val resource = HealthResource.valueOf(this)
 
                         when (it.progress.getString(syncStatusKey)!!) {
-                            synced -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
-                            syncing -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
+                            synced -> _status.tryEmit(
+                                SyncStatus.ResourceSyncingComplete(
+                                    resource
+                                )
+                            )
+                            syncing -> _status.tryEmit(
+                                SyncStatus.ResourceSyncing(
+                                    resource
+                                )
+                            )
                             nothingToSync -> _status.tryEmit(
                                 SyncStatus.ResourceNothingToSync(
                                     resource
                                 )
                             )
+                            else -> {
+                                // Do nothing
+                            }
                         }
                     }
                 }
-            }
-
-            operation.state.observeForever {
-                when (it) {
-                    is Operation.State.SUCCESS -> {
-                        _status.tryEmit(SyncStatus.SyncingCompleted)
-                        observerJob?.cancel()
-                    }
-                    is Operation.State.FAILURE -> {
-                        _status.tryEmit(SyncStatus.Unknown)
-                        observerJob?.cancel()
-                    }
-                    is Operation.State.IN_PROGRESS -> {}
+                WorkInfo.State.SUCCEEDED -> _status.tryEmit(SyncStatus.SyncingCompleted)
+                WorkInfo.State.FAILED -> _status.tryEmit(SyncStatus.Unknown)
+                WorkInfo.State.ENQUEUED,
+                WorkInfo.State.BLOCKED,
+                WorkInfo.State.CANCELLED -> {
+                    //do nothing
                 }
             }
         }
@@ -346,6 +338,56 @@ class VitalHealthConnectManager private constructor(
                 encryptedSharedPreferences.getString(SecurePrefKeys.environmentKey, null) != null
     }
 
+    suspend fun addHealthResource(
+        resource: HealthResource,
+        startDate: Instant,
+        endDate: Instant,
+        value: Double
+    ) {
+        val healthConnectClient = healthConnectClientProvider.getHealthConnectClient(context)
+
+        when (resource) {
+            HealthResource.Water -> {
+                healthConnectClient.insertRecords(
+                    listOf(
+                        HydrationRecord(
+                            startTime = startDate,
+                            startZoneOffset = ZoneOffset.UTC,
+                            endTime = if (startDate <= endDate) startDate.plusSeconds(1) else endDate,
+                            endZoneOffset = ZoneOffset.UTC,
+                            volume = Volume.milliliters(value)
+                        )
+                    )
+                )
+            }
+            HealthResource.Glucose -> {
+                healthConnectClient.insertRecords(
+                    listOf(
+                        BloodGlucoseRecord(
+                            time = startDate,
+                            zoneOffset = ZoneOffset.UTC,
+                            level = BloodGlucose.milligramsPerDeciliter(value),
+                        )
+                    )
+                )
+            }
+            HealthResource.ActiveEnergyBurned,
+            HealthResource.Activity,
+            HealthResource.BasalEnergyBurned,
+            HealthResource.BloodPressure,
+            HealthResource.Body,
+            HealthResource.HeartRate,
+            HealthResource.Profile,
+            HealthResource.Sleep,
+            HealthResource.Steps,
+            HealthResource.Workout -> {
+                vitalLogger.logI("Not supported resource $resource")
+            }
+        }
+
+        syncData()
+    }
+
     companion object {
         fun create(
             context: Context,
@@ -365,7 +407,8 @@ class VitalHealthConnectManager private constructor(
         }
 
         val vitalRequiredPermissions =
-            vitalHealthRecordTypes.map { HealthPermission.createReadPermission(it) }.toSet()
+            readRecordTypes.map { HealthPermission.createReadPermission(it) }.toSet()
+                .plus(writeRecordTypes.map { HealthPermission.createWritePermission(it) })
     }
 }
 

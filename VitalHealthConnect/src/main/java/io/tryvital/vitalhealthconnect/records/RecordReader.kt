@@ -88,6 +88,21 @@ interface RecordReader {
         startTime: Instant,
         endTime: Instant
     ): List<Vo2MaxRecord>
+
+    suspend fun readBloodGlucose(
+        startTime: Instant,
+        endTime: Instant
+    ): List<BloodGlucoseRecord>
+
+    suspend fun readBloodPressure(
+        startTime: Instant,
+        endTime: Instant
+    ): List<BloodPressureRecord>
+
+    suspend fun readWater(
+        startTime: Instant,
+        endTime: Instant
+    ): List<HydrationRecord>
 }
 
 internal class HealthConnectRecordReader(
@@ -163,6 +178,21 @@ internal class HealthConnectRecordReader(
     override suspend fun readVo2Max(
         startTime: Instant, endTime: Instant
     ): List<Vo2MaxRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readBloodGlucose(
+        startTime: Instant,
+        endTime: Instant
+    ): List<BloodGlucoseRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readBloodPressure(
+        startTime: Instant,
+        endTime: Instant
+    ): List<BloodPressureRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readWater(
+        startTime: Instant,
+        endTime: Instant
+    ): List<HydrationRecord> = readRecords(startTime, endTime)
 
     private suspend inline fun <reified T : Record> readRecords(
         startTime: Instant, endTime: Instant

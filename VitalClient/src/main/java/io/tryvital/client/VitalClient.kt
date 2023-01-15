@@ -48,6 +48,10 @@ class VitalClient(
         SummaryService.create(dependencies.retrofit)
     }
 
+    val vitalsService by lazy {
+        VitalsService.create(dependencies.retrofit)
+    }
+
     val vitalLogger by lazy {
         dependencies.vitalLogger
     }

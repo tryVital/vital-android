@@ -1,11 +1,8 @@
 package io.tryvital.client.services
 
-import io.tryvital.client.services.data.CholesterolType
-import io.tryvital.client.services.data.Measurement
+import io.tryvital.client.services.data.*
 import retrofit2.Retrofit
-import retrofit2.http.GET
-import retrofit2.http.Path
-import retrofit2.http.Query
+import retrofit2.http.*
 import java.util.*
 
 @Suppress("unused")
@@ -20,6 +17,15 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         return timeSeries.timeseriesRequest(
             userId = userId, resource = "glucose", startDate = startDate,
             endDate = endDate, provider = provider
+        )
+    }
+
+    suspend fun sendGlucose(
+        userId: String,
+        glucosePayloads: TimeseriesPayload<List<QuantitySample>>,
+    ) {
+        return timeSeries.timeseriesPost(
+            userId = userId, resource = "glucose", payload = glucosePayloads,
         )
     }
 
@@ -84,6 +90,39 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         )
     }
 
+    suspend fun sendBloodPressure(
+        userId: String,
+        timeseriesPayload: TimeseriesPayload<List<BloodPressureSample>>
+    ) {
+        return timeSeries.bloodPressureTimeseriesPost(
+            userId = userId,
+            resource = "blood_pressure",
+            payload = timeseriesPayload
+        )
+    }
+
+    suspend fun sendHeartRate(
+        userId: String,
+        timeseriesPayload: TimeseriesPayload<List<QuantitySample>>
+    ) {
+        return timeSeries.timeseriesPost(
+            userId = userId,
+            resource = "heartrate",
+            payload = timeseriesPayload
+        )
+    }
+
+    suspend fun sendWater(
+        userId: String,
+        timeseriesPayload: TimeseriesPayload<List<QuantitySample>>
+    ) {
+        return timeSeries.timeseriesPost(
+            userId = userId,
+            resource = "water",
+            payload = timeseriesPayload
+        )
+    }
+
     companion object {
         fun create(retrofit: Retrofit): VitalsService {
             return VitalsService(retrofit.create(TimeSeries::class.java))
@@ -100,4 +139,19 @@ private interface TimeSeries {
         @Query("end_date") endDate: Date? = null,
         @Query("provider") provider: String? = null,
     ): List<Measurement>
+
+    @POST("timeseries/{user_id}/{resource}")
+    suspend fun timeseriesPost(
+        @Path("user_id") userId: String,
+        @Path("resource", encoded = true) resource: String,
+        @Body payload: TimeseriesPayload<List<QuantitySample>>
+    )
+
+    @POST("timeseries/{user_id}/{resource}")
+    suspend fun bloodPressureTimeseriesPost(
+        @Path("user_id") userId: String,
+        @Path("resource", encoded = true) resource: String,
+        @Body payload: TimeseriesPayload<List<BloodPressureSample>>
+    )
 }
+
