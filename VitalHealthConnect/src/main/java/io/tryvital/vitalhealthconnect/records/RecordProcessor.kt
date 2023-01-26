@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_INT_TO_STRING_MAP
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
+import io.tryvital.vitalhealthconnect.SupportedSleepApps
 import io.tryvital.vitalhealthconnect.ext.dayStart
 import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.HCQuantitySample
@@ -251,7 +252,7 @@ internal class HealthConnectRecordProcessor(
     ): List<SleepPayload> {
         vitalClient.vitalLogger.logI("Found ${sleeps.size} sleepSessions")
 
-        return sleeps.map { sleepSession ->
+        return sleeps.filterForAcceptedSleepDataSources().map { sleepSession ->
             val heartRateRecord =
                 recordReader.readHeartRate(sleepSession.startTime, sleepSession.endTime)
             val restingHeartRateRecord =
@@ -594,3 +595,10 @@ private fun nextDayOrRangeEnd(rangeStart: Instant, endTime: Instant) =
         rangeStart.dayStart.plus(1, ChronoUnit.DAYS)
     }
 
+private fun List<SleepSessionRecord>.filterForAcceptedSleepDataSources(): List<SleepSessionRecord> {
+    return this.filter {
+        SupportedSleepApps.values().any { supportedSleepApp ->
+            it.metadata.dataOrigin.packageName == supportedSleepApp.packageName
+        }
+    }
+}
