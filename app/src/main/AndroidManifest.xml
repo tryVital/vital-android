@@ -60,8 +60,7 @@
                 android:resource="@array/health_permissions" />
         </activity>
 
-        <!--suppress AndroidDomInspection -->
-        <!--suppress MissingClass -->
+        <!--suppress MissingClass, AndroidDomInspection, EnsureInitializerMetadata -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
