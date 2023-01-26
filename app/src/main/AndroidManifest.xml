@@ -61,6 +61,7 @@
         </activity>
 
         <!--suppress AndroidDomInspection -->
+        <!--suppress MissingClass -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
