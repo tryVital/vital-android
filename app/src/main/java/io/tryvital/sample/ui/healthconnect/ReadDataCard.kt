@@ -10,6 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.model.HealthResource
 
 @Composable
 fun ReadDataCard(
@@ -115,6 +116,32 @@ fun ReadDataCard(
                     Text("Add Water")
                 }
             }
+            Box(modifier = Modifier.height(16.dp))
+            Text("Print data to console")
+            HealthResource.values().forEach {
+                ResourceReaderButton(viewModel, it)
+            }
+            Box(modifier = Modifier.height(16.dp))
         }
+    }
+}
+
+@Composable
+private fun ResourceReaderButton(
+    viewModel: HealthConnectViewModel,
+    resource: HealthResource
+) {
+    Button(
+        onClick = {
+            viewModel.readResource(resource)
+        },
+        contentPadding = PaddingValues(
+            start = 20.dp,
+            top = 12.dp,
+            end = 20.dp,
+            bottom = 12.dp
+        )
+    ) {
+        Text("Read ${resource.name}")
     }
 }

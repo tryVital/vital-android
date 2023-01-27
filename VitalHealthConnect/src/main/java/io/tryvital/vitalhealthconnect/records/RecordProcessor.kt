@@ -299,7 +299,8 @@ internal class HealthConnectRecordProcessor(
         SummaryData.Profile(
             biologicalSex = "not_set", // this is not available in Health Connect
             dateOfBirth = Date(0), // this is not available in Health Connect
-            heightInCm = (heightRecords.last().height.inMeters.times(100)).roundToInt()
+            heightInCm = (heightRecords.lastOrNull()?.height?.inMeters?.times(100))?.roundToInt()
+                ?: 0,
         )
 
     override suspend fun processBodyFromRecords(

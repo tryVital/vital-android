@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 class HealthConnectViewModel(
     private val vitalHealthConnectManager: VitalHealthConnectManager,
@@ -48,7 +49,6 @@ class HealthConnectViewModel(
         viewModelScope.launch {
             vitalHealthConnectManager.status.collect {
                 viewModelState.update { state ->
-                    Log.e("asd vital", "status: $it")
                     state.copy(syncStatus = state.syncStatus.plus("\n${it}"))
                 }
             }
@@ -92,6 +92,7 @@ class HealthConnectViewModel(
 
     fun addWater() {
         viewModelScope.launch {
+            vitalHealthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
             vitalHealthConnectManager.addHealthResource(
                 HealthResource.Water,
                 Instant.now(),
@@ -103,6 +104,7 @@ class HealthConnectViewModel(
 
     fun addGlucose() {
         viewModelScope.launch {
+            vitalHealthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
             vitalHealthConnectManager.addHealthResource(
                 HealthResource.Glucose,
                 Instant.now(),
@@ -111,6 +113,18 @@ class HealthConnectViewModel(
             )
         }
 
+    }
+
+    fun readResource(resource: HealthResource) {
+        viewModelScope.launch {
+            val result = vitalHealthConnectManager.read(
+                resource,
+                Instant.now().plus(-10, ChronoUnit.DAYS),
+                Instant.now()
+            )
+
+            Log.e("vital resource", "read: $result")
+        }
     }
 
     companion object {
