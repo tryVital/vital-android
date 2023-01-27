@@ -2,6 +2,7 @@ package io.tryvital.sample.ui.device
 
 import android.Manifest
 import android.content.pm.PackageManager.*
+import android.os.Build
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -81,15 +82,40 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
 
                 Row {
                     Button(onClick = {
-                        val bluetoothScan = Manifest.permission.ACCESS_FINE_LOCATION
-                        when (PERMISSION_GRANTED) {
-                            ContextCompat.checkSelfPermission(
-                                context, bluetoothScan
-                            ) -> {
-                                Log.d("vital", "Got permission")
+                        //Needed on older devices
+                        val fineLocationPermission = ContextCompat.checkSelfPermission(
+                            context, Manifest.permission.ACCESS_FINE_LOCATION
+                        )
+
+                        if (fineLocationPermission != PERMISSION_GRANTED) {
+                            launcher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                        }
+
+
+                        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
+                            val bluetoothPermission = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.BLUETOOTH
+                            )
+                            if (bluetoothPermission != PERMISSION_GRANTED) {
+                                launcher.launch(Manifest.permission.BLUETOOTH)
                             }
-                            else -> {
-                                launcher.launch(bluetoothScan)
+                        }
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            val bluetoothScanPermission = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.BLUETOOTH_SCAN
+                            )
+
+                            if (bluetoothScanPermission != PERMISSION_GRANTED) {
+                                launcher.launch(Manifest.permission.BLUETOOTH_SCAN)
+                            }
+
+                            val bluetoothConnectPermission = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.BLUETOOTH_CONNECT
+                            )
+
+                            if (bluetoothConnectPermission != PERMISSION_GRANTED) {
+                                launcher.launch(Manifest.permission.BLUETOOTH_CONNECT)
                             }
                         }
                     }) {
@@ -97,7 +123,7 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                     }
                     Box(modifier = Modifier.width(16.dp))
                     Button(onClick = {
-                        viewModel.scan()
+                        viewModel.scan(context)
                     }) {
                         Text("Scan")
                     }
@@ -105,11 +131,15 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
 
                 Box(modifier = Modifier.height(24.dp))
 
-                Text(text = "Discovered Devices", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = "Discovered Devices",
+                    style = MaterialTheme.typography.titleMedium
+                )
                 if (state.scannedDevices.isEmpty()) {
                     Box(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "No devices found yet", style = MaterialTheme.typography.labelMedium
+                        text = "No devices found yet",
+                        style = MaterialTheme.typography.labelMedium
                     )
                     Box(modifier = Modifier.height(12.dp))
                 }

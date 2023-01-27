@@ -1,6 +1,7 @@
 package io.tryvital.sample.ui.device
 
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -10,6 +11,7 @@ import io.tryvital.vitaldevices.*
 import io.tryvital.vitaldevices.devices.BloodPressureSample
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,9 +32,12 @@ class DeviceViewModel(
         )
     val uiState = viewModelState.asStateFlow()
 
-    fun scan() {
+    fun scan(context: Context) {
         viewModelScope.launch {
-            vitalDeviceManager.search(uiState.value.device)
+            vitalDeviceManager.search(uiState.value.device).catch {
+                Log.i("DeviceViewModel", "Error scanning ${it.message}", it.cause)
+                Toast.makeText(context, "Error scanning ${it.message}", Toast.LENGTH_SHORT).show()
+            }
                 .collect { scannedDevice ->
                     viewModelState.update { it.copy(scannedDevices = it.scannedDevices.toMutableList() + scannedDevice) }
 

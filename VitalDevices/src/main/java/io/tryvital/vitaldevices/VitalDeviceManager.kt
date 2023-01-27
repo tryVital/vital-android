@@ -1,14 +1,11 @@
 package io.tryvital.vitaldevices
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.*
 import android.content.Context.BLUETOOTH_SERVICE
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
 import io.tryvital.client.services.data.QuantitySample
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.devices.BloodPressureReader1810
@@ -34,9 +31,8 @@ class VitalDeviceManager(
 
     fun search(deviceModel: DeviceModel) = callbackFlow {
         vitalLogger.logI("searching for ${deviceModel.name}")
-        if (permissionsGranted()) {
-            throw IllegalStateException("Missing permission for BLUETOOTH_SCAN")
-        } else if (!bluetoothAdapter.isEnabled) {
+
+        if (!bluetoothAdapter.isEnabled) {
             throw IllegalStateException("Bluetooth is not enabled on this device")
         }
 
@@ -179,15 +175,6 @@ class VitalDeviceManager(
             else -> throw IllegalStateException("${scannedDevice.deviceModel.brand} is not supported")
         }
     }
-
-    @SuppressLint("InlinedApi")
-    private fun permissionsGranted(): Boolean {
-        return ContextCompat.checkSelfPermission(
-            context,
-            Manifest.permission.BLUETOOTH_SCAN
-        ) != PackageManager.PERMISSION_GRANTED
-    }
-
 
     companion object {
         fun create(context: Context) = VitalDeviceManager(context)
