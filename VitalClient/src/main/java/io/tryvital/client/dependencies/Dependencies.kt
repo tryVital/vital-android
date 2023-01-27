@@ -38,7 +38,7 @@ class Dependencies(
     }
 
     val vitalLogger: VitalLogger by lazy {
-        VitalLogger.create()
+        VitalLogger.getOrCreate()
     }
 
     val retrofit: Retrofit by lazy {
@@ -54,7 +54,7 @@ class Dependencies(
             if (BuildConfig.DEBUG) {
                 loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
             } else {
-                if (VitalLogger.create().enabled) {
+                if (VitalLogger.getOrCreate().enabled) {
                     loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
                 } else {
                     loggingInterceptor.level = HttpLoggingInterceptor.Level.NONE

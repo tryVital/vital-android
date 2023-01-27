@@ -14,13 +14,9 @@ import androidx.work.WorkerParameters
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
-import io.tryvital.client.services.data.BloodPressureSample
-import io.tryvital.client.services.data.QuantitySample
-import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
 import io.tryvital.vitalhealthconnect.ext.toDate
-import io.tryvital.vitalhealthconnect.model.HCQuantitySample
 import io.tryvital.vitalhealthconnect.model.HealthResource
 import io.tryvital.vitalhealthconnect.records.*
 import kotlinx.coroutines.Dispatchers
@@ -59,7 +55,6 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         HealthConnectRecordProcessor(
             HealthConnectRecordReader(applicationContext, healthConnectClientProvider),
             HealthConnectRecordAggregator(applicationContext, healthConnectClientProvider),
-            vitalClient
         )
     }
 
@@ -223,25 +218,12 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 bloodPressureStartTime.toDate(),
                 bloodPressureEndTime.toDate(),
                 timeZoneId,
-                bloodPressure.map {
-                    BloodPressureSample(
-                        systolic = HCQuantitySample(
-                            value = it.systolic.inMillimetersOfMercury.toString(),
-                            unit = SampleType.BloodPressureSystolic.unit,
-                            startDate = Date.from(it.time),
-                            endDate = Date.from(it.time),
-                            metadata = it.metadata,
-                        ).toQuantitySample(currentDevice),
-                        diastolic = HCQuantitySample(
-                            value = it.diastolic.inMillimetersOfMercury.toString(),
-                            unit = SampleType.BloodPressureDiastolic.unit,
-                            startDate = Date.from(it.time),
-                            endDate = Date.from(it.time),
-                            metadata = it.metadata,
-                        ).toQuantitySample(currentDevice),
-                        pulse = null,
-                    )
-                }
+                recordProcessor.processBloodPressureFromRecords(
+                    bloodPressureStartTime,
+                    bloodPressureEndTime,
+                    currentDevice,
+                    bloodPressure
+                ).samples.map { it.toBloodPressurePayload() }
             )
 
             reportStatus(HealthResource.Glucose, synced)
@@ -267,15 +249,12 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 waterStartTime.toDate(),
                 waterEndTime.toDate(),
                 timeZoneId,
-                water.map {
-                    HCQuantitySample(
-                        value = it.volume.inMilliliters.toString(),
-                        unit = SampleType.Water.unit,
-                        startDate = it.startTime.toDate(),
-                        endDate = it.endTime.toDate(),
-                        metadata = it.metadata
-                    ).toQuantitySample(currentDevice)
-                }
+                recordProcessor.processWaterFromRecords(
+                    waterStartTime,
+                    waterEndTime,
+                    currentDevice,
+                    water
+                ).samples.map { it.toQuantitySamplePayload() }
             )
 
             reportStatus(HealthResource.Glucose, synced)
@@ -300,7 +279,12 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 heartRateStartTime.toDate(),
                 heartRateEndTime.toDate(),
                 timeZoneId,
-                mapHearthRate(heartRate, currentDevice)
+                recordProcessor.processHeartRateFromRecords(
+                    heartRateStartTime,
+                    heartRateEndTime,
+                    currentDevice,
+                    heartRate
+                ).samples.map { it.toQuantitySamplePayload() }
             )
 
             reportStatus(HealthResource.Glucose, synced)
@@ -325,15 +309,12 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 bloodGlucoseStartTime.toDate(),
                 bloodGlucoseEndTime.toDate(),
                 timeZoneId,
-                bloodGlucose.map {
-                    HCQuantitySample(
-                        value = it.level.inMilligramsPerDeciliter.toString(),
-                        unit = SampleType.GlucoseConcentration.unit,
-                        startDate = Date.from(it.time),
-                        endDate = Date.from(it.time),
-                        metadata = it.metadata,
-                    ).toQuantitySample(currentDevice)
-                },
+                recordProcessor.processGlucoseFromRecords(
+                    bloodGlucoseStartTime,
+                    bloodGlucoseEndTime,
+                    currentDevice,
+                    bloodGlucose
+                ).samples.map { it.toQuantitySamplePayload() }
             )
 
             reportStatus(HealthResource.Glucose, synced)
@@ -361,7 +342,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     sleepEndTime,
                     currentDevice,
                     sleeps
-                )
+                ).samples.map { it.toSleepPayload() }
             )
             reportStatus(HealthResource.Sleep, synced)
         } else {
@@ -409,7 +390,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     distance,
                     floorsClimbed,
                     vo2Max
-                )
+                ).samples.map { it.toActivityPayload() }
             )
             reportStatus(HealthResource.Activity, synced)
         } else {
@@ -431,8 +412,11 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             recordUploader.uploadWorkouts(
                 userId, exercisesStartTime.toDate(), exercisesEndTime.toDate(), timeZoneId,
                 recordProcessor.processWorkoutsFromRecords(
-                    exercisesStartTime, exercisesEndTime, currentDevice, exercises
-                )
+                    exercisesStartTime,
+                    exercisesEndTime,
+                    currentDevice,
+                    exercises
+                ).samples.map { it.toWorkoutPayload() }
             )
 
             reportStatus(HealthResource.Workout, synced)
@@ -461,7 +445,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     currentDevice,
                     weights,
                     bodyFats
-                )
+                ).toBodyPayload()
             )
             reportStatus(HealthResource.Body, synced)
         } else {
@@ -480,7 +464,8 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
 
             recordUploader.uploadProfile(
                 userId, height.time.toDate(), height.time.toDate(), timeZoneId,
-                recordProcessor.processProfileFromRecords(height.time, height.time, height)
+                recordProcessor.processProfileFromRecords(height.time, height.time, heights)
+                    .toProfilePayload()
             )
             reportStatus(HealthResource.Profile, synced)
         } else {
@@ -515,26 +500,4 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 .build()
         }
     }
-
-    private fun mapHearthRate(
-        heartRateRecords: List<HeartRateRecord>,
-        fallbackDeviceModel: String
-    ): List<QuantitySample> {
-        return heartRateRecords.map { heartRateRecord ->
-            heartRateRecord.samples.windowed(5, partialWindows = true)
-                .map {
-                    val averagedSample =
-                        it.fold(0L) { acc, sample -> acc + sample.beatsPerMinute } / it.size
-
-                    HCQuantitySample(
-                        value = averagedSample.toString(),
-                        unit = SampleType.HeartRate.unit,
-                        startDate = it.first().time.toDate(),
-                        endDate = it.last().time.toDate(),
-                        metadata = heartRateRecord.metadata,
-                    ).toQuantitySample(fallbackDeviceModel)
-                }
-        }.flatten()
-    }
-
 }

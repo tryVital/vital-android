@@ -99,7 +99,7 @@ interface RecordReader {
         endTime: Instant
     ): List<BloodPressureRecord>
 
-    suspend fun readWater(
+    suspend fun readHydration(
         startTime: Instant,
         endTime: Instant
     ): List<HydrationRecord>
@@ -189,7 +189,7 @@ internal class HealthConnectRecordReader(
         endTime: Instant
     ): List<BloodPressureRecord> = readRecords(startTime, endTime)
 
-    override suspend fun readWater(
+    override suspend fun readHydration(
         startTime: Instant,
         endTime: Instant
     ): List<HydrationRecord> = readRecords(startTime, endTime)

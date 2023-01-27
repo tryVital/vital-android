@@ -55,7 +55,7 @@ interface RecordUploader {
         startDate: Date,
         endDate: Date,
         timeZoneId: String?,
-        glucosePayloads: List<QuantitySample>
+        glucosePayloads: List<QuantitySamplePayload>
     )
 
     suspend fun uploadBloodPressure(
@@ -63,7 +63,7 @@ interface RecordUploader {
         startDate: Date,
         endDate: Date,
         timeZoneId: String?,
-        bloodPressurePayloads: List<BloodPressureSample>
+        bloodPressurePayloads: List<BloodPressureSamplePayload>
     )
 
     suspend fun uploadHeartRate(
@@ -71,7 +71,7 @@ interface RecordUploader {
         startDate: Date,
         endDate: Date,
         timeZoneId: String?,
-        heartRatePayloads: List<QuantitySample>
+        heartRatePayloads: List<QuantitySamplePayload>
     )
 
     suspend fun uploadWater(
@@ -79,7 +79,7 @@ interface RecordUploader {
         startDate: Date,
         endDate: Date,
         timeZoneId: String?,
-        waterPayloads: List<QuantitySample>
+        waterPayloads: List<QuantitySamplePayload>
     )
 }
 
@@ -190,7 +190,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Date,
         endDate: Date,
         timeZoneId: String?,
-        glucosePayloads: List<QuantitySample>
+        glucosePayloads: List<QuantitySamplePayload>
     ) {
         if (glucosePayloads.isNotEmpty()) {
             vitalClient.vitalsService.sendGlucose(
@@ -211,7 +211,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Date,
         endDate: Date,
         timeZoneId: String?,
-        bloodPressurePayloads: List<BloodPressureSample>
+        bloodPressurePayloads: List<BloodPressureSamplePayload>
     ) {
         if (bloodPressurePayloads.isNotEmpty()) {
             vitalClient.vitalsService.sendBloodPressure(
@@ -232,7 +232,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Date,
         endDate: Date,
         timeZoneId: String?,
-        heartRatePayloads: List<QuantitySample>
+        heartRatePayloads: List<QuantitySamplePayload>
     ) {
         if (heartRatePayloads.isNotEmpty()) {
             vitalClient.vitalsService.sendHeartRate(
@@ -253,7 +253,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Date,
         endDate: Date,
         timeZoneId: String?,
-        waterPayloads: List<QuantitySample>
+        waterPayloads: List<QuantitySamplePayload>
     ) {
         if (waterPayloads.isNotEmpty()) {
             vitalClient.vitalsService.sendWater(

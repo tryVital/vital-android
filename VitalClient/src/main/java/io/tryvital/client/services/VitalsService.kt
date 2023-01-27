@@ -22,7 +22,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun sendGlucose(
         userId: String,
-        glucosePayloads: TimeseriesPayload<List<QuantitySample>>,
+        glucosePayloads: TimeseriesPayload<List<QuantitySamplePayload>>,
     ) {
         return timeSeries.timeseriesPost(
             userId = userId, resource = "glucose", payload = glucosePayloads,
@@ -92,7 +92,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun sendBloodPressure(
         userId: String,
-        timeseriesPayload: TimeseriesPayload<List<BloodPressureSample>>
+        timeseriesPayload: TimeseriesPayload<List<BloodPressureSamplePayload>>
     ) {
         return timeSeries.bloodPressureTimeseriesPost(
             userId = userId,
@@ -103,7 +103,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun sendHeartRate(
         userId: String,
-        timeseriesPayload: TimeseriesPayload<List<QuantitySample>>
+        timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
     ) {
         return timeSeries.timeseriesPost(
             userId = userId,
@@ -114,7 +114,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun sendWater(
         userId: String,
-        timeseriesPayload: TimeseriesPayload<List<QuantitySample>>
+        timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
     ) {
         return timeSeries.timeseriesPost(
             userId = userId,
@@ -144,14 +144,14 @@ private interface TimeSeries {
     suspend fun timeseriesPost(
         @Path("user_id") userId: String,
         @Path("resource", encoded = true) resource: String,
-        @Body payload: TimeseriesPayload<List<QuantitySample>>
+        @Body payload: TimeseriesPayload<List<QuantitySamplePayload>>
     )
 
     @POST("timeseries/{user_id}/{resource}")
     suspend fun bloodPressureTimeseriesPost(
         @Path("user_id") userId: String,
         @Path("resource", encoded = true) resource: String,
-        @Body payload: TimeseriesPayload<List<BloodPressureSample>>
+        @Body payload: TimeseriesPayload<List<BloodPressureSamplePayload>>
     )
 }
 

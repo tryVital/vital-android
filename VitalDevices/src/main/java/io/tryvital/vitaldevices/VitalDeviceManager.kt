@@ -6,7 +6,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.*
 import android.content.Context.BLUETOOTH_SERVICE
-import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.devices.BloodPressureReader1810
 import io.tryvital.vitaldevices.devices.BloodPressureSample
@@ -25,7 +25,7 @@ class VitalDeviceManager(
     private var glucoseMeter1808: GlucoseMeter1808? = null
     private var bloodPressureReader1810: BloodPressureReader1810? = null
 
-    private val vitalLogger = VitalLogger.create()
+    private val vitalLogger = VitalLogger.getOrCreate()
     private val deviceStateChange = MutableStateFlow<Pair<String, Boolean>?>(null)
     private var repeatSearch = false
 
@@ -140,7 +140,7 @@ class VitalDeviceManager(
         }.map { it.second }
     }
 
-    fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): Flow<List<QuantitySample>> {
+    fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): Flow<List<QuantitySamplePayload>> {
         when (scannedDevice.deviceModel.brand) {
             Brand.AccuChek,
             Brand.Contour -> {

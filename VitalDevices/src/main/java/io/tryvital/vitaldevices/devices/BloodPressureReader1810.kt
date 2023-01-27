@@ -5,7 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
-import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.ScannedDevice
@@ -35,7 +35,7 @@ class BloodPressureReader1810(
     private val scannedBluetoothDevice: BluetoothDevice,
     private val scannedDevice: ScannedDevice,
 ) : BleManager(context), BloodPressureReader {
-    private val vitalLogger = VitalLogger.create()
+    private val vitalLogger = VitalLogger.getOrCreate()
     private val measurements = MutableStateFlow<BloodPressureSample?>(null)
 
     private var bloodPressureMeasurementCharacteristic: BluetoothGattCharacteristic? = null
@@ -109,21 +109,21 @@ class BloodPressureReader1810(
 
         val measurementTime = response.timestamp?.time ?: Date(0)
         return BloodPressureSample(
-            systolic = QuantitySample(
+            systolic = QuantitySamplePayload(
                 id = "systolic-${measurementTime.time}",
                 value = response.systolic.toString(),
                 unit = SampleType.BloodPressureSystolic.unit,
                 startDate = measurementTime,
                 endDate = measurementTime,
             ),
-            diastolic = QuantitySample(
+            diastolic = QuantitySamplePayload(
                 id = "diastolic-${measurementTime.time}",
                 value = response.diastolic.toString(),
                 unit = SampleType.BloodPressureDiastolic.unit,
                 startDate = measurementTime,
                 endDate = measurementTime,
             ),
-            pulse = QuantitySample(
+            pulse = QuantitySamplePayload(
                 id = "pulseRate-${measurementTime.time}",
                 value = response.pulseRate.toString(),
                 unit = SampleType.HeartRate.unit,

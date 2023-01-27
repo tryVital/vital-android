@@ -5,7 +5,7 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
-import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.ScannedDevice
@@ -30,7 +30,7 @@ private val recordAccessControlPointCharacteristicUUID =
 
 interface GlucoseMeter {
     fun pair(): Flow<Boolean>
-    fun read(): Flow<List<QuantitySample>>
+    fun read(): Flow<List<QuantitySamplePayload>>
 }
 
 class GlucoseMeter1808(
@@ -38,8 +38,8 @@ class GlucoseMeter1808(
     private val scannedBluetoothDevice: BluetoothDevice,
     private val scannedDevice: ScannedDevice,
 ) : BleManager(context), GlucoseMeter {
-    private val vitalLogger = VitalLogger.create()
-    private val measurements = MutableStateFlow<QuantitySample?>(null)
+    private val vitalLogger = VitalLogger.getOrCreate()
+    private val measurements = MutableStateFlow<QuantitySamplePayload?>(null)
 
 
     private var glucoseMeasurementCharacteristic: BluetoothGattCharacteristic? = null
@@ -68,7 +68,7 @@ class GlucoseMeter1808(
     }
 
 
-    override fun read(): Flow<List<QuantitySample>> {
+    override fun read(): Flow<List<QuantitySamplePayload>> {
         writeCharacteristic(
             recordAccessControlPointCharacteristic,
             RecordAccessControlPointData.reportAllStoredRecords(),
@@ -126,13 +126,13 @@ class GlucoseMeter1808(
 
     private fun mapRawData(
         device: BluetoothDevice, data: Data
-    ): QuantitySample {
+    ): QuantitySamplePayload {
         val response = GlucoseMeasurementResponse().apply {
             onDataReceived(device, data)
         }
 
         val measurementTime = response.time?.time ?: Date(0)
-        return QuantitySample(
+        return QuantitySamplePayload(
             id = "glucose-${measurementTime.time}",
             value = (response.glucoseConcentration?.times(100000)).toString(),
             unit = SampleType.GlucoseConcentration.unit,

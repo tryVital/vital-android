@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         val vitalDeviceManager = vitalApp.vitalDeviceManager
         val vitalHealthConnectManager = vitalApp.vitalHealthConnectManager
         val userRepository = vitalApp.userRepository
-        VitalLogger.create().enabled = true
+        VitalLogger.getOrCreate().enabled = true
 
         setContent {
             val navController = rememberNavController()
