@@ -31,6 +31,11 @@ android {
         jvmTarget = '1.8'
     }
 
+    lintOptions {
+        //because the Initializer is not in the same module as the VitalHealthInitializer it reports this as an error
+        disable 'EnsureInitializerMetadata'
+    }
+
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
