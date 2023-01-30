@@ -10,12 +10,9 @@ sealed class ProcessedResourceData {
 }
 
 sealed class TimeSeriesData {
-    data class ActiveEnergyBurned(val samples: List<QuantitySample>) : TimeSeriesData()
-    data class BasalEnergyBurned(val samples: List<QuantitySample>) : TimeSeriesData()
     data class Glucose(val samples: List<QuantitySample>) : TimeSeriesData()
     data class BloodPressure(val samples: List<BloodPressureSample>) : TimeSeriesData()
     data class HeartRate(val samples: List<QuantitySample>) : TimeSeriesData()
-    data class Steps(val samples: List<QuantitySample>) : TimeSeriesData()
     data class Water(val samples: List<QuantitySample>) : TimeSeriesData()
 }
 

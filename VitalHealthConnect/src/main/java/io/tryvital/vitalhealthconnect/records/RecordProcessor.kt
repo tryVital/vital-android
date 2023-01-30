@@ -17,20 +17,6 @@ import kotlin.math.roundToInt
 
 interface RecordProcessor {
 
-    suspend fun processActiveEnergyBurnedFromRecords(
-        startTime: Instant,
-        endTime: Instant,
-        currentDevice: String,
-        activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,
-    ): TimeSeriesData.ActiveEnergyBurned
-
-    suspend fun processBasalEnergyBurnedFromRecords(
-        startDate: Instant,
-        endDate: Instant,
-        currentDevice: String,
-        readBasalEnergyBurned: List<BasalMetabolicRateRecord>
-    ): TimeSeriesData
-
     suspend fun processBloodPressureFromRecords(
         startDate: Instant,
         endDate: Instant,
@@ -51,13 +37,6 @@ interface RecordProcessor {
         currentDevice: String,
         heartRateRecords: List<HeartRateRecord>
     ): TimeSeriesData.HeartRate
-
-    fun processStepsFromRecords(
-        startDate: Instant,
-        endDate: Instant,
-        currentDevice: String,
-        readSteps: List<StepsRecord>
-    ): TimeSeriesData.Steps
 
     fun processWaterFromRecords(
         startDate: Instant,
@@ -115,44 +94,6 @@ internal class HealthConnectRecordProcessor(
 
     private val logger = VitalLogger.getOrCreate()
 
-    override suspend fun processActiveEnergyBurnedFromRecords(
-        startTime: Instant,
-        endTime: Instant,
-        currentDevice: String,
-        activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,
-    ): TimeSeriesData.ActiveEnergyBurned {
-        return TimeSeriesData.ActiveEnergyBurned(
-            activeEnergyBurned.map {
-                HCQuantitySample(
-                    value = it.energy.inKilojoules.toString(),
-                    unit = SampleType.ActiveCaloriesBurned.unit,
-                    startDate = Date.from(it.startTime),
-                    endDate = Date.from(it.endTime),
-                    metadata = it.metadata,
-                ).toQuantitySample(currentDevice)
-            }
-        )
-    }
-
-    override suspend fun processBasalEnergyBurnedFromRecords(
-        startDate: Instant,
-        endDate: Instant,
-        currentDevice: String,
-        readBasalEnergyBurned: List<BasalMetabolicRateRecord>
-    ): TimeSeriesData {
-        return TimeSeriesData.BasalEnergyBurned(
-            readBasalEnergyBurned.map {
-                HCQuantitySample(
-                    value = (it.basalMetabolicRate.inWatts / 1000).toString(),
-                    unit = SampleType.BasalMetabolicRate.unit,
-                    startDate = it.time.toDate(),
-                    endDate = it.time.toDate(),
-                    metadata = it.metadata,
-                ).toQuantitySample(currentDevice)
-            }
-        )
-    }
-
     override suspend fun processBloodPressureFromRecords(
         startDate: Instant,
         endDate: Instant,
@@ -208,25 +149,6 @@ internal class HealthConnectRecordProcessor(
     ): TimeSeriesData.HeartRate {
         return TimeSeriesData.HeartRate(
             mapHearthRate(heartRateRecords, currentDevice)
-        )
-    }
-
-    override fun processStepsFromRecords(
-        startDate: Instant,
-        endDate: Instant,
-        currentDevice: String,
-        readSteps: List<StepsRecord>
-    ): TimeSeriesData.Steps {
-        return TimeSeriesData.Steps(
-            readSteps.map {
-                HCQuantitySample(
-                    value = it.count.toString(),
-                    unit = SampleType.Steps.unit,
-                    startDate = Date.from(it.startTime),
-                    endDate = Date.from(it.endTime),
-                    metadata = it.metadata,
-                ).toQuantitySample(currentDevice)
-            }
         )
     }
 

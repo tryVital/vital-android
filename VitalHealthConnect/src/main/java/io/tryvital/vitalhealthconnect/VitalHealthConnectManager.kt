@@ -275,20 +275,30 @@ class VitalHealthConnectManager private constructor(
         val currentDevice = Build.MODEL
 
         return when (resource) {
-            HealthResource.ActiveEnergyBurned -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processActiveEnergyBurnedFromRecords(
+            HealthResource.ActiveEnergyBurned -> ProcessedResourceData.Summary(
+                recordProcessor.processActivitiesFromRecords(
                     startDate,
                     endDate,
                     currentDevice,
-                    recordReader.readActiveEnergyBurned(startDate, endDate)
+                    recordReader.readActiveEnergyBurned(startDate, endDate),
+                    recordReader.readBasalMetabolicRate(startDate, endDate),
+                    recordReader.readSteps(startDate, endDate),
+                    recordReader.readDistance(startDate, endDate),
+                    recordReader.readFloorsClimbed(startDate, endDate),
+                    recordReader.readVo2Max(startDate, endDate),
                 )
             )
-            HealthResource.BasalEnergyBurned -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processBasalEnergyBurnedFromRecords(
+            HealthResource.BasalEnergyBurned -> ProcessedResourceData.Summary(
+                recordProcessor.processActivitiesFromRecords(
                     startDate,
                     endDate,
                     currentDevice,
-                    recordReader.readBasalMetabolicRate(startDate, endDate)
+                    recordReader.readActiveEnergyBurned(startDate, endDate),
+                    recordReader.readBasalMetabolicRate(startDate, endDate),
+                    recordReader.readSteps(startDate, endDate),
+                    recordReader.readDistance(startDate, endDate),
+                    recordReader.readFloorsClimbed(startDate, endDate),
+                    recordReader.readVo2Max(startDate, endDate),
                 )
             )
             HealthResource.BloodPressure -> ProcessedResourceData.TimeSeries(
@@ -315,12 +325,17 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readHeartRate(startDate, endDate)
                 )
             )
-            HealthResource.Steps -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processStepsFromRecords(
+            HealthResource.Steps -> ProcessedResourceData.Summary(
+                recordProcessor.processActivitiesFromRecords(
                     startDate,
                     endDate,
                     currentDevice,
-                    recordReader.readSteps(startDate, endDate)
+                    recordReader.readActiveEnergyBurned(startDate, endDate),
+                    recordReader.readBasalMetabolicRate(startDate, endDate),
+                    recordReader.readSteps(startDate, endDate),
+                    recordReader.readDistance(startDate, endDate),
+                    recordReader.readFloorsClimbed(startDate, endDate),
+                    recordReader.readVo2Max(startDate, endDate),
                 )
             )
             HealthResource.Water -> ProcessedResourceData.TimeSeries(
