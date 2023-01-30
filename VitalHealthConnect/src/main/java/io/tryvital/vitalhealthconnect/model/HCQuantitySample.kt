@@ -1,7 +1,7 @@
 package io.tryvital.vitalhealthconnect.model
 
 import androidx.health.connect.client.records.metadata.Metadata
-import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.vitalhealthconnect.model.processedresource.QuantitySample
 import java.util.*
 
 data class HCQuantitySample(

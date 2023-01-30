@@ -36,24 +36,24 @@ data class WorkoutPayload(
     @Json(name = "distance")
     val distanceInMeter: Long,
     @Json(name = "heart_rate")
-    val heartRate: List<QuantitySample>,
+    val heartRate: List<QuantitySamplePayload>,
     @Json(name = "respiratory_rate")
-    val respiratoryRate: List<QuantitySample>
+    val respiratoryRate: List<QuantitySamplePayload>
 )
 
 data class ActivityPayload(
     @Json(name = "active_energy_burned")
-    val activeEnergyBurned: List<QuantitySample>,
+    val activeEnergyBurned: List<QuantitySamplePayload>,
     @Json(name = "basal_energy_burned")
-    val basalEnergyBurned: List<QuantitySample>,
+    val basalEnergyBurned: List<QuantitySamplePayload>,
     @Json(name = "steps")
-    val steps: List<QuantitySample>,
+    val steps: List<QuantitySamplePayload>,
     @Json(name = "distance_walking_running")
-    val distanceWalkingRunning: List<QuantitySample>,
+    val distanceWalkingRunning: List<QuantitySamplePayload>,
     @Json(name = "vo2_max")
-    val vo2Max: List<QuantitySample>,
+    val vo2Max: List<QuantitySamplePayload>,
     @Json(name = "floors_climbed")
-    val floorsClimbed: List<QuantitySample>,
+    val floorsClimbed: List<QuantitySamplePayload>,
 )
 
 data class ProfilePayload(
@@ -67,9 +67,9 @@ data class ProfilePayload(
 
 data class BodyPayload(
     @Json(name = "body_mass")
-    val bodyMass: List<QuantitySample>,
+    val bodyMass: List<QuantitySamplePayload>,
     @Json(name = "body_fat_percentage")
-    val bodyFatPercentage: List<QuantitySample>,
+    val bodyFatPercentage: List<QuantitySamplePayload>,
 )
 
 data class SleepPayload(
@@ -84,18 +84,18 @@ data class SleepPayload(
     @Json(name = "product_type")
     val deviceModel: String?,
     @Json(name = "heart_rate")
-    val heartRate: List<QuantitySample>,
+    val heartRate: List<QuantitySamplePayload>,
     @Json(name = "resting_heart_rate")
-    val restingHeartRate: List<QuantitySample>,
+    val restingHeartRate: List<QuantitySamplePayload>,
     @Json(name = "heart_rate_variability")
-    val heartRateVariability: List<QuantitySample>,
+    val heartRateVariability: List<QuantitySamplePayload>,
     @Json(name = "oxygen_saturation")
-    val oxygenSaturation: List<QuantitySample>,
+    val oxygenSaturation: List<QuantitySamplePayload>,
     @Json(name = "respiratory_rate")
-    val respiratoryRate: List<QuantitySample>,
+    val respiratoryRate: List<QuantitySamplePayload>,
 )
 
-data class QuantitySample(
+data class QuantitySamplePayload(
     @Json(name = "id")
     val id: String,
     @Json(name = "value")
@@ -116,13 +116,13 @@ data class QuantitySample(
     val metadata: String? = null,
 )
 
-data class BloodPressureSample(
+data class BloodPressureSamplePayload(
     @Json(name = "systolic")
-    val systolic: QuantitySample,
+    val systolic: QuantitySamplePayload,
     @Json(name = "diastolic")
-    val diastolic: QuantitySample,
+    val diastolic: QuantitySamplePayload,
     @Json(name = "pulse")
-    val pulse: QuantitySample?,
+    val pulse: QuantitySamplePayload?,
 )
 
 

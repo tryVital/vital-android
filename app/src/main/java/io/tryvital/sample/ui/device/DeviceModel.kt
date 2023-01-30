@@ -6,7 +6,7 @@ import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.vitaldevices.*
 import io.tryvital.vitaldevices.devices.BloodPressureSample
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,7 +99,7 @@ class DeviceViewModel(
 data class BluetoothViewModelState(
     val device: DeviceModel,
     val scannedDevices: List<ScannedDevice>,
-    val samples: List<QuantitySample>,
+    val samples: List<QuantitySamplePayload>,
     val bloodPressureSamples: List<BloodPressureSample>,
     val isConnected: Boolean,
 )

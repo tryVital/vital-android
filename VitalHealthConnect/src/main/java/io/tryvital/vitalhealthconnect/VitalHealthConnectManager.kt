@@ -14,10 +14,9 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
-import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
-import io.tryvital.vitalhealthconnect.model.HealthResource
-import io.tryvital.vitalhealthconnect.model.SyncStatus
-import io.tryvital.vitalhealthconnect.model.healthResources
+import io.tryvital.vitalhealthconnect.model.*
+import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
+import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -73,7 +72,9 @@ class VitalHealthConnectManager private constructor(
     private val healthConnectClientProvider: HealthConnectClientProvider,
     private val apiKey: String,
     private val region: Region,
-    private val environment: Environment
+    private val environment: Environment,
+    private val recordReader: RecordReader,
+    private val recordProcessor: RecordProcessor,
 ) {
     private val vitalClient: VitalClient = VitalClient(context, region, environment, apiKey)
 
@@ -215,6 +216,169 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
+    suspend fun addHealthResource(
+        resource: HealthResource,
+        startDate: Instant,
+        endDate: Instant,
+        value: Double
+    ) {
+        val healthConnectClient = healthConnectClientProvider.getHealthConnectClient(context)
+
+        when (resource) {
+            HealthResource.Water -> {
+                healthConnectClient.insertRecords(
+                    listOf(
+                        HydrationRecord(
+                            startTime = startDate,
+                            startZoneOffset = ZoneOffset.UTC,
+                            endTime = if (startDate <= endDate) startDate.plusSeconds(1) else endDate,
+                            endZoneOffset = ZoneOffset.UTC,
+                            volume = Volume.milliliters(value)
+                        )
+                    )
+                )
+            }
+            HealthResource.Glucose -> {
+                healthConnectClient.insertRecords(
+                    listOf(
+                        BloodGlucoseRecord(
+                            time = startDate,
+                            zoneOffset = ZoneOffset.UTC,
+                            level = BloodGlucose.milligramsPerDeciliter(value),
+                        )
+                    )
+                )
+            }
+            HealthResource.ActiveEnergyBurned,
+            HealthResource.Activity,
+            HealthResource.BasalEnergyBurned,
+            HealthResource.BloodPressure,
+            HealthResource.Body,
+            HealthResource.HeartRate,
+            HealthResource.Profile,
+            HealthResource.Sleep,
+            HealthResource.Steps,
+            HealthResource.Workout -> {
+                vitalLogger.logI("Not supported resource $resource")
+            }
+        }
+
+        syncData()
+    }
+
+    @Suppress("unused")
+    suspend fun read(
+        resource: HealthResource,
+        startDate: Instant,
+        endDate: Instant
+    ): ProcessedResourceData {
+        val currentDevice = Build.MODEL
+
+        return when (resource) {
+            HealthResource.ActiveEnergyBurned -> ProcessedResourceData.TimeSeries(
+                recordProcessor.processActiveEnergyBurnedFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readActiveEnergyBurned(startDate, endDate)
+                )
+            )
+            HealthResource.BasalEnergyBurned -> ProcessedResourceData.TimeSeries(
+                recordProcessor.processBasalEnergyBurnedFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readBasalMetabolicRate(startDate, endDate)
+                )
+            )
+            HealthResource.BloodPressure -> ProcessedResourceData.TimeSeries(
+                recordProcessor.processBloodPressureFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readBloodPressure(startDate, endDate)
+                )
+            )
+            HealthResource.Glucose -> ProcessedResourceData.TimeSeries(
+                recordProcessor.processGlucoseFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readBloodGlucose(startDate, endDate)
+                )
+            )
+            HealthResource.HeartRate -> ProcessedResourceData.TimeSeries(
+                recordProcessor.processHeartRateFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readHeartRate(startDate, endDate)
+                )
+            )
+            HealthResource.Steps -> ProcessedResourceData.TimeSeries(
+                recordProcessor.processStepsFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readSteps(startDate, endDate)
+                )
+            )
+            HealthResource.Water -> ProcessedResourceData.TimeSeries(
+                recordProcessor.processWaterFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readHydration(startDate, endDate)
+                )
+            )
+            HealthResource.Body -> ProcessedResourceData.Summary(
+                recordProcessor.processBodyFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readWeights(startDate, endDate),
+                    recordReader.readBodyFat(startDate, endDate)
+                )
+            )
+            HealthResource.Profile -> ProcessedResourceData.Summary(
+                recordProcessor.processProfileFromRecords(
+                    startDate,
+                    endDate,
+                    recordReader.readHeights(startDate, endDate)
+                )
+            )
+            HealthResource.Sleep -> ProcessedResourceData.Summary(
+                recordProcessor.processSleepFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readSleepSession(startDate, endDate)
+                )
+            )
+            HealthResource.Activity -> ProcessedResourceData.Summary(
+                recordProcessor.processActivitiesFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readActiveEnergyBurned(startDate, endDate),
+                    recordReader.readBasalMetabolicRate(startDate, endDate),
+                    recordReader.readSteps(startDate, endDate),
+                    recordReader.readDistance(startDate, endDate),
+                    recordReader.readFloorsClimbed(startDate, endDate),
+                    recordReader.readVo2Max(startDate, endDate),
+                )
+            )
+            HealthResource.Workout -> ProcessedResourceData.Summary(
+                recordProcessor.processWorkoutsFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readExerciseSessions(startDate, endDate)
+                )
+            )
+        }
+    }
+
     @Suppress("unused")
     fun resetChangeToken() {
         vitalLogger.logI("Resetting change token")
@@ -338,56 +502,6 @@ class VitalHealthConnectManager private constructor(
                 encryptedSharedPreferences.getString(SecurePrefKeys.environmentKey, null) != null
     }
 
-    suspend fun addHealthResource(
-        resource: HealthResource,
-        startDate: Instant,
-        endDate: Instant,
-        value: Double
-    ) {
-        val healthConnectClient = healthConnectClientProvider.getHealthConnectClient(context)
-
-        when (resource) {
-            HealthResource.Water -> {
-                healthConnectClient.insertRecords(
-                    listOf(
-                        HydrationRecord(
-                            startTime = startDate,
-                            startZoneOffset = ZoneOffset.UTC,
-                            endTime = if (startDate <= endDate) startDate.plusSeconds(1) else endDate,
-                            endZoneOffset = ZoneOffset.UTC,
-                            volume = Volume.milliliters(value)
-                        )
-                    )
-                )
-            }
-            HealthResource.Glucose -> {
-                healthConnectClient.insertRecords(
-                    listOf(
-                        BloodGlucoseRecord(
-                            time = startDate,
-                            zoneOffset = ZoneOffset.UTC,
-                            level = BloodGlucose.milligramsPerDeciliter(value),
-                        )
-                    )
-                )
-            }
-            HealthResource.ActiveEnergyBurned,
-            HealthResource.Activity,
-            HealthResource.BasalEnergyBurned,
-            HealthResource.BloodPressure,
-            HealthResource.Body,
-            HealthResource.HeartRate,
-            HealthResource.Profile,
-            HealthResource.Sleep,
-            HealthResource.Steps,
-            HealthResource.Workout -> {
-                vitalLogger.logI("Not supported resource $resource")
-            }
-        }
-
-        syncData()
-    }
-
     companion object {
         fun create(
             context: Context,
@@ -403,6 +517,11 @@ class VitalHealthConnectManager private constructor(
                 apiKey,
                 region,
                 environment,
+                HealthConnectRecordReader(context, healthConnectClientProvider),
+                HealthConnectRecordProcessor(
+                    HealthConnectRecordReader(context, healthConnectClientProvider),
+                    HealthConnectRecordAggregator(context, healthConnectClientProvider),
+                )
             )
         }
 

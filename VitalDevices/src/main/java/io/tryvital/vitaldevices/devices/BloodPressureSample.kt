@@ -1,9 +1,9 @@
 package io.tryvital.vitaldevices.devices
 
-import io.tryvital.client.services.data.QuantitySample
+import io.tryvital.client.services.data.QuantitySamplePayload
 
 data class BloodPressureSample(
-    val systolic: QuantitySample,
-    val diastolic: QuantitySample,
-    val pulse: QuantitySample,
+    val systolic: QuantitySamplePayload,
+    val diastolic: QuantitySamplePayload,
+    val pulse: QuantitySamplePayload,
 )

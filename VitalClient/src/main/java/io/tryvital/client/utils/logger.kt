@@ -21,7 +21,7 @@ class VitalLogger private constructor(var enabled: Boolean = false) {
     companion object {
         private var instance: VitalLogger? = null
 
-        fun create(): VitalLogger {
+        fun getOrCreate(): VitalLogger {
             if (instance == null) {
                 synchronized(VitalLogger::class.java) {
                     if (instance == null) {

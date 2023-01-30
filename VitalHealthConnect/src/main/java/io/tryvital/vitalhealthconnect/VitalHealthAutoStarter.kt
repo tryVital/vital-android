@@ -23,7 +23,7 @@ class VitalHealthInitializer : Initializer<VitalHealthAutoStarter> {
 }
 
 class VitalHealthAutoStarter(private val context: Context) {
-    private val vitalLogger = VitalLogger.create()
+    private val vitalLogger = VitalLogger.getOrCreate()
 
     private val sharedPreferences: SharedPreferences = context.getSharedPreferences(
         prefsFileName, Context.MODE_PRIVATE
