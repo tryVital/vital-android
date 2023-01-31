@@ -54,6 +54,11 @@ interface RecordReader {
         endTime: Instant
     ): List<SleepSessionRecord>
 
+    suspend fun readSleepStages(
+        startTime: Instant,
+        endTime: Instant
+    ): List<SleepStageRecord>
+
     suspend fun readOxygenSaturation(
         startTime: Instant,
         endTime: Instant
@@ -149,6 +154,11 @@ internal class HealthConnectRecordReader(
     override suspend fun readSleepSession(
         startTime: Instant, endTime: Instant
     ): List<SleepSessionRecord> = readRecords(startTime, endTime)
+
+    override suspend fun readSleepStages(
+        startTime: Instant,
+        endTime: Instant
+    ): List<SleepStageRecord> = readRecords(startTime, endTime)
 
     override suspend fun readOxygenSaturation(
         startTime: Instant, endTime: Instant

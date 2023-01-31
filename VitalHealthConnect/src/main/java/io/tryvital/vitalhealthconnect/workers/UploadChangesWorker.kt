@@ -123,6 +123,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         val weights = mutableListOf<WeightRecord>()
         val exercises = mutableListOf<ExerciseSessionRecord>()
         val sleeps = mutableListOf<SleepSessionRecord>()
+        val sleepStages = mutableListOf<SleepStageRecord>()
         val bodyFats = mutableListOf<BodyFatRecord>()
         val activeEnergyBurned = mutableListOf<ActiveCaloriesBurnedRecord>()
         val basalMetabolicRate = mutableListOf<BasalMetabolicRateRecord>()
@@ -140,6 +141,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             when (change.record) {
                 is ExerciseSessionRecord -> exercises.add(change.record as ExerciseSessionRecord)
                 is SleepSessionRecord -> sleeps.add(change.record as SleepSessionRecord)
+                is SleepStageRecord -> sleepStages.add(change.record as SleepStageRecord)
                 is HeightRecord -> heights.add(change.record as HeightRecord)
                 is BodyFatRecord -> bodyFats.add(change.record as BodyFatRecord)
                 is WeightRecord -> weights.add(change.record as WeightRecord)
@@ -158,7 +160,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         }
 
         vitalLogger.logI(
-            "Syncing ${exercises.size} exercises and ${sleeps.size} sleeps " +
+            "Syncing ${exercises.size} exercises and ${sleeps.size} sleeps and ${sleepStages.size} " +
                     "and ${heights.size} heights and ${bodyFats.size} bodyFats and ${weights.size} weights " +
                     "and ${activeEnergyBurned.size} activeEnergyBurned and ${basalMetabolicRate.size} basalMetabolicRate " +
                     "and ${stepsRate.size} stepsRate and ${distance.size} distance and ${floorsClimbed.size} floorsClimbed " +
@@ -186,7 +188,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             )
         }
         if (resourcesToSync.contains(HealthResource.Sleep)) {
-            getSleep(sleeps, userId, timeZoneId, currentDevice)
+            getSleep(sleeps, sleepStages, userId, timeZoneId, currentDevice)
         }
         if (resourcesToSync.contains(HealthResource.Glucose)) {
             getGlucose(bloodGlucose, userId, timeZoneId, currentDevice)
@@ -326,6 +328,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
 
     private suspend fun getSleep(
         sleeps: List<SleepSessionRecord>,
+        stages: List<SleepStageRecord>,
         userId: String,
         timeZoneId: String?,
         currentDevice: String
@@ -341,7 +344,8 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     sleepStartTime,
                     sleepEndTime,
                     currentDevice,
-                    sleeps
+                    sleeps,
+                    stages,
                 ).samples.map { it.toSleepPayload() }
             )
             reportStatus(HealthResource.Sleep, synced)

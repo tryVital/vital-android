@@ -14,6 +14,7 @@ data class Sleep(
     val heartRateVariability: List<QuantitySample>,
     val oxygenSaturation: List<QuantitySample>,
     val respiratoryRate: List<QuantitySample>,
+    val stages: SleepStages,
 ) {
     fun toSleepPayload(): SleepPayload {
         return SleepPayload(
@@ -29,4 +30,22 @@ data class Sleep(
             respiratoryRate = respiratoryRate.map { it.toQuantitySamplePayload() },
         )
     }
+}
+
+data class SleepStages(
+    val awakeSleepSamples: List<QuantitySample>,
+    val deepSleepSamples: List<QuantitySample>,
+    val lightSleepSamples: List<QuantitySample>,
+    val remSleepSamples: List<QuantitySample>,
+    val outOfBedSleepSamples: List<QuantitySample>,
+    val unknownSleepSamples: List<QuantitySample>,
+)
+
+enum class SleepStage(val id: Int) {
+    Deep(1),
+    Light(2),
+    Rem(3),
+    Awake(4),
+    OutOfBed(5),
+    Unknown(-1),
 }

@@ -250,7 +250,8 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
                 startTime,
                 endTime,
                 currentDevice,
-                recordReader.readSleepSession(startTime, endTime)
+                recordReader.readSleepSession(startTime, endTime),
+                recordReader.readSleepStages(startTime, endTime)
             )
         if (sleepPayloads.samples.isEmpty()) {
             reportStatus(HealthResource.Sleep, nothingToSync)

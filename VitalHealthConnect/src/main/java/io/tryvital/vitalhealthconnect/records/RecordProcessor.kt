@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_INT_TO_STRING_MAP
 import io.tryvital.client.services.data.*
-import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
 import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.*
@@ -71,7 +70,8 @@ interface RecordProcessor {
         startTime: Instant,
         endTime: Instant,
         fallbackDeviceModel: String,
-        sleepSessionRecords: List<SleepSessionRecord>
+        sleepSessionRecords: List<SleepSessionRecord>,
+        readSleepStages: List<SleepStageRecord>
     ): SummaryData.Sleeps
 
     suspend fun processActivitiesFromRecords(
@@ -91,8 +91,6 @@ internal class HealthConnectRecordProcessor(
     private val recordReader: RecordReader,
     private val recordAggregator: RecordAggregator,
 ) : RecordProcessor {
-
-    private val logger = VitalLogger.getOrCreate()
 
     override suspend fun processBloodPressureFromRecords(
         startDate: Instant,
@@ -256,19 +254,19 @@ internal class HealthConnectRecordProcessor(
         startTime: Instant,
         endTime: Instant,
         fallbackDeviceModel: String,
-        sleepSessionRecords: List<SleepSessionRecord>
+        sleepSessionRecords: List<SleepSessionRecord>,
+        readSleepStages: List<SleepStageRecord>
     ): SummaryData.Sleeps {
         return SummaryData.Sleeps(
-            processSleeps(fallbackDeviceModel, sleepSessionRecords)
+            processSleeps(fallbackDeviceModel, sleepSessionRecords, readSleepStages)
         )
     }
 
     private suspend fun processSleeps(
         fallbackDeviceModel: String,
         sleeps: List<SleepSessionRecord>,
+        sleepStages: List<SleepStageRecord>,
     ): List<Sleep> {
-        logger.logI("Found ${sleeps.size} sleepSessions")
-
         return sleeps.filterForAcceptedSleepDataSources().map { sleepSession ->
             val heartRateRecord =
                 recordReader.readHeartRate(sleepSession.startTime, sleepSession.endTime)
@@ -304,6 +302,80 @@ internal class HealthConnectRecordProcessor(
                     oxygenSaturationRecord,
                     fallbackDeviceModel
                 ),
+                stages = SleepStages(
+                    awakeSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_AWAKE }
+                        .map { sleepStage ->
+                            QuantitySample(
+                                id = sleepStage.metadata.id,
+                                value = SleepStage.Awake.id.toString(),
+                                unit = "stage",
+                                startDate = Date.from(sleepSession.startTime),
+                                endDate = Date.from(sleepSession.endTime),
+                                sourceBundle = sleepStage.metadata.dataOrigin.packageName,
+                                deviceModel = fallbackDeviceModel,
+                            )
+                        },
+                    deepSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_DEEP }
+                        .map { sleepStage ->
+                            QuantitySample(
+                                id = sleepStage.metadata.id,
+                                value = SleepStage.Deep.id.toString(),
+                                unit = "stage",
+                                startDate = Date.from(sleepSession.startTime),
+                                endDate = Date.from(sleepSession.endTime),
+                                sourceBundle = sleepStage.metadata.dataOrigin.packageName,
+                                deviceModel = fallbackDeviceModel,
+                            )
+                        },
+                    lightSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_LIGHT }
+                        .map { sleepStage ->
+                            QuantitySample(
+                                id = sleepStage.metadata.id,
+                                value = SleepStage.Light.id.toString(),
+                                unit = "stage",
+                                startDate = Date.from(sleepSession.startTime),
+                                endDate = Date.from(sleepSession.endTime),
+                                sourceBundle = sleepStage.metadata.dataOrigin.packageName,
+                                deviceModel = fallbackDeviceModel,
+                            )
+                        },
+                    remSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_REM }
+                        .map { sleepStage ->
+                            QuantitySample(
+                                id = sleepStage.metadata.id,
+                                value = SleepStage.Rem.id.toString(),
+                                unit = "stage",
+                                startDate = Date.from(sleepSession.startTime),
+                                endDate = Date.from(sleepSession.endTime),
+                                sourceBundle = sleepStage.metadata.dataOrigin.packageName,
+                                deviceModel = fallbackDeviceModel,
+                            )
+                        },
+                    unknownSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_UNKNOWN }
+                        .map { sleepStage ->
+                            QuantitySample(
+                                id = sleepStage.metadata.id,
+                                value = SleepStage.Unknown.id.toString(),
+                                unit = "stage",
+                                startDate = Date.from(sleepSession.startTime),
+                                endDate = Date.from(sleepSession.endTime),
+                                sourceBundle = sleepStage.metadata.dataOrigin.packageName,
+                                deviceModel = fallbackDeviceModel,
+                            )
+                        },
+                    outOfBedSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_OUT_OF_BED }
+                        .map { sleepStage ->
+                            QuantitySample(
+                                id = sleepStage.metadata.id,
+                                value = SleepStage.OutOfBed.id.toString(),
+                                unit = "stage",
+                                startDate = Date.from(sleepSession.startTime),
+                                endDate = Date.from(sleepSession.endTime),
+                                sourceBundle = sleepStage.metadata.dataOrigin.packageName,
+                                deviceModel = fallbackDeviceModel,
+                            )
+                        },
+                )
             )
         }
     }

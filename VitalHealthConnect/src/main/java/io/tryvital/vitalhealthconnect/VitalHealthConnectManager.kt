@@ -41,6 +41,7 @@ internal val readRecordTypes = setOf(
     BodyFatRecord::class,
     WeightRecord::class,
     SleepSessionRecord::class,
+    SleepStageRecord::class,
     OxygenSaturationRecord::class,
     HeartRateVariabilitySdnnRecord::class,
     RestingHeartRateRecord::class,
@@ -367,7 +368,8 @@ class VitalHealthConnectManager private constructor(
                     startDate,
                     endDate,
                     currentDevice,
-                    recordReader.readSleepSession(startDate, endDate)
+                    recordReader.readSleepSession(startDate, endDate),
+                    recordReader.readSleepStages(startDate, endDate),
                 )
             )
             HealthResource.Activity -> ProcessedResourceData.Summary(
