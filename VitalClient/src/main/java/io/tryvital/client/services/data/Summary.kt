@@ -127,11 +127,11 @@ data class BloodPressureSamplePayload(
 
 
 sealed class SampleType(val unit: String) {
-    object HeartRate : SampleType("bpm")
     object RespiratoryRate : SampleType("bpm")
     object Weight : SampleType("kg")
     object BodyFat : SampleType("percent")
-    object HeartRateVariabilitySdnn : SampleType("rmssd")
+    object HeartRate : SampleType("bpm")
+    object HeartRateVariabilityRmssd : SampleType("rmssd")
     object OxygenSaturation : SampleType("percent")
     object ActiveCaloriesBurned : SampleType("kJ")
     object Steps : SampleType("")

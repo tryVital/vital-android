@@ -1,15 +1,12 @@
 package io.tryvital.vitalhealthconnect.records
 
-import android.annotation.SuppressLint
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_INT_TO_STRING_MAP
-import io.tryvital.client.services.data.*
+import io.tryvital.client.services.data.SampleType
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
 import io.tryvital.vitalhealthconnect.ext.toDate
-import io.tryvital.vitalhealthconnect.model.*
+import io.tryvital.vitalhealthconnect.model.HCQuantitySample
 import io.tryvital.vitalhealthconnect.model.processedresource.*
-import io.tryvital.vitalhealthconnect.model.processedresource.Activity
-import io.tryvital.vitalhealthconnect.model.processedresource.Workout
 import java.time.Instant
 import java.util.*
 import kotlin.math.roundToInt
@@ -36,6 +33,14 @@ interface RecordProcessor {
         currentDevice: String,
         heartRateRecords: List<HeartRateRecord>
     ): TimeSeriesData.HeartRate
+
+
+    fun processHeartRateVariabilityRmssFromRecords(
+        startDate: Instant,
+        endDate: Instant,
+        currentDevice: String,
+        heartRateRecords: List<HeartRateVariabilityRmssdRecord>
+    ): TimeSeriesData.HeartRateVariabilityRmssd
 
     fun processWaterFromRecords(
         startDate: Instant,
@@ -149,6 +154,26 @@ internal class HealthConnectRecordProcessor(
             mapHearthRate(heartRateRecords, currentDevice)
         )
     }
+
+    override fun processHeartRateVariabilityRmssFromRecords(
+        startDate: Instant,
+        endDate: Instant,
+        currentDevice: String,
+        heartRateRecords: List<HeartRateVariabilityRmssdRecord>
+    ): TimeSeriesData.HeartRateVariabilityRmssd {
+        return TimeSeriesData.HeartRateVariabilityRmssd(
+            heartRateRecords.map {
+                HCQuantitySample(
+                    value = it.heartRateVariabilityMillis.toString(),
+                    unit = SampleType.HeartRateVariabilityRmssd.unit,
+                    startDate = Date.from(it.time),
+                    endDate = Date.from(it.time),
+                    metadata = it.metadata,
+                ).toQuantitySample(currentDevice)
+            }
+        )
+    }
+
 
     override fun processWaterFromRecords(
         startDate: Instant,
@@ -274,8 +299,8 @@ internal class HealthConnectRecordProcessor(
                 recordReader.readRestingHeartRate(sleepSession.startTime, sleepSession.endTime)
             val respiratoryRateRecord =
                 recordReader.readRespiratoryRate(sleepSession.startTime, sleepSession.endTime)
-            val readHeartRateVariabilitySdnnRecord =
-                recordReader.readHeartRateVariabilitySdnn(
+            val readHeartRateVariabilityRmssdRecord =
+                recordReader.readHeartRateVariabilityRmssd(
                     sleepSession.startTime,
                     sleepSession.endTime
                 )
@@ -294,8 +319,8 @@ internal class HealthConnectRecordProcessor(
                     fallbackDeviceModel
                 ),
                 respiratoryRate = mapRespiratoryRate(respiratoryRateRecord, fallbackDeviceModel),
-                heartRateVariability = mapHeartRateVariabilitySdnnRecord(
-                    readHeartRateVariabilitySdnnRecord,
+                heartRateVariability = mapHeartRateVariabilityRmssdRecord(
+                    readHeartRateVariabilityRmssdRecord,
                     fallbackDeviceModel
                 ),
                 oxygenSaturation = mapOxygenSaturationRecord(
@@ -470,20 +495,14 @@ internal class HealthConnectRecordProcessor(
         }
     }
 
-    /**
-    HeartRateVariabilitySdnnRecord is marked as RestrictedApi. The plugin is still alpha therefor
-    We assume it's a mistake, if later this stays the same we have to move to a different
-    hearth rate.
-     */
-    @SuppressLint("RestrictedApi")
-    private fun mapHeartRateVariabilitySdnnRecord(
-        readHeartRateVariabilitySdnnRecords: List<HeartRateVariabilitySdnnRecord>,
+    private fun mapHeartRateVariabilityRmssdRecord(
+        readHeartRateVariabilityRmssdRecords: List<HeartRateVariabilityRmssdRecord>,
         fallbackDeviceModel: String
     ): List<QuantitySample> {
-        return readHeartRateVariabilitySdnnRecords.map {
+        return readHeartRateVariabilityRmssdRecords.map {
             HCQuantitySample(
                 value = it.heartRateVariabilityMillis.toString(),
-                unit = SampleType.HeartRateVariabilitySdnn.unit,
+                unit = SampleType.HeartRateVariabilityRmssd.unit,
                 startDate = it.time.toDate(),
                 endDate = it.time.toDate(),
                 metadata = it.metadata,

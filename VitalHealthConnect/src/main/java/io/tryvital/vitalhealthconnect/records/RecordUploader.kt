@@ -74,6 +74,14 @@ interface RecordUploader {
         heartRatePayloads: List<QuantitySamplePayload>
     )
 
+    suspend fun uploadHeartRateVariability(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        heartRatePayloads: List<QuantitySamplePayload>
+    )
+
     suspend fun uploadWater(
         userId: String,
         startDate: Date,
@@ -236,6 +244,27 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
     ) {
         if (heartRatePayloads.isNotEmpty()) {
             vitalClient.vitalsService.sendHeartRate(
+                userId, TimeseriesPayload(
+                    stage = stage,
+                    provider = providerId,
+                    startDate = startDate,
+                    endDate = endDate,
+                    timeZoneId = timeZoneId,
+                    data = heartRatePayloads,
+                )
+            )
+        }
+    }
+
+    override suspend fun uploadHeartRateVariability(
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?,
+        heartRatePayloads: List<QuantitySamplePayload>
+    ) {
+        if (heartRatePayloads.isNotEmpty()) {
+            vitalClient.vitalsService.sendHeartRateVariability(
                 userId, TimeseriesPayload(
                     stage = stage,
                     provider = providerId,

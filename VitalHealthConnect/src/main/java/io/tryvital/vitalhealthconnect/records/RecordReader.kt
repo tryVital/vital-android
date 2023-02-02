@@ -24,10 +24,10 @@ interface RecordReader {
         endTime: Instant
     ): List<RestingHeartRateRecord>
 
-    suspend fun readHeartRateVariabilitySdnn(
+    suspend fun readHeartRateVariabilityRmssd(
         startTime: Instant,
         endTime: Instant
-    ): List<HeartRateVariabilitySdnnRecord>
+    ): List<HeartRateVariabilityRmssdRecord>
 
     suspend fun readRespiratoryRate(
         startTime: Instant,
@@ -131,9 +131,9 @@ internal class HealthConnectRecordReader(
         startTime: Instant, endTime: Instant
     ): List<RestingHeartRateRecord> = readRecords(startTime, endTime)
 
-    override suspend fun readHeartRateVariabilitySdnn(
+    override suspend fun readHeartRateVariabilityRmssd(
         startTime: Instant, endTime: Instant
-    ): List<HeartRateVariabilitySdnnRecord> = readRecords(startTime, endTime)
+    ): List<HeartRateVariabilityRmssdRecord> = readRecords(startTime, endTime)
 
     override suspend fun readRespiratoryRate(
         startTime: Instant, endTime: Instant

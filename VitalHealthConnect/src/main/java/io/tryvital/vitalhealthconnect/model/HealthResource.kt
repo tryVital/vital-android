@@ -28,6 +28,7 @@ sealed class HealthResource(val name: String) {
     object ActiveEnergyBurned : HealthResource("activeEnergyBurned")
     object BasalEnergyBurned : HealthResource("basalEnergyBurned")
     object Water : HealthResource("water")
+    object HeartRateVariability : HealthResource("heartRateVariability")
 
     override fun toString(): String {
         return name
@@ -48,7 +49,8 @@ sealed class HealthResource(val name: String) {
                 Steps,
                 ActiveEnergyBurned,
                 BasalEnergyBurned,
-                Water
+                Water,
+                HeartRateVariability,
             )
         }
 
@@ -66,6 +68,7 @@ sealed class HealthResource(val name: String) {
                 "activeEnergyBurned" -> ActiveEnergyBurned
                 "basalEnergyBurned" -> BasalEnergyBurned
                 "water" -> Water
+                "heartRateVariability" -> HeartRateVariability
                 else -> throw IllegalArgumentException("No object io.tryvital.vitalhealthconnect.model.HealthResource.$value")
             }
         }

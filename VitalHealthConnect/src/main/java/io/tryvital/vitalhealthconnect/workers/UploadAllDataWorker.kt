@@ -129,6 +129,17 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         if (resourcesToSync.contains(HealthResource.Water)) {
             getWater(startTime, endTime, currentDevice, userId, startDate, endDate, timeZoneId)
         }
+        if (resourcesToSync.contains(HealthResource.HeartRateVariability)) {
+            getHeartRateVariability(
+                startTime,
+                endTime,
+                currentDevice,
+                userId,
+                startDate,
+                endDate,
+                timeZoneId
+            )
+        }
     }
 
     private suspend fun getWater(
@@ -179,6 +190,34 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
                 timeZoneId,
                 heartRatePayloads.samples.map { it.toQuantitySamplePayload() })
             reportStatus(HealthResource.HeartRate, synced)
+        }
+    }
+
+    private suspend fun getHeartRateVariability(
+        startTime: Instant,
+        endTime: Instant,
+        currentDevice: String,
+        userId: String,
+        startDate: Date,
+        endDate: Date,
+        timeZoneId: String?
+    ) {
+        reportStatus(HealthResource.HeartRateVariability, syncing)
+        val heartRatePayloads = recordProcessor.processHeartRateVariabilityRmssFromRecords(
+            startTime,
+            endTime,
+            currentDevice,
+            recordReader.readHeartRateVariabilityRmssd(startTime, endTime)
+        )
+        if (heartRatePayloads.samples.isEmpty()) {
+            reportStatus(HealthResource.HeartRateVariability, nothingToSync)
+        } else {
+            recordUploader.uploadHeartRateVariability(userId,
+                startDate,
+                endDate,
+                timeZoneId,
+                heartRatePayloads.samples.map { it.toQuantitySamplePayload() })
+            reportStatus(HealthResource.HeartRateVariability, synced)
         }
     }
 

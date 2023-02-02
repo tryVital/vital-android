@@ -259,6 +259,7 @@ class VitalHealthConnectManager private constructor(
             HealthResource.Profile,
             HealthResource.Sleep,
             HealthResource.Steps,
+            HealthResource.HeartRateVariability,
             HealthResource.Workout -> {
                 vitalLogger.logI("Not supported resource $resource")
             }
@@ -391,6 +392,14 @@ class VitalHealthConnectManager private constructor(
                     endDate,
                     currentDevice,
                     recordReader.readExerciseSessions(startDate, endDate)
+                )
+            )
+            HealthResource.HeartRateVariability -> ProcessedResourceData.TimeSeries(
+                recordProcessor.processHeartRateVariabilityRmssFromRecords(
+                    startDate,
+                    endDate,
+                    currentDevice,
+                    recordReader.readHeartRateVariabilityRmssd(startDate, endDate)
                 )
             )
         }

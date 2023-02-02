@@ -112,6 +112,17 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         )
     }
 
+    suspend fun sendHeartRateVariability(
+        userId: String,
+        timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
+    ) {
+        return timeSeries.timeseriesPost(
+            userId = userId,
+            resource = "heartrate_variability",
+            payload = timeseriesPayload
+        )
+    }
+
     suspend fun sendWater(
         userId: String,
         timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
