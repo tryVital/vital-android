@@ -192,7 +192,7 @@ internal class HealthConnectRecordProcessor(
             readBloodGlucose.map {
                 HCQuantitySample(
                     value = it.level.inMilligramsPerDeciliter.toString(),
-                    unit = SampleType.GlucoseConcentration.unit,
+                    unit = SampleType.GlucoseConcentrationMilligramPerDecilitre.unit,
                     startDate = Date.from(it.time),
                     endDate = Date.from(it.time),
                     metadata = it.metadata,
