@@ -11,10 +11,7 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.ScannedDevice
 import io.tryvital.vitaldevices.chunked
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.*
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.common.callback.bps.BloodPressureMeasurementResponse
 import no.nordicsemi.android.ble.data.Data
@@ -36,7 +33,10 @@ class BloodPressureReader1810(
     private val scannedDevice: ScannedDevice,
 ) : BleManager(context), BloodPressureReader {
     private val vitalLogger = VitalLogger.getOrCreate()
-    private val measurements = MutableStateFlow<BloodPressureSample?>(null)
+
+    // Keep all incoming measurements in memory until the subscribers get to process them.
+    // Note that replay buffer is zero sized, so no value is kept in memory in absence of subscribers.
+    private val measurements = MutableSharedFlow<BloodPressureSample>(replay = 0, extraBufferCapacity = Int.MAX_VALUE)
 
     private var bloodPressureMeasurementCharacteristic: BluetoothGattCharacteristic? = null
 
@@ -62,7 +62,7 @@ class BloodPressureReader1810(
         awaitClose { }
     }
 
-    override fun read() = measurements.filterNotNull().chunked(50, 300)
+    override fun read() = measurements.chunked(50, 300)
 
     @SuppressLint("MissingPermission")
     private fun bond() {
@@ -89,7 +89,11 @@ class BloodPressureReader1810(
 
         override fun initialize() {
             setIndicationCallback(bloodPressureMeasurementCharacteristic).with { device: BluetoothDevice, data: Data ->
-                measurements.value = mapRawData(device, data)
+                val success = measurements.tryEmit(mapRawData(device, data))
+
+                if (!success) {
+                    vitalLogger.logI("Failed to emit GlucoseMeter1080 measurement despite unlimited flow buffer size.")
+                }
             }
 
             enableIndications(bloodPressureMeasurementCharacteristic).enqueue()

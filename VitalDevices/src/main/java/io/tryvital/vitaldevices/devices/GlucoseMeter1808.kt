@@ -12,9 +12,8 @@ import io.tryvital.vitaldevices.ScannedDevice
 import io.tryvital.vitaldevices.chunked
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.filterNotNull
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.common.callback.glucose.GlucoseMeasurementResponse
 import no.nordicsemi.android.ble.common.data.RecordAccessControlPointData
@@ -39,8 +38,10 @@ class GlucoseMeter1808(
     private val scannedDevice: ScannedDevice,
 ) : BleManager(context), GlucoseMeter {
     private val vitalLogger = VitalLogger.getOrCreate()
-    private val measurements = MutableStateFlow<QuantitySamplePayload?>(null)
 
+    // Keep all incoming measurements in memory until we get to process them.
+    // Note that replay buffer is zero sized, so no value is kept in memory in absence of subscribers.
+    private val measurements = MutableSharedFlow<QuantitySamplePayload>(replay = 0, extraBufferCapacity = Int.MAX_VALUE)
 
     private var glucoseMeasurementCharacteristic: BluetoothGattCharacteristic? = null
     private var recordAccessControlPointCharacteristic: BluetoothGattCharacteristic? = null
@@ -78,7 +79,7 @@ class GlucoseMeter1808(
             .done { vitalLogger.logI("Successfully requested all data from ${scannedDevice.name}") }
             .enqueue()
 
-        return measurements.filterNotNull().chunked(50, 300)
+        return measurements.chunked(50, 300)
     }
 
     @SuppressLint("MissingPermission")
@@ -107,7 +108,11 @@ class GlucoseMeter1808(
 
         override fun initialize() {
             setNotificationCallback(glucoseMeasurementCharacteristic).with { device: BluetoothDevice, data: Data ->
-                measurements.value = mapRawData(device, data)
+                val success = measurements.tryEmit(mapRawData(device, data))
+
+                if (!success) {
+                    vitalLogger.logI("Failed to emit GlucoseMeter1080 measurement despite unlimited flow buffer size.")
+                }
             }
 
             enableNotifications(glucoseMeasurementCharacteristic).enqueue()
