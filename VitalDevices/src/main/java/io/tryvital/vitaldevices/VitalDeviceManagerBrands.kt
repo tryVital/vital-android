@@ -1,5 +1,9 @@
 package io.tryvital.vitaldevices
 
+import java.util.*
+
+const val VITAL_BLE_SIMULATOR = "_vital_ble_simulator_"
+
 fun devices(): List<DeviceModel> {
     return listOf(
         DeviceModel(
@@ -29,6 +33,12 @@ fun devices(): List<DeviceModel> {
         DeviceModel(
             id = "accuchek_guide_active",
             name = "Accu-Chek Active",
+            brand = Brand.AccuChek,
+            kind = Kind.GlucoseMeter
+        ),
+        DeviceModel(
+            id = VITAL_BLE_SIMULATOR,
+            name = "Vital BLE Simulator",
             brand = Brand.AccuChek,
             kind = Kind.GlucoseMeter
         ),
@@ -66,7 +76,15 @@ fun codes(deviceId: String): List<String> {
         "accuchek_guide_me" -> return listOf("meter")
         "contour_next_one" -> return listOf("Ocontour")
         "beurer" -> return listOf("Beuerer", "BC", "bc")
+        VITAL_BLE_SIMULATOR -> return listOf(VITAL_BLE_SIMULATOR)
     }
 
     return emptyList()
+}
+
+fun serviceUUID(kind: Kind): UUID {
+    return when (kind) {
+        Kind.GlucoseMeter -> UUID.fromString("00001808-0000-1000-8000-00805f9b34fb")
+        Kind.BloodPressure -> UUID.fromString("00001810-0000-1000-8000-00805f9b34fb")
+    }
 }

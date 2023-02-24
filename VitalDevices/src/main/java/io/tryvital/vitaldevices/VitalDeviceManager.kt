@@ -1,7 +1,7 @@
 package io.tryvital.vitaldevices
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothAdapter.LeScanCallback
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.*
@@ -26,97 +26,42 @@ class VitalDeviceManager(
     private var bloodPressureReader1810: BloodPressureReader1810? = null
 
     private val vitalLogger = VitalLogger.getOrCreate()
-    private val deviceStateChange = MutableStateFlow<Pair<String, Boolean>?>(null)
-    private var repeatSearch = false
 
+    fun connected(deviceModel: DeviceModel): List<ScannedDevice> {
+        return bluetoothAdapter.bondedDevices.mapNotNull { mapIfSuitable(it, deviceModel) }
+    }
     fun search(deviceModel: DeviceModel) = callbackFlow {
-        vitalLogger.logI("searching for ${deviceModel.name}")
+        vitalLogger.logI("Searching for ${deviceModel.name}")
 
         if (!bluetoothAdapter.isEnabled) {
             throw IllegalStateException("Bluetooth is not enabled on this device")
         }
 
-        repeatSearch = true
-        val codes = codes(deviceModel.id)
+        val expectedServiceUUID = arrayOf(serviceUUID(deviceModel.kind))
+        vitalLogger.logI("Scanning for BLE service $expectedServiceUUID")
 
-        val filter = IntentFilter().also {
-            it.addAction(BluetoothDevice.ACTION_FOUND)
-            it.addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
-            it.addAction(BluetoothDevice.ACTION_ACL_CONNECTED)
-            it.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED)
-            it.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
-            it.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+        fun onDeviceDiscovered(device: BluetoothDevice) {
+            vitalLogger.logI("Discovered ${deviceModel.kind} ${device.name} uuid=${device.name}")
+            val scannedDevice = mapIfSuitable(device, deviceModel)
+            if (scannedDevice != null) {
+                trySend(scannedDevice)
+            }
         }
 
-        context.registerReceiver(object : BroadcastReceiver() {
-            @Suppress("DEPRECATION")
-            override fun onReceive(context: Context, intent: Intent) {
-                when (intent.action) {
-                    BluetoothDevice.ACTION_ACL_CONNECTED -> {
-                        val device: BluetoothDevice? =
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                        deviceStateChange.value = Pair(device?.address ?: "", true)
-                    }
-                    BluetoothDevice.ACTION_ACL_DISCONNECTED -> {
-                        val device: BluetoothDevice? =
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                        deviceStateChange.value = Pair(device?.address ?: "", false)
-                    }
-                    BluetoothDevice.ACTION_FOUND -> {
-                        val device: BluetoothDevice? =
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+        val callback = LeScanCallback { device, _, _ ->
+            onDeviceDiscovered(device)
+        }
 
-                        if (device?.name == null) {
-                            return
-                        }
+        bluetoothAdapter.startLeScan(expectedServiceUUID, callback)
 
-                        vitalLogger.logI("Found device ${device.name}")
-
-                        if (codes.any { device.name.lowercase().contains(it.lowercase()) }) {
-                            channel.trySend(
-                                ScannedDevice(
-                                    address = device.address,
-                                    name = device.name,
-                                    deviceModel = deviceModel
-                                )
-                            )
-                        }
-                    }
-                    BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
-                        val device: BluetoothDevice? =
-                            intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
-                        vitalLogger.logI("Bond state changed ${device?.bondState}")
-                    }
-                    BluetoothAdapter.ACTION_DISCOVERY_STARTED -> {
-                        vitalLogger.logI("Discovery started")
-
-                    }
-                    BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-                        vitalLogger.logI("Discovery finished")
-
-                        if (repeatSearch) {
-                            bluetoothAdapter.startDiscovery()
-                        } else {
-                            channel.close()
-                        }
-                    }
-                }
-            }
-        }, filter)
-
-        val result = bluetoothAdapter.startDiscovery()
-        vitalLogger.logI("Discovery result $result")
+        for (device in bluetoothAdapter.bondedDevices) {
+            onDeviceDiscovered(device)
+        }
 
         awaitClose {
+            bluetoothAdapter.stopLeScan(callback)
             vitalLogger.logI("Closing search")
-            repeatSearch = false
-            bluetoothAdapter.cancelDiscovery()
         }
-    }
-
-    fun stopSearch() {
-        repeatSearch = false
-        bluetoothAdapter.cancelDiscovery()
     }
 
     fun pair(scannedDevice: ScannedDevice): Flow<Boolean> {
@@ -132,12 +77,6 @@ class VitalDeviceManager(
                 scannedDevice,
             ).pair()
         }
-    }
-
-    fun monitorConnection(scannedDevice: ScannedDevice): Flow<Boolean> {
-        return deviceStateChange.filterNotNull().filter {
-            it.first == scannedDevice.address
-        }.map { it.second }
     }
 
     fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): Flow<List<QuantitySamplePayload>> {
@@ -174,6 +113,20 @@ class VitalDeviceManager(
             }
             else -> throw IllegalStateException("${scannedDevice.deviceModel.brand} is not supported")
         }
+    }
+
+    private fun mapIfSuitable(device: BluetoothDevice, deviceModel: DeviceModel): ScannedDevice? {
+        val codes = codes(deviceModel.id)
+
+        if (codes.any { device.name.lowercase().contains(it.lowercase()) } || codes.contains(VITAL_BLE_SIMULATOR)) {
+            return ScannedDevice(
+                address = device.address,
+                name = device.name,
+                deviceModel = deviceModel
+            )
+        }
+
+        return null
     }
 
     companion object {

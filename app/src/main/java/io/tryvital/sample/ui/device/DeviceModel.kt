@@ -9,15 +9,15 @@ import androidx.lifecycle.viewModelScope
 import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.vitaldevices.*
 import io.tryvital.vitaldevices.devices.BloodPressureSample
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class DeviceViewModel(
     private val vitalDeviceManager: VitalDeviceManager,
-    private val deviceId: String
+    private val deviceId: String,
+
+    private val _toasts: MutableSharedFlow<String> = MutableSharedFlow(replay = 0)
 ) :
     ViewModel() {
     private val viewModelState =
@@ -27,25 +27,45 @@ class DeviceViewModel(
                 scannedDevices = emptyList(),
                 samples = emptyList(),
                 bloodPressureSamples = emptyList(),
-                isConnected = false
+                isScanning = false
             )
         )
     val uiState = viewModelState.asStateFlow()
+    val toasts = _toasts.asSharedFlow()
 
-    fun scan(context: Context) {
-        viewModelScope.launch {
-            vitalDeviceManager.search(uiState.value.device).catch {
-                Log.i("DeviceViewModel", "Error scanning ${it.message}", it.cause)
-                Toast.makeText(context, "Error scanning ${it.message}", Toast.LENGTH_SHORT).show()
-            }
-                .collect { scannedDevice ->
-                    viewModelState.update { it.copy(scannedDevices = it.scannedDevices.toMutableList() + scannedDevice) }
+    init {
+        val deviceModel = viewModelState.value.device
+        val bondedDevices = vitalDeviceManager.connected(deviceModel)
+        viewModelState.update { it.copy(scannedDevices = bondedDevices) }
 
-                    vitalDeviceManager.monitorConnection(scannedDevice).collect { connectionState ->
-                        viewModelState.update { it.copy(isConnected = connectionState) }
-                    }
+        viewModelState
+            .map { it.isScanning }
+            .flatMapLatest { isScanning ->
+                when (isScanning) {
+                    true -> vitalDeviceManager
+                        .search(uiState.value.device)
+                        .catch {
+                            Log.i("DeviceViewModel", "Error scanning ${it.message}", it.cause)
+                            _toasts.tryEmit("Error scanning ${it.message}")
+                        }
+                        .onEach { scannedDevice ->
+                            viewModelState.update {
+                                val devices = (it.scannedDevices.toMutableSet() + setOf(scannedDevice)).toList()
+                                it.copy(scannedDevices = devices)
+                            }
+                        }
+                    false -> emptyFlow()
                 }
-        }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    fun scan() {
+        viewModelState.update { it.copy(isScanning = true) }
+    }
+
+    fun stopScanning() {
+        viewModelState.update { it.copy(isScanning = false) }
     }
 
     fun connect(context: Context, scannedDevice: ScannedDevice) {
@@ -76,11 +96,6 @@ class DeviceViewModel(
         }
     }
 
-    override fun onCleared() {
-        vitalDeviceManager.stopSearch()
-        super.onCleared()
-    }
-
     companion object {
         fun provideFactory(
             vitalDeviceManager: VitalDeviceManager,
@@ -101,5 +116,5 @@ data class BluetoothViewModelState(
     val scannedDevices: List<ScannedDevice>,
     val samples: List<QuantitySamplePayload>,
     val bloodPressureSamples: List<BloodPressureSample>,
-    val isConnected: Boolean,
+    val isScanning: Boolean,
 )
