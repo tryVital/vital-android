@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.pm.PackageManager.*
 import android.os.Build
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,6 +28,8 @@ import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import io.tryvital.sample.ui.devices.deviceImageUrl
 import io.tryvital.vitaldevices.VitalDeviceManager
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,7 +39,14 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
         factory = DeviceViewModel.provideFactory(vitalDeviceManager, deviceId)
     )
 
+    val context = LocalContext.current
     val state = viewModel.uiState.collectAsState().value
+
+    LaunchedEffect(key1 = Unit) {
+        viewModel.toasts
+            .onEach { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+            .launchIn(this)
+    }
 
     Scaffold(topBar = {
         TopAppBar(title = { Text("Device") },
@@ -61,10 +72,6 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                     modifier = Modifier.size(200.dp)
                 )
                 Text(text = state.device.name, style = MaterialTheme.typography.titleLarge)
-                Text(
-                    text = "IsConnected " + state.isConnected,
-                    style = MaterialTheme.typography.titleSmall
-                )
                 Box(modifier = Modifier.height(24.dp))
 
                 val launcher = rememberLauncherForActivityResult(
@@ -123,9 +130,17 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                     }
                     Box(modifier = Modifier.width(16.dp))
                     Button(onClick = {
-                        viewModel.scan(context)
+                        if (state.isScanning) {
+                            viewModel.stopScanning()
+                        } else {
+                            viewModel.scan()
+                        }
                     }) {
-                        Text("Scan")
+                        if (state.isScanning) {
+                            Text("Stop Scanning")
+                        } else {
+                            Text("Scan")
+                        }
                     }
                 }
 
