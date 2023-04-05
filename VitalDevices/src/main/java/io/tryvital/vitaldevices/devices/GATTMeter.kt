@@ -2,6 +2,7 @@ package io.tryvital.vitaldevices.devices
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothDevice.BOND_BONDED
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
 import android.content.Context
@@ -14,11 +15,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import no.nordicsemi.android.ble.BleManager
 import no.nordicsemi.android.ble.common.callback.RecordAccessControlPointResponse
 import no.nordicsemi.android.ble.common.data.RecordAccessControlPointData
 import no.nordicsemi.android.ble.data.Data
 import java.util.*
+import kotlin.time.Duration
 
 // Standard Record Access Control Point characteristic as per BLE GATT
 private val racpCharacteristicUUID =
@@ -44,9 +47,17 @@ abstract class GATTMeter<Sample>(
     private var measurementCharacteristic: BluetoothGattCharacteristic? = null
     private var racpCharacteristic: BluetoothGattCharacteristic? = null
 
+    private var deviceReady = MutableStateFlow(false)
+
     abstract fun mapRawData(device: BluetoothDevice, data: Data): Sample?
 
     fun pair() = callbackFlow {
+        // It has an active connection. Don't bother to connect again.
+        if (isConnected) {
+            send(true)
+            return@callbackFlow
+        }
+
         var inError = false
         connect(scannedBluetoothDevice).retry(3, 100).timeout(15000).useAutoConnect(false)
             .fail { _, status ->
@@ -70,6 +81,11 @@ abstract class GATTMeter<Sample>(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     fun read(): Flow<List<Sample>> = channelFlow {
+        withTimeout(10 * 1000) {
+            // Wait for deviceReady to be `true`, or timeout the flow after 10 seconds.
+            deviceReady.filter { it }.first()
+        }
+
         // (1) Start a new parallel job that listens to measurements and collect them into a list.
         val sampleCollector = launch {
             val samples = mutableListOf<Sample>()
@@ -172,9 +188,14 @@ abstract class GATTMeter<Sample>(
                 .enqueue()
         }
 
+        override fun onDeviceReady() {
+            deviceReady.value = true
+        }
+
         override fun onServicesInvalidated() {
             racpCharacteristic = null
             measurementCharacteristic = null
+            deviceReady.value = false
         }
     }
 
