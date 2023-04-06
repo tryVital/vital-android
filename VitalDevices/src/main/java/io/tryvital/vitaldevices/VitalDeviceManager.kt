@@ -8,9 +8,7 @@ import android.content.*
 import android.content.Context.BLUETOOTH_SERVICE
 import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.client.utils.VitalLogger
-import io.tryvital.vitaldevices.devices.BloodPressureReader1810
-import io.tryvital.vitaldevices.devices.BloodPressureSample
-import io.tryvital.vitaldevices.devices.GlucoseMeter1808
+import io.tryvital.vitaldevices.devices.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
 
@@ -21,9 +19,6 @@ class VitalDeviceManager(
 ) {
     private val bluetoothManager by lazy { context.getSystemService(BLUETOOTH_SERVICE) as BluetoothManager }
     private val bluetoothAdapter by lazy { bluetoothManager.adapter }
-
-    private var glucoseMeter1808: GlucoseMeter1808? = null
-    private var bloodPressureReader1810: BloodPressureReader1810? = null
 
     private val vitalLogger = VitalLogger.getOrCreate()
 
@@ -64,32 +59,15 @@ class VitalDeviceManager(
         }
     }
 
-    fun pair(scannedDevice: ScannedDevice): Flow<Boolean> {
-        return when (scannedDevice.deviceModel.kind) {
-            Kind.GlucoseMeter -> GlucoseMeter1808(
-                context,
-                bluetoothAdapter.getRemoteDevice(scannedDevice.address),
-                scannedDevice,
-            ).pair()
-            Kind.BloodPressure -> BloodPressureReader1810(
-                context,
-                bluetoothAdapter.getRemoteDevice(scannedDevice.address),
-                scannedDevice,
-            ).pair()
-        }
-    }
-
-    fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): Flow<List<QuantitySamplePayload>> {
+    fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): GlucoseMeter {
         when (scannedDevice.deviceModel.brand) {
             Brand.AccuChek,
             Brand.Contour -> {
-                glucoseMeter1808 = GlucoseMeter1808(
+                return GlucoseMeter1808(
                     context,
                     bluetoothAdapter.getRemoteDevice(scannedDevice.address),
                     scannedDevice,
                 )
-                return glucoseMeter1808!!.pair().filter { it }
-                    .flatMapConcat { glucoseMeter1808!!.read() }
             }
             else -> throw IllegalStateException("${scannedDevice.deviceModel.brand} is not supported")
         }
@@ -98,18 +76,15 @@ class VitalDeviceManager(
     fun bloodPressure(
         context: Context,
         scannedDevice: ScannedDevice
-    ): Flow<List<BloodPressureSample>> {
+    ): BloodPressureReader {
         when (scannedDevice.deviceModel.brand) {
             Brand.Omron,
             Brand.Beurer -> {
-                bloodPressureReader1810 = BloodPressureReader1810(
+                return BloodPressureReader1810(
                     context,
                     bluetoothAdapter.getRemoteDevice(scannedDevice.address),
                     scannedDevice,
                 )
-
-                return bloodPressureReader1810!!.pair().filter { it }
-                    .flatMapConcat { bloodPressureReader1810!!.read() }
             }
             else -> throw IllegalStateException("${scannedDevice.deviceModel.brand} is not supported")
         }

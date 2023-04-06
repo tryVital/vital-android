@@ -16,8 +16,8 @@ private val bloodPressureMeasurementCharacteristicUUID =
     UUID.fromString("00002A35-0000-1000-8000-00805f9b34fb")
 
 interface BloodPressureReader {
-    fun pair(): Flow<Boolean>
-    fun read(): Flow<List<BloodPressureSample>>
+    suspend fun pair()
+    suspend fun read(): List<BloodPressureSample>
 }
 
 class BloodPressureReader1810(
