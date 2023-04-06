@@ -18,8 +18,8 @@ private val glucoseMeasurementCharacteristicUUID =
     UUID.fromString("00002A18-0000-1000-8000-00805f9b34fb")
 
 interface GlucoseMeter {
-    fun pair(): Flow<Boolean>
-    fun read(): Flow<List<QuantitySamplePayload>>
+    suspend fun pair()
+    suspend fun read(): List<QuantitySamplePayload>
 }
 
 class GlucoseMeter1808(

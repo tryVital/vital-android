@@ -11,16 +11,17 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.BluetoothError
 import io.tryvital.vitaldevices.NoMoreSamplesException
 import io.tryvital.vitaldevices.ScannedDevice
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 import no.nordicsemi.android.ble.BleManager
+import no.nordicsemi.android.ble.callback.FailCallback
 import no.nordicsemi.android.ble.common.callback.RecordAccessControlPointResponse
 import no.nordicsemi.android.ble.common.data.RecordAccessControlPointData
 import no.nordicsemi.android.ble.data.Data
 import java.util.*
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.time.Duration
 
 // Standard Record Access Control Point characteristic as per BLE GATT
@@ -51,41 +52,69 @@ abstract class GATTMeter<Sample>(
 
     abstract fun mapRawData(device: BluetoothDevice, data: Data): Sample?
 
-    fun pair() = callbackFlow {
-        // It has an active connection. Don't bother to connect again.
+    @Suppress("MemberVisibilityCanBePrivate")
+    suspend fun pair(): Unit = suspendCancellableCoroutine { continuation ->
+        // The device is already connected. Don't bother to connect again.
         if (isConnected) {
-            send(true)
-            return@callbackFlow
+            return@suspendCancellableCoroutine
         }
 
-        var inError = false
-        connect(scannedBluetoothDevice).retry(3, 100).timeout(15000).useAutoConnect(false)
+        connect(scannedBluetoothDevice)
+            .retry(3, 100)
+            .timeout(15000)
+            .useAutoConnect(false)
             .fail { _, status ->
                 logError("connect", status)
-                trySend(false)
-                inError = true
-                close()
-            }.done {
-                if (inError) return@done
-                vitalLogger.logI("Successfully connected to ${scannedDevice.name}")
-                vitalLogger.logI("Bonded state: $isBonded to ${scannedDevice.name}")
-                if (!isBonded) {
-                    bond()
-                }
-                trySend(true)
-                close()
-            }.enqueue()
 
-        awaitClose { }
+                if (!continuation.isActive) {
+                    vitalLogger.logI("Inactive continuation has received connect fail callback for ${scannedDevice.name}")
+                    return@fail
+                }
+                continuation.resumeWithException(BluetoothError("Failed to connect (status code = $status)"))
+            }
+            .done {
+                vitalLogger.logI("Successfully connected to ${scannedDevice.name}; bonded = $isBonded")
+
+                if (!continuation.isActive) {
+                    vitalLogger.logI("Inactive continuation has received connect done callback for ${scannedDevice.name}")
+                    return@done
+                }
+
+                if (isBonded) {
+                    continuation.resume(Unit)
+                } else {
+                    vitalLogger.logI("Start bonding with ${scannedDevice.name}")
+
+                    bond(
+                        onDone = { continuation.resume(Unit) },
+                        onFail = { status ->
+                            continuation.resumeWithException(BluetoothError("Failed to bond (status code = $status"))
+                        }
+                    )
+                }
+            }
+            .enqueue()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun read(): Flow<List<Sample>> = channelFlow {
+    suspend fun read(): List<Sample> {
+        pair()
+
         withTimeout(10 * 1000) {
             // Wait for deviceReady to be `true`, or timeout the flow after 10 seconds.
             deviceReady.filter { it }.first()
         }
 
+        val samples = readSamples().single()
+
+        // Disconnect when we have done reading. Some devices rely on BLE disconnection as
+        // a cue to toast users with a "Transferred Completed" message.
+        disconnect().enqueue()
+
+        return samples
+    }
+
+    private fun readSamples(): Flow<List<Sample>> = channelFlow {
         // (1) Start a new parallel job that listens to measurements and collect them into a list.
         val sampleCollector = launch {
             val samples = mutableListOf<Sample>()
@@ -136,9 +165,17 @@ abstract class GATTMeter<Sample>(
     }
 
     @SuppressLint("MissingPermission")
-    private fun bond() {
-        ensureBond().fail { _, status -> logError("bond", status) }
-            .done { vitalLogger.logI("Bonded with ${scannedDevice.name}") }.enqueue()
+    private fun bond(onDone: () -> Unit, onFail: (Int) -> Unit) {
+        ensureBond()
+            .fail { _, status ->
+                logError("bond", status)
+                onFail(status)
+            }
+            .done {
+                vitalLogger.logI("Bonded with ${scannedDevice.name}")
+                onDone()
+            }
+            .enqueue()
     }
 
     override fun getGattCallback(): BleManagerGattCallback {
@@ -148,7 +185,9 @@ abstract class GATTMeter<Sample>(
     private inner class GattCallbackImpl : BleManagerGattCallback() {
 
         override fun isRequiredServiceSupported(gatt: BluetoothGatt): Boolean {
-            val service = gatt.getService(serviceID)
+            vitalLogger.logI("Discovered services: ${gatt.services.map { it.uuid }}")
+
+            val service = gatt.getService(serviceID) ?: return false
 
             measurementCharacteristic = service.getCharacteristic(measurementCharacteristicID)
             racpCharacteristic = service.getCharacteristic(racpCharacteristicUUID)

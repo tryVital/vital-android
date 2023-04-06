@@ -72,11 +72,13 @@ class DeviceViewModel(
         viewModelScope.launch {
             when (uiState.value.device.kind) {
                 Kind.BloodPressure -> vitalDeviceManager.bloodPressure(context, scannedDevice)
-                    .collect { sample ->
+                    .read()
+                    .let { sample ->
                         viewModelState.update { it.copy(bloodPressureSamples = it.bloodPressureSamples + sample) }
                     }
                 Kind.GlucoseMeter -> vitalDeviceManager.glucoseMeter(context, scannedDevice)
-                    .collect { sample ->
+                    .read()
+                    .let { sample ->
                         viewModelState.update { it.copy(samples = it.samples + sample) }
                     }
             }
@@ -86,12 +88,19 @@ class DeviceViewModel(
 
     fun pair(context: Context, scannedDevice: ScannedDevice) {
         viewModelScope.launch {
-            vitalDeviceManager.pair(scannedDevice).collect {
-                if (it) {
-                    Toast.makeText(context, "Paired", Toast.LENGTH_SHORT).show()
-                } else {
-                    Toast.makeText(context, "Pairing failed", Toast.LENGTH_SHORT).show()
+            try {
+                when (uiState.value.device.kind) {
+                    Kind.BloodPressure -> vitalDeviceManager
+                        .bloodPressure(context, scannedDevice)
+                        .pair()
+                    Kind.GlucoseMeter -> vitalDeviceManager
+                        .glucoseMeter(context, scannedDevice)
+                        .pair()
                 }
+
+                Toast.makeText(context, "Paired", Toast.LENGTH_SHORT).show()
+            } catch (e: BluetoothError) {
+                Toast.makeText(context, "Pairing failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
