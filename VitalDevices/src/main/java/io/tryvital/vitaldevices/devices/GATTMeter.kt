@@ -64,7 +64,7 @@ abstract class GATTMeter<Sample>(
             .timeout(15000)
             .useAutoConnect(false)
             .fail { _, status ->
-                logError("connect", status)
+                vitalLogger.logI("Failed to connect (status code = $status)")
 
                 if (!continuation.isActive) {
                     vitalLogger.logI("Inactive continuation has received connect fail callback for ${scannedDevice.name}")
@@ -157,7 +157,7 @@ abstract class GATTMeter<Sample>(
             BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
         )
             .fail { _, status ->
-                logError("writeCharacteristic", status)
+                vitalLogger.logI("Failed to write characteristic (status code = $status)")
                 this.close(BluetoothError("Failed to write to the RACP characteristic."))
             }
             .done { vitalLogger.logI("Successfully initiated the read operation via an RACP write.") }
@@ -168,7 +168,7 @@ abstract class GATTMeter<Sample>(
     private fun bond(onDone: () -> Unit, onFail: (Int) -> Unit) {
         ensureBond()
             .fail { _, status ->
-                logError("bond", status)
+                vitalLogger.logI("Failed to bond (status code = $status)")
                 onFail(status)
             }
             .done {
@@ -236,9 +236,5 @@ abstract class GATTMeter<Sample>(
             measurementCharacteristic = null
             deviceReady.value = false
         }
-    }
-
-    private fun logError(context: String, status: Int) {
-        vitalLogger.logI("Error in $context for ${scannedDevice.name} with status $status")
     }
 }
