@@ -29,8 +29,6 @@ import kotlin.reflect.KClass
 
 internal const val providerId = "health_connect"
 
-private const val minSupportedSDK = Build.VERSION_CODES.P
-
 internal val readRecordTypes = setOf(
     ExerciseSessionRecord::class,
     DistanceRecord::class,
@@ -43,7 +41,7 @@ internal val readRecordTypes = setOf(
     SleepSessionRecord::class,
     SleepStageRecord::class,
     OxygenSaturationRecord::class,
-    HeartRateVariabilitySdnnRecord::class,
+    HeartRateVariabilityRmssdRecord::class,
     RestingHeartRateRecord::class,
     ActiveCaloriesBurnedRecord::class,
     BasalMetabolicRateRecord::class,
@@ -56,15 +54,10 @@ internal val readRecordTypes = setOf(
     HeartRateRecord::class,
 )
 
-internal val writeRecordTypes = setOf(
-    HydrationRecord::class,
-    BloodGlucoseRecord::class,
-)
-
-internal fun vitalRecordTypes(healthPermission: Set<HealthPermission>): Set<KClass<out Record>> {
-    return readRecordTypes.filter { recordType ->
-        healthPermission.contains(HealthPermission.createReadPermission(recordType))
-    }.toSet()
+internal fun vitalRecordTypes(healthPermission: Set<String>): Set<KClass<out Record>> {
+    return readRecordTypes.filterTo(mutableSetOf()) { recordType ->
+        healthPermission.contains(HealthPermission.getReadPermission(recordType))
+    }
 }
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -107,18 +100,9 @@ class VitalHealthConnectManager private constructor(
         _status.tryEmit(SyncStatus.Unknown)
     }
 
-    fun isAvailable(context: Context): HealthConnectAvailability {
-        return when {
-            Build.VERSION.SDK_INT < minSupportedSDK -> HealthConnectAvailability.NotSupportedSDK
-            HealthConnectClient.isProviderAvailable(context) -> HealthConnectAvailability.Installed
-            else -> HealthConnectAvailability.NotInstalled
-        }
-    }
-
-    suspend fun getGrantedPermissions(context: Context): Set<HealthPermission> {
-        return healthConnectClientProvider.getHealthConnectClient(context).permissionController.getGrantedPermissions(
-            vitalRequiredPermissions
-        )
+    suspend fun getGrantedPermissions(context: Context): Set<String> {
+        return healthConnectClientProvider.getHealthConnectClient(context)
+            .permissionController.getGrantedPermissions()
     }
 
     @SuppressLint("ApplySharedPref")
@@ -529,6 +513,18 @@ class VitalHealthConnectManager private constructor(
     }
 
     companion object {
+        private const val packageName = "com.google.android.apps.healthdata"
+
+        @Suppress("unused")
+        fun isAvailable(context: Context): HealthConnectAvailability {
+            return when (HealthConnectClient.sdkStatus(context, packageName)) {
+                HealthConnectClient.SDK_UNAVAILABLE -> HealthConnectAvailability.NotSupportedSDK
+                HealthConnectClient.SDK_AVAILABLE -> HealthConnectAvailability.Installed
+                HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> HealthConnectAvailability.NotInstalled
+                else -> HealthConnectAvailability.NotSupportedSDK
+            }
+        }
+
         fun create(
             context: Context,
             apiKey: String,
@@ -550,10 +546,6 @@ class VitalHealthConnectManager private constructor(
                 )
             )
         }
-
-        val vitalRequiredPermissions =
-            readRecordTypes.map { HealthPermission.createReadPermission(it) }.toSet()
-                .plus(writeRecordTypes.map { HealthPermission.createWritePermission(it) })
     }
 }
 

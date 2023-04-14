@@ -1,9 +1,9 @@
 buildscript {
     ext {
         core = '1.9.0'
-        compose = '1.3.0'
+        compose = '1.4.1'
         nav = '2.5.3'
-        material3 = '1.0.0'
+        material3 = '1.0.1'
         activity_compose = '1.6.1'
         lifecycle_runtime = '2.5.1'
         lifecycle_viewmodel_compose = '2.5.1'
@@ -14,13 +14,13 @@ buildscript {
         okhttp = '4.10.0'
         junit = '4.13.2'
         test_ext = '1.1.4'
-        test_espresso = '3.5.0'
+        test_espresso = '3.5.1'
         mockito = "4.8.0"
         mockito_kotlin = "4.0.0"
         mockito_inline = "4.6.1"
         mockwebserver = "4.10.0"
         kotlinx_coroutines_test = "1.6.4"
-        health_connect = "1.0.0-alpha08"
+        health_connect = "1.0.0-alpha11"
         coil_compose = "2.0.0"
         ble = "2.5.1"
         annotation = "1.5.0"
@@ -34,7 +34,7 @@ buildscript {
 plugins {
     id 'com.android.application' version '7.3.1' apply false
     id 'com.android.library' version '7.3.1' apply false
-    id 'org.jetbrains.kotlin.android' version '1.6.10' apply false
+    id 'org.jetbrains.kotlin.android' version '1.8.0' apply false
 }
 
 task clean(type: Delete) {
