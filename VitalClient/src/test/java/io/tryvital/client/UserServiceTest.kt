@@ -127,7 +127,7 @@ class UserServiceTest {
 
         val sut = UserService.create(retrofit)
         val user = sut.createUser(CreateUserRequest(userName))
-        assertEquals("POST /user/key HTTP/1.1", server.takeRequest().requestLine)
+        assertEquals("POST /user HTTP/1.1", server.takeRequest().requestLine)
 
         assertEquals(user.userId, userId)
         assertEquals(user.userKey, userKey)

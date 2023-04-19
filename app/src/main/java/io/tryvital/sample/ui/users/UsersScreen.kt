@@ -48,6 +48,20 @@ fun UsersScreen(
         viewModel.update()
     }
     val state = viewModel.uiState.collectAsState().value
+    val error = state.currentError
+
+    if (error != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.setError(null) },
+            title = { Text(text = error::class.simpleName ?: "") },
+            text = { Text(text = error.message ?: "") },
+            confirmButton = {
+                Button(onClick = { viewModel.setError(null) }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {

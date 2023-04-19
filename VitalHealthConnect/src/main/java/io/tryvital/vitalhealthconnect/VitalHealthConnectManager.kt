@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.units.BloodGlucose
@@ -43,7 +44,6 @@ internal val readRecordTypes = setOf(
     OxygenSaturationRecord::class,
     HeartRateVariabilityRmssdRecord::class,
     RestingHeartRateRecord::class,
-    ActiveCaloriesBurnedRecord::class,
     BasalMetabolicRateRecord::class,
     StepsRecord::class,
     DistanceRecord::class,
@@ -103,6 +103,64 @@ class VitalHealthConnectManager private constructor(
     suspend fun getGrantedPermissions(context: Context): Set<String> {
         return healthConnectClientProvider.getHealthConnectClient(context)
             .permissionController.getGrantedPermissions()
+    }
+
+    fun permissionsRequiredToWriteResources(resources: Set<HealthResource>): Set<String> {
+        val recordTypes = mutableSetOf<KClass<out Record>>()
+
+        for (resource in resources) {
+            val records = when (resource) {
+                HealthResource.Water -> listOf(HydrationRecord::class)
+                HealthResource.BloodPressure -> listOf(BloodPressureRecord::class)
+                HealthResource.Glucose -> listOf(BloodGlucoseRecord::class)
+                else -> throw RecordWriteUnsupported(resource)
+            }
+
+            recordTypes.addAll(records)
+        }
+
+        return recordTypes.map { HealthPermission.getWritePermission(it) }.toSet()
+    }
+
+    fun permissionsRequiredToSyncResources(resources: Set<HealthResource>): Set<String> {
+        val recordTypes = mutableSetOf<KClass<out Record>>()
+
+        for (resource in resources) {
+            val records = when (resource) {
+                HealthResource.Water -> listOf(HydrationRecord::class)
+                HealthResource.ActiveEnergyBurned -> listOf(ActiveCaloriesBurnedRecord::class)
+                HealthResource.Activity -> listOf(
+                    ActiveCaloriesBurnedRecord::class,
+                    BasalMetabolicRateRecord::class,
+                    StepsRecord::class,
+                    DistanceRecord::class,
+                    FloorsClimbedRecord::class,
+                )
+                HealthResource.BasalEnergyBurned -> listOf(BasalMetabolicRateRecord::class)
+                HealthResource.BloodPressure -> listOf(BloodPressureRecord::class)
+                HealthResource.Body -> listOf(
+                    BodyFatRecord::class,
+                    WeightRecord::class,
+                )
+                HealthResource.Glucose -> listOf(BloodGlucoseRecord::class)
+                HealthResource.HeartRate -> listOf(HeartRateRecord::class)
+                HealthResource.HeartRateVariability -> listOf(HeartRateVariabilityRmssdRecord::class)
+                HealthResource.Profile -> listOf(HeightRecord::class)
+                HealthResource.Sleep -> listOf(
+                    SleepSessionRecord::class,
+                    SleepStageRecord::class,
+                )
+                HealthResource.Steps -> listOf(StepsRecord::class)
+                HealthResource.Workout -> listOf(
+                    ExerciseSessionRecord::class,
+                    HeartRateRecord::class,
+                )
+            }
+
+            recordTypes.addAll(records)
+        }
+
+        return recordTypes.map { HealthPermission.getReadPermission(it) }.toSet()
     }
 
     @SuppressLint("ApplySharedPref")
@@ -246,6 +304,7 @@ class VitalHealthConnectManager private constructor(
             HealthResource.HeartRateVariability,
             HealthResource.Workout -> {
                 vitalLogger.logI("Not supported resource $resource")
+                throw RecordWriteUnsupported(resource)
             }
         }
 

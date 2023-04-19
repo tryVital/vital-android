@@ -12,7 +12,7 @@ interface UserService {
     @GET("user/{user_id}")
     suspend fun getUser(@Path("user_id") userId: String): User
 
-    @POST("user/key")
+    @POST("user")
     suspend fun createUser(@Body request: CreateUserRequest): CreateUserResponse
 
     @DELETE("user/{user_id}")
