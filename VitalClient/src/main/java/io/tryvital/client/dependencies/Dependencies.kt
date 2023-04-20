@@ -70,8 +70,7 @@ class Dependencies(
                 }
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
-                // TODO: [VIT-2862] GZip not working correctly.
-                //.addInterceptor(GzipRequestInterceptor())
+                .addInterceptor(GzipRequestInterceptor())
                 .addNetworkInterceptor(ApiKeyInterceptor(apiKey))
                 .addInterceptor(loggingInterceptor)
                 .build()

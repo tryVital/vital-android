@@ -10,20 +10,34 @@ import okio.buffer
 internal class GzipRequestInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest: Request = chain.request()
-        if (originalRequest.body == null || originalRequest.header("Content-Encoding") != null) {
+        if (originalRequest.body == null || originalRequest.header("Content-Encoding") != null || originalRequest.method != "POST") {
             return chain.proceed(originalRequest)
         }
+
+        // Only these requests under these specific paths should be gzipped:
+        // 1. POST https://example.com/v2/summary/:resource/:user_id
+        // 1. POST https://example.com/v2/timeseries/:user_id/:resource
+        val apiVersion = originalRequest.url.pathSegments.getOrNull(0)
+        val root = originalRequest.url.pathSegments.getOrNull(1)
+        if (apiVersion != "v2" || !(root == "timeseries" || root == "summary")) {
+            return chain.proceed(originalRequest)
+        }
+
         val compressedRequest: Request = originalRequest.newBuilder()
             .header("Content-Encoding", "gzip")
-            .method(originalRequest.method, forceContentLength(gzip(originalRequest.body!!)))
+            .method(originalRequest.method, gzip(originalRequest.body!!))
             .build()
 
         return chain.proceed(compressedRequest)
     }
 
-    private fun forceContentLength(requestBody: RequestBody): RequestBody {
+    private fun gzip(requestBody: RequestBody): RequestBody {
         val buffer = Buffer()
-        requestBody.writeTo(buffer)
+
+        val gzipSink = GzipSink(buffer).buffer()
+        requestBody.writeTo(gzipSink)
+        gzipSink.close()
+
         return object : RequestBody() {
             override fun contentType(): MediaType? {
                 return requestBody.contentType()
@@ -35,24 +49,6 @@ internal class GzipRequestInterceptor : Interceptor {
 
             override fun writeTo(sink: BufferedSink) {
                 sink.write(buffer.snapshot())
-            }
-        }
-    }
-
-    private fun gzip(body: RequestBody): RequestBody {
-        return object : RequestBody() {
-            override fun contentType(): MediaType? {
-                return body.contentType()
-            }
-
-            override fun contentLength(): Long {
-                return -1 // We don't know the compressed length in advance!
-            }
-
-            override fun writeTo(sink: BufferedSink) {
-                val gzipSink: BufferedSink = GzipSink(sink).buffer()
-                body.writeTo(gzipSink)
-                gzipSink.close()
             }
         }
     }
