@@ -10,8 +10,8 @@ data class Workout(
     val sourceBundle: String?,
     val deviceModel: String?,
     val sport: String,
-    val caloriesInKiloJules: Long,
-    val distanceInMeter: Long,
+    val caloriesInKiloJules: Double?,
+    val distanceInMeter: Double?,
     val heartRate: List<QuantitySample>,
     val respiratoryRate: List<QuantitySample>
 
@@ -24,8 +24,9 @@ data class Workout(
             sourceBundle = sourceBundle,
             deviceModel = deviceModel,
             sport = sport,
-            caloriesInKiloJules = caloriesInKiloJules,
-            distanceInMeter = distanceInMeter,
+            // TODO: ManualWorkoutCreation should have had these two nullable.
+            caloriesInKiloJules = caloriesInKiloJules ?: 0.0,
+            distanceInMeter = distanceInMeter ?: 0.0,
             heartRate = heartRate.map { it.toQuantitySamplePayload() },
             respiratoryRate = respiratoryRate.map { it.toQuantitySamplePayload() },
         )

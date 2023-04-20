@@ -202,13 +202,8 @@ internal class HealthConnectRecordProcessor(
     ): SummaryData.Workouts {
         return SummaryData.Workouts(
             exerciseRecords.map { exercise ->
-                val aggregatedDistance =
-                    recordAggregator.aggregateDistance(exercise.startTime, exercise.endTime)
-                val aggregatedActiveCaloriesBurned =
-                    recordAggregator.aggregateActiveEnergyBurned(
-                        exercise.startTime,
-                        exercise.endTime
-                    )
+                val summary =
+                    recordAggregator.aggregateWorkoutSummary(exercise.startTime, exercise.endTime)
                 val heartRateRecord =
                     recordReader.readHeartRate(exercise.startTime, exercise.endTime)
                 val respiratoryRateRecord =
@@ -220,8 +215,8 @@ internal class HealthConnectRecordProcessor(
                     endDate = Date.from(exercise.endTime),
                     sourceBundle = exercise.metadata.dataOrigin.packageName,
                     sport = EXERCISE_TYPE_INT_TO_STRING_MAP[exercise.exerciseType] ?: "workout",
-                    caloriesInKiloJules = aggregatedActiveCaloriesBurned,
-                    distanceInMeter = aggregatedDistance,
+                    caloriesInKiloJules = summary.caloriesBurned,
+                    distanceInMeter = summary.distance,
                     heartRate = mapHearthRate(
                         heartRateRecord,
                         fallbackDeviceModel

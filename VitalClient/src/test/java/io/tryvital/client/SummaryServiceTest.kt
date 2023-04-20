@@ -57,8 +57,8 @@ class SummaryServiceTest {
                         sourceBundle = "fit",
                         deviceModel = "not Iphone",
                         sport = "walking",
-                        caloriesInKiloJules = 101,
-                        distanceInMeter = 301,
+                        caloriesInKiloJules = 101.0,
+                        distanceInMeter = 301.0,
                         heartRate = emptyList(),
                         respiratoryRate = emptyList()
                     )
