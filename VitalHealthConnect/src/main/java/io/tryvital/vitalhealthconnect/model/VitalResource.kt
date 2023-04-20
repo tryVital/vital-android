@@ -1,34 +1,34 @@
 package io.tryvital.vitalhealthconnect.model
 
 val healthResources = setOf(
-    HealthResource.Profile,
-    HealthResource.Body,
-    HealthResource.Workout,
-    HealthResource.Activity,
-    HealthResource.Sleep,
-    HealthResource.Glucose,
-    HealthResource.BloodPressure,
-    HealthResource.HeartRate,
-    HealthResource.Steps,
-    HealthResource.ActiveEnergyBurned,
-    HealthResource.BasalEnergyBurned,
-    HealthResource.Water,
+    VitalResource.Profile,
+    VitalResource.Body,
+    VitalResource.Workout,
+    VitalResource.Activity,
+    VitalResource.Sleep,
+    VitalResource.Glucose,
+    VitalResource.BloodPressure,
+    VitalResource.HeartRate,
+    VitalResource.Steps,
+    VitalResource.ActiveEnergyBurned,
+    VitalResource.BasalEnergyBurned,
+    VitalResource.Water,
 )
 
-sealed class HealthResource(val name: String) {
-    object Profile : HealthResource("profile")
-    object Body : HealthResource("body")
-    object Workout : HealthResource("workout")
-    object Activity : HealthResource("activity")
-    object Sleep : HealthResource("sleep")
-    object Glucose : HealthResource("glucose")
-    object BloodPressure : HealthResource("bloodPressure")
-    object HeartRate : HealthResource("heartRate")
-    object Steps : HealthResource("steps")
-    object ActiveEnergyBurned : HealthResource("activeEnergyBurned")
-    object BasalEnergyBurned : HealthResource("basalEnergyBurned")
-    object Water : HealthResource("water")
-    object HeartRateVariability : HealthResource("heartRateVariability")
+sealed class VitalResource(val name: String) {
+    object Profile : VitalResource("profile")
+    object Body : VitalResource("body")
+    object Workout : VitalResource("workout")
+    object Activity : VitalResource("activity")
+    object Sleep : VitalResource("sleep")
+    object Glucose : VitalResource("glucose")
+    object BloodPressure : VitalResource("bloodPressure")
+    object HeartRate : VitalResource("heartRate")
+    object Steps : VitalResource("steps")
+    object ActiveEnergyBurned : VitalResource("activeEnergyBurned")
+    object BasalEnergyBurned : VitalResource("basalEnergyBurned")
+    object Water : VitalResource("water")
+    object HeartRateVariability : VitalResource("heartRateVariability")
 
     override fun toString(): String {
         return name
@@ -36,7 +36,7 @@ sealed class HealthResource(val name: String) {
 
     companion object {
         @Suppress("unused")
-        fun values(): Array<HealthResource> {
+        fun values(): Array<VitalResource> {
             return arrayOf(
                 Profile,
                 Body,
@@ -54,7 +54,7 @@ sealed class HealthResource(val name: String) {
             )
         }
 
-        fun valueOf(value: String): HealthResource {
+        fun valueOf(value: String): VitalResource {
             return when (value) {
                 "profile" -> Profile
                 "body" -> Body
