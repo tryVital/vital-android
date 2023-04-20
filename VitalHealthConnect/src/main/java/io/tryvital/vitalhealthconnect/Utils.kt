@@ -51,4 +51,4 @@ internal fun createEncryptedSharedPreferences(context: Context) = EncryptedShare
 
 internal suspend fun getGrantedPermissions(context: Context) =
     HealthConnectClientProvider().getHealthConnectClient(context)
-        .permissionController.getGrantedPermissions(VitalHealthConnectManager.vitalRequiredPermissions)
+        .permissionController.getGrantedPermissions()

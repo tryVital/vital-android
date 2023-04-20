@@ -47,16 +47,18 @@ data class ProvidersResponse(
 
 data class CreateUserRequest(
     @Json(name = "client_user_id")
-    val clientUserId: String
+    val clientUserId: String,
+    @Json(name = "fallback_time_zone")
+    val fallbackTimeZone: String? = null
 )
 
 data class CreateUserResponse(
     @Json(name = "user_id")
-    val userId: String?,
+    val userId: String,
     @Json(name = "user_key")
     val userKey: String?,
     @Json(name = "client_user_id")
-    val clientUserId: String?
+    val clientUserId: String
 )
 
 data class DeleteUserResponse(

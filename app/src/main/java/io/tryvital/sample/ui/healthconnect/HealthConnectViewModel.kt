@@ -2,16 +2,15 @@ package io.tryvital.sample.ui.healthconnect
 
 import android.content.Context
 import android.util.Log
-import androidx.health.connect.client.permission.HealthPermission
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.tryvital.client.services.data.User
 import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
-import io.tryvital.vitalhealthconnect.VitalHealthConnectManager.Companion.vitalRequiredPermissions
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.model.HealthResource
+import io.tryvital.vitalhealthconnect.model.healthResources
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -30,49 +29,50 @@ class HealthConnectViewModel(
 
     fun init(context: Context) {
         viewModelScope.launch {
-            viewModelState.update {
-                val available = vitalHealthConnectManager.isAvailable(context)
-
-                val permissionsGranted =
-                    if (available == HealthConnectAvailability.Installed) vitalHealthConnectManager.getGrantedPermissions(
-                        context
-                    )
-                        .containsAll(vitalRequiredPermissions) else false
-
-                it.copy(
-                    available = available,
-                    permissionsGranted = permissionsGranted
-                )
-            }
-        }
-
-        viewModelScope.launch {
             vitalHealthConnectManager.status.collect {
                 viewModelState.update { state ->
                     state.copy(syncStatus = state.syncStatus.plus("\n${it}"))
                 }
             }
         }
+
+        checkAvailability(context)
+        checkPermissions(context)
+    }
+
+    fun permissionsRequired(): Set<String> {
+        val read = vitalHealthConnectManager.permissionsRequiredToSyncResources(
+            setOf(HealthResource.Water, HealthResource.Glucose, HealthResource.Activity)
+        )
+        val write = vitalHealthConnectManager.permissionsRequiredToWriteResources(
+            setOf(HealthResource.Water, HealthResource.Glucose)
+        )
+        return read + write
     }
 
     fun checkAvailability(context: Context) {
         viewModelState.update {
-            it.copy(available = vitalHealthConnectManager.isAvailable(context))
+            it.copy(available = VitalHealthConnectManager.isAvailable(context))
         }
     }
 
     fun checkPermissions(context: Context) {
         viewModelScope.launch {
+            val state = viewModelState.value
+            if (state.available != HealthConnectAvailability.Installed)
+                return@launch
+
+            val permissionsRequired = this@HealthConnectViewModel.permissionsRequired()
+            val permissionsGranted = vitalHealthConnectManager.getGrantedPermissions(context)
+            val permissionsMissing = permissionsRequired - permissionsGranted
+
             viewModelState.update {
                 it.copy(
-                    permissionsGranted = vitalHealthConnectManager.getGrantedPermissions(context) == vitalRequiredPermissions
+                    permissionsGranted = permissionsGranted.sorted(),
+                    permissionsMissing = permissionsMissing.sorted()
                 )
             }
         }
-    }
-
-    fun getPermissions(): Set<HealthPermission> {
-        return vitalRequiredPermissions
     }
 
     fun linkProvider() {
@@ -142,7 +142,8 @@ class HealthConnectViewModel(
 
 data class HealthConnectViewModelState(
     val available: HealthConnectAvailability? = null,
-    val permissionsGranted: Boolean? = null,
+    val permissionsGranted: List<String> = listOf(),
+    val permissionsMissing: List<String> = listOf(),
     val user: User,
     val syncStatus: String = "",
 )

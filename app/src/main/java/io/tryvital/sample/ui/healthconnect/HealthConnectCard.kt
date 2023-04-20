@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.InstallMobile
@@ -41,15 +42,23 @@ fun HealthConnectCard(
                 Box(Modifier.align(Alignment.CenterHorizontally)) {
                     Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
-                PermissionInfo(state.permissionsGranted, viewModel)
+                PermissionInfo(
+                    state.permissionsGranted,
+                    state.permissionsMissing,
+                    viewModel
+                )
             }
         }
     }
 }
 
 @Composable
-fun PermissionInfo(permissionsGranted: Boolean?, viewModel: HealthConnectViewModel) {
-    when (permissionsGranted) {
+fun PermissionInfo(
+    permissionsGranted: List<String>,
+    permissionsMissing: List<String>,
+    viewModel: HealthConnectViewModel
+) {
+    when (permissionsGranted.isNotEmpty()) {
         true -> Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -57,11 +66,41 @@ fun PermissionInfo(permissionsGranted: Boolean?, viewModel: HealthConnectViewMod
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "All permission granted 👍",
+                if (permissionsMissing.isEmpty()) "All permissions granted 👍" else "Some permissions missing 👀",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = Color.Magenta
             )
+            Text(
+                "Granted",
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+            )
+            Column {
+                permissionsGranted.forEach { permission ->
+                    Text(
+                        permission,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 11.sp,
+                        color = Color.DarkGray
+                    )
+                }
+            }
+            Text(
+                "Missing",
+                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+            )
+            Column {
+                permissionsMissing.forEach { permission ->
+                    Text(
+                        permission,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 11.sp,
+                        color = Color.Red
+                    )
+                }
+            }
         }
         false -> Box(
             modifier = Modifier
@@ -84,7 +123,7 @@ fun PermissionInfo(permissionsGranted: Boolean?, viewModel: HealthConnectViewMod
                 Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = {
-                        permissionsLauncher.launch(viewModel.getPermissions())
+                        permissionsLauncher.launch(viewModel.permissionsRequired())
                     },
                     contentPadding = PaddingValues(
                         start = 20.dp,
@@ -103,15 +142,6 @@ fun PermissionInfo(permissionsGranted: Boolean?, viewModel: HealthConnectViewMod
                 }
 
             }
-        }
-        null -> Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-                .size(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
         }
     }
 }

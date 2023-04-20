@@ -35,8 +35,12 @@ class UsersViewModel(
 
     fun addUser(name: String) {
         viewModelScope.launch {
-            vitalClient.userService.createUser(CreateUserRequest(name))
-            update()
+            try {
+                vitalClient.userService.createUser(CreateUserRequest(name))
+                update()
+            } catch (e: Exception) {
+                setError(e)
+            }
         }
     }
 
@@ -69,6 +73,10 @@ class UsersViewModel(
         }
     }
 
+    fun setError(error: Throwable?) {
+        viewModelState.update { it.copy(currentError = error) }
+    }
+
     companion object {
         fun provideFactory(
             client: VitalClient,
@@ -86,4 +94,5 @@ data class UsersViewModelState(
     val loading: Boolean = false,
     val users: List<User>? = listOf(),
     val selectedUser: User? = null,
+    var currentError: Throwable? = null,
 )
