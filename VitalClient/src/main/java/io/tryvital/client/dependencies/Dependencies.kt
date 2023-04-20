@@ -9,7 +9,7 @@ import io.tryvital.client.BuildConfig
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.utils.ApiKeyInterceptor
-import io.tryvital.client.utils.GzipRequestInterceptor
+import io.tryvital.client.utils.VitalRequestInterceptor
 import io.tryvital.client.utils.VitalLogger
 import okhttp3.Cache
 import okhttp3.OkHttpClient
@@ -70,7 +70,7 @@ class Dependencies(
                 }
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
-                .addInterceptor(GzipRequestInterceptor())
+                .addInterceptor(VitalRequestInterceptor())
                 .addNetworkInterceptor(ApiKeyInterceptor(apiKey))
                 .addInterceptor(loggingInterceptor)
                 .build()

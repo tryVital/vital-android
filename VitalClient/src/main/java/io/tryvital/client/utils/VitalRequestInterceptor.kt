@@ -6,29 +6,32 @@ import okio.BufferedSink
 import okio.GzipSink
 import okio.buffer
 
+const val VITAL_SDK_VERSION = "0.9.4"
 
-internal class GzipRequestInterceptor : Interceptor {
+internal class VitalRequestInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val originalRequest: Request = chain.request()
-        if (originalRequest.body == null || originalRequest.header("Content-Encoding") != null || originalRequest.method != "POST") {
-            return chain.proceed(originalRequest)
-        }
+        val request = chain.request()
+        var builder = request.newBuilder()
+            .header("x-vital-ios-sdk-version", VITAL_SDK_VERSION)
 
         // Only these requests under these specific paths should be gzipped:
         // 1. POST https://example.com/v2/summary/:resource/:user_id
         // 1. POST https://example.com/v2/timeseries/:user_id/:resource
-        val apiVersion = originalRequest.url.pathSegments.getOrNull(0)
-        val root = originalRequest.url.pathSegments.getOrNull(1)
-        if (apiVersion != "v2" || !(root == "timeseries" || root == "summary")) {
-            return chain.proceed(originalRequest)
+        val apiVersion = request.url.pathSegments.getOrNull(0)
+        val root = request.url.pathSegments.getOrNull(1)
+        val body = request.body
+        if (
+            body != null &&
+            request.method == "POST" &&
+            apiVersion == "v2" &&
+            (root == "timeseries" || root == "summary")
+        ) {
+            builder = builder
+                .header("Content-Encoding", "gzip")
+                .method(request.method, gzip(body))
         }
 
-        val compressedRequest: Request = originalRequest.newBuilder()
-            .header("Content-Encoding", "gzip")
-            .method(originalRequest.method, gzip(originalRequest.body!!))
-            .build()
-
-        return chain.proceed(compressedRequest)
+        return chain.proceed(builder.build())
     }
 
     private fun gzip(requestBody: RequestBody): RequestBody {
