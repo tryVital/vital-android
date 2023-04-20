@@ -4,37 +4,37 @@ data class HCWorkoutSummary(
     /**
      * Unit: bpm
      */
-    val maxHeartRate: Long?,
+    val maxHeartRate: Long? = null,
     /**
      * Unit: bpm
      */
-    val averageHeartRate: Long?,
+    val averageHeartRate: Long? = null,
     /**
      * Unit: meters
      */
-    val distance: Double?,
+    val distance: Double? = null,
     /**
      * Unit: kcal
      */
-    val caloriesBurned: Double?,
+    val caloriesBurned: Double? = null,
     /**
      * Unit: meters
      */
-    val elevationGained: Double?,
+    val elevationGained: Double? = null,
     /**
      * Unit: meters/sec
      */
-    val maxSpeed: Double?,
+    val maxSpeed: Double? = null,
     /**
      * Unit: meters/sec
      */
-    val averageSpeed: Double?,
+    val averageSpeed: Double? = null,
     /**
      * Unit: watts
      */
-    val maxWatts: Double?,
+    val maxWatts: Double? = null,
     /**
      * Unit: watts
      */
-    val averageWatts: Double?,
+    val averageWatts: Double? = null,
 )

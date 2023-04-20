@@ -1,6 +1,8 @@
 package io.tryvital.vitalhealthconnect.records
 
 import android.content.Context
+import androidx.health.connect.client.aggregate.AggregateMetric
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
@@ -12,6 +14,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.*
+import kotlin.reflect.KClass
 
 interface RecordAggregator {
 
@@ -36,38 +39,51 @@ internal class HealthConnectRecordAggregator(
         healthConnectClientProvider.getHealthConnectClient(context)
     }
 
+    suspend fun permittedMetrics(
+        vararg pairs: Pair<KClass<out Record>, AggregateMetric<*>>
+    ): Set<AggregateMetric<*>> {
+        val grantedPermissions = healthConnectClient.permissionController.getGrantedPermissions()
+        return pairs.mapNotNullTo(mutableSetOf()) { (recordType, metric) ->
+            if (HealthPermission.getReadPermission(recordType) in grantedPermissions)
+                metric
+            else
+                null
+        }
+    }
+
     override suspend fun aggregateWorkoutSummary(
         startTime: Instant,
         endTime: Instant
     ): HCWorkoutSummary {
+        val metricsToRequest = permittedMetrics(
+            DistanceRecord::class to DistanceRecord.DISTANCE_TOTAL,
+            ActiveCaloriesBurnedRecord::class to ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+            // TODO: ManualWorkoutCreation missing full workoutv2 coverage
+            //HeartRateRecord::class to HeartRateRecord.BPM_MAX,
+            //HeartRateRecord::class to HeartRateRecord.BPM_AVG,
+            //ElevationGainedRecord::class to ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
+            //SpeedRecord::class to SpeedRecord.SPEED_MAX,
+            //SpeedRecord::class to SpeedRecord.SPEED_AVG,
+            //PowerRecord::class to PowerRecord.POWER_MAX,
+            //PowerRecord::class to PowerRecord.POWER_AVG,
+        )
+
+        // No permission for anything; fail gracefully by returning an empty summary.
+        if (metricsToRequest.isEmpty()) {
+            return HCWorkoutSummary()
+        }
+
         val response = healthConnectClient.aggregate(
             AggregateRequest(
-                metrics = setOf(
-                    DistanceRecord.DISTANCE_TOTAL,
-                    ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
-                    // TODO: ManualWorkoutCreation missing full workoutv2 coverage
-                    //HeartRateRecord.BPM_MAX,
-                    //HeartRateRecord.BPM_AVG,
-                    //ElevationGainedRecord.ELEVATION_GAINED_TOTAL,
-                    //SpeedRecord.SPEED_MAX,
-                    //SpeedRecord.SPEED_AVG,
-                    //PowerRecord.POWER_MAX,
-                    //PowerRecord.POWER_AVG,
-                ),
-                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+                metricsToRequest,
+                // Inclusive-exclusive
+                TimeRangeFilter.between(startTime, endTime)
             )
         )
 
         return HCWorkoutSummary(
             distance = response[DistanceRecord.DISTANCE_TOTAL]?.inMeters,
             caloriesBurned = response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories,
-            maxHeartRate = null,
-            averageWatts = null,
-            averageHeartRate = null,
-            elevationGained = null,
-            maxSpeed = null,
-            averageSpeed = null,
-            maxWatts = null,
             // TODO: ManualWorkoutCreation missing full workoutv2 coverage
             // maxHeartRate = response[HeartRateRecord.BPM_MAX],
             // averageHeartRate = response[HeartRateRecord.BPM_AVG],
@@ -87,25 +103,28 @@ internal class HealthConnectRecordAggregator(
         val startOfDay = LocalDateTime.of(date, LocalTime.MIDNIGHT).atZone(zoneId)
         val endOfDay = LocalDateTime.of(date.plusDays(1), LocalTime.MIDNIGHT).atZone(zoneId)
 
-        val response = healthConnectClient.aggregate(
-            AggregateRequest(
-                metrics = setOf(
-                    TotalCaloriesBurnedRecord.ENERGY_TOTAL,
-                    ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
-                    BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL,
-                    StepsRecord.COUNT_TOTAL,
-                    DistanceRecord.DISTANCE_TOTAL,
-                    FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
-                    ExerciseSessionRecord.EXERCISE_DURATION_TOTAL,
-                ),
-                // Inclusive-exclusive
-                timeRangeFilter = TimeRangeFilter.between(
-                    startOfDay.toInstant(),
-                    endOfDay.toInstant(),
-                )
-            )
+        val metricsToRequest = permittedMetrics(
+            TotalCaloriesBurnedRecord::class to TotalCaloriesBurnedRecord.ENERGY_TOTAL,
+            ActiveCaloriesBurnedRecord::class to ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+            BasalMetabolicRateRecord::class to BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL,
+            StepsRecord::class to StepsRecord.COUNT_TOTAL,
+            DistanceRecord::class to DistanceRecord.DISTANCE_TOTAL,
+            FloorsClimbedRecord::class to FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
+            ExerciseSessionRecord::class to ExerciseSessionRecord.EXERCISE_DURATION_TOTAL,
         )
 
+        // No permission for anything; fail gracefully by returning an empty summary.
+        if (metricsToRequest.isEmpty()) {
+            return HCActivitySummary()
+        }
+
+        val response = healthConnectClient.aggregate(
+            AggregateRequest(
+                metricsToRequest,
+                // Inclusive-exclusive
+                TimeRangeFilter.between(startOfDay.toInstant(), endOfDay.toInstant())
+            )
+        )
         val totalCaloriesBurned = response[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
         var activeCaloriesBurned = response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
         var basalCaloriesBurned = response[BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL]?.inKilocalories
