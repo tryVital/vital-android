@@ -11,7 +11,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.util.SimpleTimeZone
+import java.util.*
 
 interface RecordAggregator {
 
@@ -22,7 +22,7 @@ interface RecordAggregator {
 
     suspend fun aggregateActivityDaySummary(
         date: LocalDate,
-        timeZone: SimpleTimeZone
+        timeZone: TimeZone
     ): HCActivitySummary
 }
 
@@ -81,8 +81,12 @@ internal class HealthConnectRecordAggregator(
 
     override suspend fun aggregateActivityDaySummary(
         date: LocalDate,
-        timeZone: SimpleTimeZone
+        timeZone: TimeZone
     ): HCActivitySummary {
+        val zoneId = timeZone.toZoneId()
+        val startOfDay = LocalDateTime.of(date, LocalTime.MIDNIGHT).atZone(zoneId)
+        val endOfDay = LocalDateTime.of(date.plusDays(1), LocalTime.MIDNIGHT).atZone(zoneId)
+
         val response = healthConnectClient.aggregate(
             AggregateRequest(
                 metrics = setOf(
@@ -96,8 +100,8 @@ internal class HealthConnectRecordAggregator(
                 ),
                 // Inclusive-exclusive
                 timeRangeFilter = TimeRangeFilter.between(
-                    LocalDateTime.of(date, LocalTime.MIDNIGHT),
-                    LocalDateTime.of(date.plusDays(1), LocalTime.MIDNIGHT),
+                    startOfDay.toInstant(),
+                    endOfDay.toInstant(),
                 )
             )
         )
