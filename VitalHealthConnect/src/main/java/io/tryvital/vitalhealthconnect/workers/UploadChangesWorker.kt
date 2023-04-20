@@ -17,7 +17,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
 import io.tryvital.vitalhealthconnect.ext.toDate
-import io.tryvital.vitalhealthconnect.model.HealthResource
+import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.records.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -84,7 +84,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                         inputData.getString(userIdKey)!!,
                         currentChanges.changes,
                         resourcesToSync = inputData.getStringArray(resourcesKey)?.mapNotNull {
-                            HealthResource.valueOf(it)
+                            VitalResource.valueOf(it)
                         }?.toSet() ?: emptySet()
                     )
 
@@ -112,7 +112,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
     }
 
     private suspend fun readAndUploadHealthDataFromChange(
-        userId: String, changes: List<Change>, resourcesToSync: Set<HealthResource>
+        userId: String, changes: List<Change>, resourcesToSync: Set<VitalResource>
     ) {
         val heights = mutableListOf<HeightRecord>()
         val weights = mutableListOf<WeightRecord>()
@@ -164,16 +164,16 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         val hostTimeZone = TimeZone.getDefault()
         val timeZoneId = hostTimeZone.id
 
-        if (resourcesToSync.contains(HealthResource.Profile)) {
+        if (resourcesToSync.contains(VitalResource.Profile)) {
             getProfile(heights, userId, timeZoneId)
         }
-        if (resourcesToSync.contains(HealthResource.Body)) {
+        if (resourcesToSync.contains(VitalResource.Body)) {
             getBody(bodyFats, weights, userId, timeZoneId, currentDevice)
         }
-        if (resourcesToSync.contains(HealthResource.Workout)) {
+        if (resourcesToSync.contains(VitalResource.Workout)) {
             getWorkouts(exercises, userId, timeZoneId, currentDevice)
         }
-        if (resourcesToSync.contains(HealthResource.Activity)) {
+        if (resourcesToSync.contains(VitalResource.Activity)) {
             getActivity(
                 activeEnergyBurned,
                 basalMetabolicRate,
@@ -186,22 +186,22 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 currentDevice
             )
         }
-        if (resourcesToSync.contains(HealthResource.Sleep)) {
+        if (resourcesToSync.contains(VitalResource.Sleep)) {
             getSleep(sleeps, sleepStages, userId, timeZoneId, currentDevice)
         }
-        if (resourcesToSync.contains(HealthResource.Glucose)) {
+        if (resourcesToSync.contains(VitalResource.Glucose)) {
             getGlucose(bloodGlucose, userId, timeZoneId, currentDevice)
         }
-        if (resourcesToSync.contains(HealthResource.BloodPressure)) {
+        if (resourcesToSync.contains(VitalResource.BloodPressure)) {
             getBloodPressure(bloodPressure, userId, timeZoneId, currentDevice)
         }
-        if (resourcesToSync.contains(HealthResource.HeartRate)) {
+        if (resourcesToSync.contains(VitalResource.HeartRate)) {
             getHeartRate(heartRate, userId, timeZoneId, currentDevice)
         }
-        if (resourcesToSync.contains(HealthResource.Water)) {
+        if (resourcesToSync.contains(VitalResource.Water)) {
             getWater(water, userId, timeZoneId, currentDevice)
         }
-        if (resourcesToSync.contains(HealthResource.HeartRateVariability)) {
+        if (resourcesToSync.contains(VitalResource.HeartRateVariability)) {
             getHeartRateVariability(heartRateVariabilityRmssd, userId, timeZoneId, currentDevice)
         }
     }
@@ -212,7 +212,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         timeZoneId: String?,
         currentDevice: String
     ) {
-        reportStatus(HealthResource.BloodPressure, syncing)
+        reportStatus(VitalResource.BloodPressure, syncing)
         if (bloodPressure.isNotEmpty()) {
             val bloodPressureStartTime = bloodPressure.minOf { it.time }
             val bloodPressureEndTime = bloodPressure.maxOf { it.time }
@@ -225,9 +225,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     bloodPressureStartTime, bloodPressureEndTime, currentDevice, bloodPressure
                 ).samples.map { it.toBloodPressurePayload() })
 
-            reportStatus(HealthResource.BloodPressure, synced)
+            reportStatus(VitalResource.BloodPressure, synced)
         } else {
-            reportStatus(HealthResource.BloodPressure, nothingToSync)
+            reportStatus(VitalResource.BloodPressure, nothingToSync)
         }
 
     }
@@ -235,7 +235,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
     private suspend fun getWater(
         water: List<HydrationRecord>, userId: String, timeZoneId: String?, currentDevice: String
     ) {
-        reportStatus(HealthResource.Water, syncing)
+        reportStatus(VitalResource.Water, syncing)
         if (water.isNotEmpty()) {
             val waterStartTime = water.minOf { it.startTime }
             val waterEndTime = water.maxOf { it.endTime }
@@ -248,16 +248,16 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     waterStartTime, waterEndTime, currentDevice, water
                 ).samples.map { it.toQuantitySamplePayload() })
 
-            reportStatus(HealthResource.Water, synced)
+            reportStatus(VitalResource.Water, synced)
         } else {
-            reportStatus(HealthResource.Water, nothingToSync)
+            reportStatus(VitalResource.Water, nothingToSync)
         }
     }
 
     private suspend fun getHeartRate(
         heartRate: List<HeartRateRecord>, userId: String, timeZoneId: String?, currentDevice: String
     ) {
-        reportStatus(HealthResource.HeartRate, syncing)
+        reportStatus(VitalResource.HeartRate, syncing)
         if (heartRate.isNotEmpty()) {
             val heartRateStartTime = heartRate.minOf { it.startTime }
             val heartRateEndTime = heartRate.maxOf { it.endTime }
@@ -270,9 +270,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     heartRateStartTime, heartRateEndTime, currentDevice, heartRate
                 ).samples.map { it.toQuantitySamplePayload() })
 
-            reportStatus(HealthResource.HeartRate, synced)
+            reportStatus(VitalResource.HeartRate, synced)
         } else {
-            reportStatus(HealthResource.HeartRate, nothingToSync)
+            reportStatus(VitalResource.HeartRate, nothingToSync)
         }
     }
 
@@ -282,7 +282,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         timeZoneId: String?,
         currentDevice: String
     ) {
-        reportStatus(HealthResource.HeartRateVariability, syncing)
+        reportStatus(VitalResource.HeartRateVariability, syncing)
         if (rmssdRecords.isNotEmpty()) {
             val heartRateStartTime = rmssdRecords.minOf { it.time }
             val heartRateEndTime = rmssdRecords.maxOf { it.time }
@@ -295,9 +295,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     heartRateStartTime, heartRateEndTime, currentDevice, rmssdRecords
                 ).samples.map { it.toQuantitySamplePayload() })
 
-            reportStatus(HealthResource.HeartRateVariability, synced)
+            reportStatus(VitalResource.HeartRateVariability, synced)
         } else {
-            reportStatus(HealthResource.HeartRateVariability, nothingToSync)
+            reportStatus(VitalResource.HeartRateVariability, nothingToSync)
         }
     }
 
@@ -307,7 +307,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         timeZoneId: String?,
         currentDevice: String
     ) {
-        reportStatus(HealthResource.Glucose, syncing)
+        reportStatus(VitalResource.Glucose, syncing)
         if (bloodGlucose.isNotEmpty()) {
             val bloodGlucoseStartTime = bloodGlucose.minOf { it.time }
             val bloodGlucoseEndTime = bloodGlucose.maxOf { it.time }
@@ -320,9 +320,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     bloodGlucoseStartTime, bloodGlucoseEndTime, currentDevice, bloodGlucose
                 ).samples.map { it.toQuantitySamplePayload() })
 
-            reportStatus(HealthResource.Glucose, synced)
+            reportStatus(VitalResource.Glucose, synced)
         } else {
-            reportStatus(HealthResource.Glucose, nothingToSync)
+            reportStatus(VitalResource.Glucose, nothingToSync)
         }
 
     }
@@ -334,7 +334,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         timeZoneId: String?,
         currentDevice: String
     ) {
-        reportStatus(HealthResource.Sleep, syncing)
+        reportStatus(VitalResource.Sleep, syncing)
         if (sleeps.isNotEmpty()) {
             val sleepStartTime = sleeps.minOf { it.startTime }
             val sleepEndTime = sleeps.maxOf { it.endTime }
@@ -350,9 +350,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     sleeps,
                     stages,
                 ).samples.map { it.toSleepPayload() })
-            reportStatus(HealthResource.Sleep, synced)
+            reportStatus(VitalResource.Sleep, synced)
         } else {
-            reportStatus(HealthResource.Sleep, nothingToSync)
+            reportStatus(VitalResource.Sleep, nothingToSync)
         }
     }
 
@@ -367,7 +367,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         timeZoneId: String?,
         currentDevice: String
     ) {
-        reportStatus(HealthResource.Activity, syncing)
+        reportStatus(VitalResource.Activity, syncing)
         if (activeEnergyBurned.isNotEmpty() || basalMetabolicRate.isNotEmpty() || stepsRate.isNotEmpty() || distance.isNotEmpty() || floorsClimbed.isNotEmpty() || vo2Max.isNotEmpty()) {
             val activityStartTime = activeEnergyBurned.asSequence().map { it.startTime }
                 .plus(basalMetabolicRate.map { it.time }).plus(stepsRate.map { it.startTime })
@@ -393,9 +393,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     floorsClimbed,
                     vo2Max
                 ).samples.map { it.toActivityPayload() })
-            reportStatus(HealthResource.Activity, synced)
+            reportStatus(VitalResource.Activity, synced)
         } else {
-            reportStatus(HealthResource.Activity, nothingToSync)
+            reportStatus(VitalResource.Activity, nothingToSync)
         }
     }
 
@@ -405,7 +405,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         timeZoneId: String?,
         currentDevice: String
     ) {
-        reportStatus(HealthResource.Workout, syncing)
+        reportStatus(VitalResource.Workout, syncing)
         if (exercises.isNotEmpty()) {
             val exercisesStartTime = exercises.minOf { it.startTime }
             val exercisesEndTime = exercises.maxOf { it.endTime }
@@ -418,9 +418,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     exercisesStartTime, exercisesEndTime, currentDevice, exercises
                 ).samples.map { it.toWorkoutPayload() })
 
-            reportStatus(HealthResource.Workout, synced)
+            reportStatus(VitalResource.Workout, synced)
         } else {
-            reportStatus(HealthResource.Workout, nothingToSync)
+            reportStatus(VitalResource.Workout, nothingToSync)
         }
     }
 
@@ -431,7 +431,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         timeZoneId: String?,
         currentDevice: String
     ) {
-        reportStatus(HealthResource.Body, syncing)
+        reportStatus(VitalResource.Body, syncing)
         if (bodyFats.isNotEmpty() || weights.isNotEmpty()) {
             val bodyStartTime = bodyFats.map { it.time }.plus(weights.map { it.time }).minOf { it }
             val bodyEndTime = bodyFats.map { it.time }.plus(weights.map { it.time }).maxOf { it }
@@ -445,16 +445,16 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     bodyStartTime, bodyEndTime, currentDevice, weights, bodyFats
                 ).toBodyPayload()
             )
-            reportStatus(HealthResource.Body, synced)
+            reportStatus(VitalResource.Body, synced)
         } else {
-            reportStatus(HealthResource.Body, nothingToSync)
+            reportStatus(VitalResource.Body, nothingToSync)
         }
     }
 
     private suspend fun getProfile(
         heights: List<HeightRecord>, userId: String, timeZoneId: String?
     ) {
-        reportStatus(HealthResource.Profile, syncing)
+        reportStatus(VitalResource.Profile, syncing)
         if (heights.isNotEmpty()) {
             val height = heights.last()
 
@@ -466,13 +466,13 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 recordProcessor.processProfileFromRecords(height.time, height.time, heights)
                     .toProfilePayload()
             )
-            reportStatus(HealthResource.Profile, synced)
+            reportStatus(VitalResource.Profile, synced)
         } else {
-            reportStatus(HealthResource.Profile, nothingToSync)
+            reportStatus(VitalResource.Profile, nothingToSync)
         }
     }
 
-    private suspend fun reportStatus(resource: HealthResource, status: String) {
+    private suspend fun reportStatus(resource: VitalResource, status: String) {
         setProgress(
             Data.Builder().putString(statusTypeKey, resource.name).putString(syncStatusKey, status)
                 .build()
@@ -487,7 +487,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             region: Region,
             environment: Environment,
             apiKey: String,
-            resource: Set<HealthResource>
+            resource: Set<VitalResource>
         ): Data {
             return Data.Builder().putString(userIdKey, userId)
                 .putString(regionKey, region.toString())
