@@ -385,6 +385,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 recordProcessor.processActivitiesFromRecords(
                     activityStartTime,
                     activityEndTime,
+                    TimeZone.getDefault(),
                     currentDevice,
                     activeEnergyBurned,
                     basalMetabolicRate,
@@ -392,7 +393,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                     distance,
                     floorsClimbed,
                     vo2Max
-                ).samples.map { it.toActivityPayload() })
+                ).activities.map { it.toActivityPayload() })
             reportStatus(HealthResource.Activity, synced)
         } else {
             reportStatus(HealthResource.Activity, nothingToSync)

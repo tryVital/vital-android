@@ -370,6 +370,7 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         val activityPayloads = recordProcessor.processActivitiesFromRecords(
             startTime,
             endTime,
+            TimeZone.getDefault(),
             currentDevice,
             recordReader.readActiveEnergyBurned(startTime, endTime),
             recordReader.readBasalMetabolicRate(startTime, endTime),
@@ -378,7 +379,7 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
             recordReader.readFloorsClimbed(startTime, endTime),
             recordReader.readVo2Max(startTime, endTime),
         )
-        if (activityPayloads.samples.isEmpty()) {
+        if (activityPayloads.activities.isEmpty()) {
             reportStatus(HealthResource.Activity, nothingToSync)
         } else {
             recordUploader.uploadActivities(
@@ -386,7 +387,7 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
                 startDate,
                 endDate,
                 timeZoneId,
-                activityPayloads.samples.map { it.toActivityPayload() }
+                activityPayloads.activities.map { it.toActivityPayload() }
             )
             reportStatus(HealthResource.Activity, synced)
         }

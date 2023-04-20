@@ -47,7 +47,7 @@ sealed class SummaryData {
     }
 
     data class Activities(
-        val samples: List<Activity>
+        val activities: List<Activity>
     ) : SummaryData()
 
     data class Sleeps(

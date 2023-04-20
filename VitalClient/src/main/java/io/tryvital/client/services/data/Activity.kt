@@ -1,6 +1,7 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
+import java.time.LocalDate
 import java.util.*
 
 data class ActivitiesResponse(
@@ -25,4 +26,22 @@ data class Activity(
     val medium: Double?,
     val high: Double?,
     val source: Source,
+)
+
+data class ActivityDaySummary(
+    @Json(name = "calendar_date")
+    val date: LocalDate,
+    @Json(name = "active_energy_burned_sum")
+    val activeEnergyBurnedSum: Double?,
+    @Json(name = "basal_energy_burned_sum")
+    val basalEnergyBurnedSum: Double?,
+    @Json(name = "steps_sum")
+    val stepsSum: Long?,
+    @Json(name = "distance_walking_running_sum")
+    val distanceWalkingRunningSum: Double?,
+    @Json(name = "floors_climbed_sum")
+    val floorsClimbedSum: Long?,
+    val low: Double?,
+    val medium: Double?,
+    val high: Double?,
 )

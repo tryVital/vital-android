@@ -10,6 +10,7 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.utils.ApiKeyInterceptor
 import io.tryvital.client.utils.GzipRequestInterceptor
+import io.tryvital.client.utils.LocalDateJsonAdapter
 import io.tryvital.client.utils.VitalLogger
 import okhttp3.Cache
 import okhttp3.OkHttpClient
@@ -20,6 +21,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import java.lang.reflect.Type
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.time.LocalDate
 import java.util.*
 import java.util.concurrent.TimeUnit
 
@@ -92,7 +94,8 @@ class Dependencies(
 
         internal fun createMoshi(): Moshi = Moshi.Builder()
             .add(KotlinJsonAdapterFactory())
-            .add(Date::class.java, Rfc3339DateJsonAdapter().nullSafe())
+            .add(Date::class.java, Rfc3339DateJsonAdapter())
+            .add(LocalDate::class.java, LocalDateJsonAdapter)
             .build()
 
         internal fun resolveUrl(region: Region, environment: Environment): String {

@@ -319,33 +319,25 @@ class VitalHealthConnectManager private constructor(
     ): ProcessedResourceData {
         val currentDevice = Build.MODEL
 
+        suspend fun readActivities(): ProcessedResourceData {
+            val activities = recordProcessor.processActivitiesFromRecords(
+                startDate,
+                endDate,
+                TimeZone.getDefault(),
+                currentDevice,
+                recordReader.readActiveEnergyBurned(startDate, endDate),
+                recordReader.readBasalMetabolicRate(startDate, endDate),
+                recordReader.readSteps(startDate, endDate),
+                recordReader.readDistance(startDate, endDate),
+                recordReader.readFloorsClimbed(startDate, endDate),
+                recordReader.readVo2Max(startDate, endDate),
+            )
+            return ProcessedResourceData.Summary(activities)
+        }
+
         return when (resource) {
-            HealthResource.ActiveEnergyBurned -> ProcessedResourceData.Summary(
-                recordProcessor.processActivitiesFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readActiveEnergyBurned(startDate, endDate),
-                    recordReader.readBasalMetabolicRate(startDate, endDate),
-                    recordReader.readSteps(startDate, endDate),
-                    recordReader.readDistance(startDate, endDate),
-                    recordReader.readFloorsClimbed(startDate, endDate),
-                    recordReader.readVo2Max(startDate, endDate),
-                )
-            )
-            HealthResource.BasalEnergyBurned -> ProcessedResourceData.Summary(
-                recordProcessor.processActivitiesFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readActiveEnergyBurned(startDate, endDate),
-                    recordReader.readBasalMetabolicRate(startDate, endDate),
-                    recordReader.readSteps(startDate, endDate),
-                    recordReader.readDistance(startDate, endDate),
-                    recordReader.readFloorsClimbed(startDate, endDate),
-                    recordReader.readVo2Max(startDate, endDate),
-                )
-            )
+            HealthResource.ActiveEnergyBurned -> readActivities()
+            HealthResource.BasalEnergyBurned -> readActivities()
             HealthResource.BloodPressure -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processBloodPressureFromRecords(
                     startDate,
@@ -370,19 +362,7 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readHeartRate(startDate, endDate)
                 )
             )
-            HealthResource.Steps -> ProcessedResourceData.Summary(
-                recordProcessor.processActivitiesFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readActiveEnergyBurned(startDate, endDate),
-                    recordReader.readBasalMetabolicRate(startDate, endDate),
-                    recordReader.readSteps(startDate, endDate),
-                    recordReader.readDistance(startDate, endDate),
-                    recordReader.readFloorsClimbed(startDate, endDate),
-                    recordReader.readVo2Max(startDate, endDate),
-                )
-            )
+            HealthResource.Steps -> readActivities()
             HealthResource.Water -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processWaterFromRecords(
                     startDate,
@@ -416,19 +396,7 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readSleepStages(startDate, endDate),
                 )
             )
-            HealthResource.Activity -> ProcessedResourceData.Summary(
-                recordProcessor.processActivitiesFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readActiveEnergyBurned(startDate, endDate),
-                    recordReader.readBasalMetabolicRate(startDate, endDate),
-                    recordReader.readSteps(startDate, endDate),
-                    recordReader.readDistance(startDate, endDate),
-                    recordReader.readFloorsClimbed(startDate, endDate),
-                    recordReader.readVo2Max(startDate, endDate),
-                )
-            )
+            HealthResource.Activity -> readActivities()
             HealthResource.Workout -> ProcessedResourceData.Summary(
                 recordProcessor.processWorkoutsFromRecords(
                     startDate,
