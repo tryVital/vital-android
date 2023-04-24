@@ -9,8 +9,8 @@ import io.tryvital.client.services.data.User
 import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
-import io.tryvital.vitalhealthconnect.model.HealthResource
-import io.tryvital.vitalhealthconnect.model.healthResources
+import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthconnect.model.WritableVitalResource
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -42,10 +42,10 @@ class HealthConnectViewModel(
 
     fun permissionsRequired(): Set<String> {
         val read = vitalHealthConnectManager.permissionsRequiredToSyncResources(
-            setOf(HealthResource.Water, HealthResource.Glucose, HealthResource.Activity)
+            setOf(VitalResource.Water, VitalResource.Glucose, VitalResource.Activity)
         )
         val write = vitalHealthConnectManager.permissionsRequiredToWriteResources(
-            setOf(HealthResource.Water, HealthResource.Glucose)
+            setOf(VitalResource.Water, VitalResource.Glucose)
         )
         return read + write
     }
@@ -93,8 +93,8 @@ class HealthConnectViewModel(
     fun addWater() {
         viewModelScope.launch {
             vitalHealthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
-            vitalHealthConnectManager.addHealthResource(
-                HealthResource.Water,
+            vitalHealthConnectManager.writeRecord(
+                WritableVitalResource.Water,
                 Instant.now(),
                 Instant.now(),
                 100.0
@@ -105,8 +105,8 @@ class HealthConnectViewModel(
     fun addGlucose() {
         viewModelScope.launch {
             vitalHealthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
-            vitalHealthConnectManager.addHealthResource(
-                HealthResource.Glucose,
+            vitalHealthConnectManager.writeRecord(
+                WritableVitalResource.Glucose,
                 Instant.now(),
                 Instant.now(),
                 15.0
@@ -115,7 +115,7 @@ class HealthConnectViewModel(
 
     }
 
-    fun readResource(resource: HealthResource) {
+    fun readResource(resource: VitalResource) {
         viewModelScope.launch {
             val result = vitalHealthConnectManager.read(
                 resource,

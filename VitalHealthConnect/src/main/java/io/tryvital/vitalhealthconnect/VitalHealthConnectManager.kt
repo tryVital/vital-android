@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.units.BloodGlucose
@@ -105,14 +104,14 @@ class VitalHealthConnectManager private constructor(
             .permissionController.getGrantedPermissions()
     }
 
-    fun permissionsRequiredToWriteResources(resources: Set<HealthResource>): Set<String> {
+    fun permissionsRequiredToWriteResources(resources: Set<VitalResource>): Set<String> {
         val recordTypes = mutableSetOf<KClass<out Record>>()
 
         for (resource in resources) {
             val records = when (resource) {
-                HealthResource.Water -> listOf(HydrationRecord::class)
-                HealthResource.BloodPressure -> listOf(BloodPressureRecord::class)
-                HealthResource.Glucose -> listOf(BloodGlucoseRecord::class)
+                VitalResource.Water -> listOf(HydrationRecord::class)
+                VitalResource.BloodPressure -> listOf(BloodPressureRecord::class)
+                VitalResource.Glucose -> listOf(BloodGlucoseRecord::class)
                 else -> throw RecordWriteUnsupported(resource)
             }
 
@@ -122,36 +121,36 @@ class VitalHealthConnectManager private constructor(
         return recordTypes.map { HealthPermission.getWritePermission(it) }.toSet()
     }
 
-    fun permissionsRequiredToSyncResources(resources: Set<HealthResource>): Set<String> {
+    fun permissionsRequiredToSyncResources(resources: Set<VitalResource>): Set<String> {
         val recordTypes = mutableSetOf<KClass<out Record>>()
 
         for (resource in resources) {
             val records = when (resource) {
-                HealthResource.Water -> listOf(HydrationRecord::class)
-                HealthResource.ActiveEnergyBurned -> listOf(ActiveCaloriesBurnedRecord::class)
-                HealthResource.Activity -> listOf(
+                VitalResource.Water -> listOf(HydrationRecord::class)
+                VitalResource.ActiveEnergyBurned -> listOf(ActiveCaloriesBurnedRecord::class)
+                VitalResource.Activity -> listOf(
                     ActiveCaloriesBurnedRecord::class,
                     BasalMetabolicRateRecord::class,
                     StepsRecord::class,
                     DistanceRecord::class,
                     FloorsClimbedRecord::class,
                 )
-                HealthResource.BasalEnergyBurned -> listOf(BasalMetabolicRateRecord::class)
-                HealthResource.BloodPressure -> listOf(BloodPressureRecord::class)
-                HealthResource.Body -> listOf(
+                VitalResource.BasalEnergyBurned -> listOf(BasalMetabolicRateRecord::class)
+                VitalResource.BloodPressure -> listOf(BloodPressureRecord::class)
+                VitalResource.Body -> listOf(
                     BodyFatRecord::class,
                     WeightRecord::class,
                 )
-                HealthResource.Glucose -> listOf(BloodGlucoseRecord::class)
-                HealthResource.HeartRate -> listOf(HeartRateRecord::class)
-                HealthResource.HeartRateVariability -> listOf(HeartRateVariabilityRmssdRecord::class)
-                HealthResource.Profile -> listOf(HeightRecord::class)
-                HealthResource.Sleep -> listOf(
+                VitalResource.Glucose -> listOf(BloodGlucoseRecord::class)
+                VitalResource.HeartRate -> listOf(HeartRateRecord::class)
+                VitalResource.HeartRateVariability -> listOf(HeartRateVariabilityRmssdRecord::class)
+                VitalResource.Profile -> listOf(HeightRecord::class)
+                VitalResource.Sleep -> listOf(
                     SleepSessionRecord::class,
                     SleepStageRecord::class,
                 )
-                HealthResource.Steps -> listOf(StepsRecord::class)
-                HealthResource.Workout -> listOf(
+                VitalResource.Steps -> listOf(StepsRecord::class)
+                VitalResource.Workout -> listOf(
                     ExerciseSessionRecord::class,
                     HeartRateRecord::class,
                 )
@@ -219,7 +218,7 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
-    suspend fun syncData(healthResource: Set<HealthResource> = healthResources) {
+    suspend fun syncData(healthResource: Set<VitalResource> = healthResources) {
         val userId = checkUserId()
 
         try {
@@ -259,8 +258,8 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
-    suspend fun addHealthResource(
-        resource: HealthResource,
+    suspend fun writeRecord(
+        resource: WritableVitalResource,
         startDate: Instant,
         endDate: Instant,
         value: Double
@@ -268,7 +267,7 @@ class VitalHealthConnectManager private constructor(
         val healthConnectClient = healthConnectClientProvider.getHealthConnectClient(context)
 
         when (resource) {
-            HealthResource.Water -> {
+            WritableVitalResource.Water -> {
                 healthConnectClient.insertRecords(
                     listOf(
                         HydrationRecord(
@@ -281,7 +280,7 @@ class VitalHealthConnectManager private constructor(
                     )
                 )
             }
-            HealthResource.Glucose -> {
+            WritableVitalResource.Glucose -> {
                 healthConnectClient.insertRecords(
                     listOf(
                         BloodGlucoseRecord(
@@ -292,20 +291,6 @@ class VitalHealthConnectManager private constructor(
                     )
                 )
             }
-            HealthResource.ActiveEnergyBurned,
-            HealthResource.Activity,
-            HealthResource.BasalEnergyBurned,
-            HealthResource.BloodPressure,
-            HealthResource.Body,
-            HealthResource.HeartRate,
-            HealthResource.Profile,
-            HealthResource.Sleep,
-            HealthResource.Steps,
-            HealthResource.HeartRateVariability,
-            HealthResource.Workout -> {
-                vitalLogger.logI("Not supported resource $resource")
-                throw RecordWriteUnsupported(resource)
-            }
         }
 
         syncData()
@@ -313,7 +298,7 @@ class VitalHealthConnectManager private constructor(
 
     @Suppress("unused")
     suspend fun read(
-        resource: HealthResource,
+        resource: VitalResource,
         startDate: Instant,
         endDate: Instant
     ): ProcessedResourceData {
@@ -336,9 +321,9 @@ class VitalHealthConnectManager private constructor(
         }
 
         return when (resource) {
-            HealthResource.ActiveEnergyBurned -> readActivities()
-            HealthResource.BasalEnergyBurned -> readActivities()
-            HealthResource.BloodPressure -> ProcessedResourceData.TimeSeries(
+            VitalResource.ActiveEnergyBurned -> readActivities()
+            VitalResource.BasalEnergyBurned -> readActivities()
+            VitalResource.BloodPressure -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processBloodPressureFromRecords(
                     startDate,
                     endDate,
@@ -346,7 +331,7 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readBloodPressure(startDate, endDate)
                 )
             )
-            HealthResource.Glucose -> ProcessedResourceData.TimeSeries(
+            VitalResource.Glucose -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processGlucoseFromRecords(
                     startDate,
                     endDate,
@@ -354,7 +339,7 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readBloodGlucose(startDate, endDate)
                 )
             )
-            HealthResource.HeartRate -> ProcessedResourceData.TimeSeries(
+            VitalResource.HeartRate -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processHeartRateFromRecords(
                     startDate,
                     endDate,
@@ -362,8 +347,8 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readHeartRate(startDate, endDate)
                 )
             )
-            HealthResource.Steps -> readActivities()
-            HealthResource.Water -> ProcessedResourceData.TimeSeries(
+            VitalResource.Steps -> readActivities()
+            VitalResource.Water -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processWaterFromRecords(
                     startDate,
                     endDate,
@@ -371,7 +356,7 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readHydration(startDate, endDate)
                 )
             )
-            HealthResource.Body -> ProcessedResourceData.Summary(
+            VitalResource.Body -> ProcessedResourceData.Summary(
                 recordProcessor.processBodyFromRecords(
                     startDate,
                     endDate,
@@ -380,14 +365,14 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readBodyFat(startDate, endDate)
                 )
             )
-            HealthResource.Profile -> ProcessedResourceData.Summary(
+            VitalResource.Profile -> ProcessedResourceData.Summary(
                 recordProcessor.processProfileFromRecords(
                     startDate,
                     endDate,
                     recordReader.readHeights(startDate, endDate)
                 )
             )
-            HealthResource.Sleep -> ProcessedResourceData.Summary(
+            VitalResource.Sleep -> ProcessedResourceData.Summary(
                 recordProcessor.processSleepFromRecords(
                     startDate,
                     endDate,
@@ -396,8 +381,8 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readSleepStages(startDate, endDate),
                 )
             )
-            HealthResource.Activity -> readActivities()
-            HealthResource.Workout -> ProcessedResourceData.Summary(
+            VitalResource.Activity -> readActivities()
+            VitalResource.Workout -> ProcessedResourceData.Summary(
                 recordProcessor.processWorkoutsFromRecords(
                     startDate,
                     endDate,
@@ -405,7 +390,7 @@ class VitalHealthConnectManager private constructor(
                     recordReader.readExerciseSessions(startDate, endDate)
                 )
             )
-            HealthResource.HeartRateVariability -> ProcessedResourceData.TimeSeries(
+            VitalResource.HeartRateVariability -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processHeartRateVariabilityRmssFromRecords(
                     startDate,
                     endDate,
@@ -422,7 +407,7 @@ class VitalHealthConnectManager private constructor(
         sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
     }
 
-    private fun startWorkerForChanges(userId: String, healthResource: Set<HealthResource>) {
+    private fun startWorkerForChanges(userId: String, healthResource: Set<VitalResource>) {
         val work = WorkManager.getInstance(context).beginUniqueWork(
             "UploadChangesWorker",
             ExistingWorkPolicy.REPLACE,
@@ -450,7 +435,7 @@ class VitalHealthConnectManager private constructor(
         work.enqueue()
     }
 
-    private fun startWorkerForAllData(userId: String, healthResource: Set<HealthResource>) {
+    private fun startWorkerForAllData(userId: String, healthResource: Set<VitalResource>) {
         val work = WorkManager.getInstance(context).beginUniqueWork(
             "UploadAllDataWorker",
             ExistingWorkPolicy.REPLACE,
@@ -487,7 +472,7 @@ class VitalHealthConnectManager private constructor(
             when (it.state) {
                 WorkInfo.State.RUNNING -> {
                     it.progress.getString(statusTypeKey)?.run {
-                        val resource = HealthResource.valueOf(this)
+                        val resource = VitalResource.valueOf(this)
 
                         when (it.progress.getString(syncStatusKey)!!) {
                             synced -> _status.tryEmit(
