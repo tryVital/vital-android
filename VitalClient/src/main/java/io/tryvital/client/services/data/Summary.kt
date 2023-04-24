@@ -42,6 +42,8 @@ data class WorkoutPayload(
 )
 
 data class ActivityPayload(
+    @Json(name = "day_summary")
+    val daySummary: ActivityDaySummary?,
     @Json(name = "active_energy_burned")
     val activeEnergyBurned: List<QuantitySamplePayload>,
     @Json(name = "basal_energy_burned")
