@@ -58,13 +58,15 @@ class BloodPressureReader1810(
                 startDate = measurementTime,
                 endDate = measurementTime,
             ),
-            pulse = QuantitySamplePayload(
-                id = idPrefix + "pulse",
-                value = response.pulseRate.toString(),
-                unit = SampleType.HeartRate.unit,
-                startDate = measurementTime,
-                endDate = measurementTime,
-            )
+            pulse = response.pulseRate?.let { value ->
+                QuantitySamplePayload(
+                    id = idPrefix + "pulse",
+                    value = value.toString(),
+                    unit = SampleType.HeartRate.unit,
+                    startDate = measurementTime,
+                    endDate = measurementTime,
+                )
+            }
         )
     }
 }

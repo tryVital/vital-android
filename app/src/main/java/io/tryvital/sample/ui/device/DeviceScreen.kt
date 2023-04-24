@@ -211,7 +211,7 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                         ListItem(
                             headlineText = {
                                 Text(
-                                    text = "Systolic: " + sample.systolic + " ${sample.systolic.unit} " + "Diastolic: " + sample.diastolic + " ${sample.diastolic.unit} " + "Pulse: " + sample.pulse + " ${sample.pulse.unit}"
+                                    text = "Systolic: " + sample.systolic + " ${sample.systolic.unit} " + "Diastolic: " + sample.diastolic + " ${sample.diastolic.unit} " + "Pulse: " + (sample.pulse?.let { it.value + " ${it.unit}" } ?: "null")
                                 )
                             },
                             supportingText = {
