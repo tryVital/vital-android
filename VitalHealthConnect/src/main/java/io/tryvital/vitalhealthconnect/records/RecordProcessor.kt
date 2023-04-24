@@ -5,9 +5,15 @@ import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EX
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
 import io.tryvital.vitalhealthconnect.ext.toDate
+import io.tryvital.vitalhealthconnect.model.HCActivitySummary
 import io.tryvital.vitalhealthconnect.model.HCQuantitySample
 import io.tryvital.vitalhealthconnect.model.processedresource.*
+import kotlinx.coroutines.*
 import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -82,10 +88,11 @@ interface RecordProcessor {
     suspend fun processActivitiesFromRecords(
         startTime: Instant,
         endTime: Instant,
+        timeZone: TimeZone,
         currentDevice: String,
         activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,
         basalMetabolicRate: List<BasalMetabolicRateRecord>,
-        stepsRate: List<StepsRecord>,
+        steps: List<StepsRecord>,
         distance: List<DistanceRecord>,
         floorsClimbed: List<FloorsClimbedRecord>,
         vo2Max: List<Vo2MaxRecord>,
@@ -202,13 +209,8 @@ internal class HealthConnectRecordProcessor(
     ): SummaryData.Workouts {
         return SummaryData.Workouts(
             exerciseRecords.map { exercise ->
-                val aggregatedDistance =
-                    recordAggregator.aggregateDistance(exercise.startTime, exercise.endTime)
-                val aggregatedActiveCaloriesBurned =
-                    recordAggregator.aggregateActiveEnergyBurned(
-                        exercise.startTime,
-                        exercise.endTime
-                    )
+                val summary =
+                    recordAggregator.aggregateWorkoutSummary(exercise.startTime, exercise.endTime)
                 val heartRateRecord =
                     recordReader.readHeartRate(exercise.startTime, exercise.endTime)
                 val respiratoryRateRecord =
@@ -220,8 +222,8 @@ internal class HealthConnectRecordProcessor(
                     endDate = Date.from(exercise.endTime),
                     sourceBundle = exercise.metadata.dataOrigin.packageName,
                     sport = EXERCISE_TYPE_INT_TO_STRING_MAP[exercise.exerciseType] ?: "workout",
-                    caloriesInKiloJules = aggregatedActiveCaloriesBurned,
-                    distanceInMeter = aggregatedDistance,
+                    caloriesInKiloJules = summary.caloriesBurned,
+                    distanceInMeter = summary.distance,
                     heartRate = mapHearthRate(
                         heartRateRecord,
                         fallbackDeviceModel
@@ -408,75 +410,106 @@ internal class HealthConnectRecordProcessor(
     override suspend fun processActivitiesFromRecords(
         startTime: Instant,
         endTime: Instant,
+        timeZone: TimeZone,
         currentDevice: String,
         activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,
         basalMetabolicRate: List<BasalMetabolicRateRecord>,
-        stepsRate: List<StepsRecord>,
+        steps: List<StepsRecord>,
         distance: List<DistanceRecord>,
         floorsClimbed: List<FloorsClimbedRecord>,
         vo2Max: List<Vo2MaxRecord>
-    ): SummaryData.Activities {
-        return SummaryData.Activities(
-            listOf(
-                Activity(
-                    activeEnergyBurned = activeEnergyBurned.map {
-                        HCQuantitySample(
-                            value = it.energy.inKilojoules.toString(),
-                            unit = SampleType.ActiveCaloriesBurned.unit,
-                            startDate = it.startTime.toDate(),
-                            endDate = it.endTime.toDate(),
-                            metadata = it.metadata,
-                        ).toQuantitySample(currentDevice)
-                    },
-                    basalEnergyBurned = basalMetabolicRate.map {
-                        HCQuantitySample(
-                            value = (it.basalMetabolicRate.inWatts / 1000).toString(),
-                            unit = SampleType.BasalMetabolicRate.unit,
-                            startDate = it.time.toDate(),
-                            endDate = it.time.toDate(),
-                            metadata = it.metadata,
-                        ).toQuantitySample(currentDevice)
-                    },
-                    steps = stepsRate.map {
-                        HCQuantitySample(
-                            value = it.count.toString(),
-                            unit = SampleType.Steps.unit,
-                            startDate = it.startTime.toDate(),
-                            endDate = it.endTime.toDate(),
-                            metadata = it.metadata,
-                        ).toQuantitySample(currentDevice)
+    ): SummaryData.Activities = coroutineScope {
+        val zoneId = timeZone.toZoneId()
+        val startDate = LocalDateTime.ofInstant(startTime, zoneId).toLocalDate()
+        val endDate = LocalDateTime.ofInstant(endTime, zoneId).toLocalDate()
+        assert(startDate <= endDate)
 
-                    },
-                    distanceWalkingRunning = distance.map {
-                        HCQuantitySample(
-                            value = it.distance.inMeters.toString(),
-                            unit = SampleType.Distance.unit,
-                            startDate = it.startTime.toDate(),
-                            endDate = it.endTime.toDate(),
-                            metadata = it.metadata,
-                        ).toQuantitySample(currentDevice)
-                    },
-                    floorsClimbed = floorsClimbed.map {
-                        HCQuantitySample(
-                            value = it.floors.toString(),
-                            unit = SampleType.FloorsClimbed.unit,
-                            startDate = it.startTime.toDate(),
-                            endDate = it.endTime.toDate(),
-                            metadata = it.metadata,
-                        ).toQuantitySample(currentDevice)
-                    },
-                    vo2Max = vo2Max.map {
-                        HCQuantitySample(
-                            value = it.vo2MillilitersPerMinuteKilogram.toString(),
-                            unit = SampleType.Vo2Max.unit,
-                            startDate = it.time.toDate(),
-                            endDate = it.time.toDate(),
-                            metadata = it.metadata,
-                        ).toQuantitySample(currentDevice)
-                    },
+        // Inclusive-exclusive
+        val numberOfDays = ChronoUnit.DAYS.between(startDate, endDate.plusDays(1)).toInt()
+
+        val summaryAggregators = Array(numberOfDays) { offset ->
+            async {
+                val date = startDate.plusDays(offset.toLong())
+                val summary = recordAggregator.aggregateActivityDaySummary(
+                    date = startDate.plusDays(offset.toLong()),
+                    timeZone = timeZone
                 )
+                return@async date to summary.toDatedPayload(date)
+            }
+        }
+
+        val activeEnergyBurnedByDate = quantitySamplesByDate(activeEnergyBurned, zoneId, { it.startTime }) {
+            HCQuantitySample(
+                value = it.energy.inKilojoules.toString(),
+                unit = SampleType.ActiveCaloriesBurned.unit,
+                startDate = it.startTime.toDate(),
+                endDate = it.endTime.toDate(),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+        }
+        val basalMetabolicRateByDate = quantitySamplesByDate(basalMetabolicRate, zoneId, { it.time }) {
+            HCQuantitySample(
+                value = (it.basalMetabolicRate.inWatts / 1000).toString(),
+                unit = SampleType.BasalMetabolicRate.unit,
+                startDate = it.time.toDate(),
+                endDate = it.time.toDate(),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+        }
+        val distanceByDate = quantitySamplesByDate(distance, zoneId, { it.startTime }) {
+            HCQuantitySample(
+                value = it.distance.inMeters.toString(),
+                unit = SampleType.Distance.unit,
+                startDate = it.startTime.toDate(),
+                endDate = it.endTime.toDate(),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+        }
+        val floorsClimbedByDate = quantitySamplesByDate(floorsClimbed, zoneId, { it.startTime }) {
+            HCQuantitySample(
+                value = it.floors.toString(),
+                unit = SampleType.FloorsClimbed.unit,
+                startDate = it.startTime.toDate(),
+                endDate = it.endTime.toDate(),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+        }
+        val stepsByDate = quantitySamplesByDate(steps, zoneId, { it.startTime }) {
+            HCQuantitySample(
+                value = it.count.toString(),
+                unit = SampleType.Steps.unit,
+                startDate = it.startTime.toDate(),
+                endDate = it.endTime.toDate(),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+
+        }
+        val vo2MaxByDate = quantitySamplesByDate(vo2Max, zoneId, { it.time }) {
+            HCQuantitySample(
+                value = it.vo2MillilitersPerMinuteKilogram.toString(),
+                unit = SampleType.Vo2Max.unit,
+                startDate = it.time.toDate(),
+                endDate = it.time.toDate(),
+                metadata = it.metadata,
+            ).toQuantitySample(currentDevice)
+        }
+
+        val daySummariesByDate = awaitAll(*summaryAggregators).toMap()
+
+        val activities = (0 until numberOfDays).map { offset ->
+            val date = startDate.plusDays(offset.toLong())
+            Activity(
+                daySummary = daySummariesByDate[date],
+                activeEnergyBurned = activeEnergyBurnedByDate[date] ?: emptyList(),
+                basalEnergyBurned = basalMetabolicRateByDate[date] ?: emptyList(),
+                distanceWalkingRunning = distanceByDate[date] ?: emptyList(),
+                floorsClimbed = floorsClimbedByDate[date] ?: emptyList(),
+                steps = stepsByDate[date] ?: emptyList(),
+                vo2Max = vo2MaxByDate[date] ?: emptyList(),
             )
-        )
+        }
+
+        SummaryData.Activities(activities = activities)
     }
 
 
@@ -569,4 +602,16 @@ private fun List<SleepSessionRecord>.filterForAcceptedSleepDataSources(): List<S
             it.metadata.dataOrigin.packageName == supportedSleepApp.packageName
         }
     }
+}
+
+inline fun <R: Record> quantitySamplesByDate(
+    records: Iterable<R>,
+    zoneId: ZoneId,
+    timeSelector: (R) -> Instant,
+    transform: (R) -> QuantitySample
+): Map<LocalDate, List<QuantitySample>> {
+    return records.groupBy(
+        keySelector = { timeSelector(it).atZone(zoneId).toLocalDate() },
+        valueTransform = transform
+    )
 }

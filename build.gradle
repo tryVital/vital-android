@@ -2,6 +2,7 @@ buildscript {
     ext {
         core = '1.9.0'
         compose = '1.4.1'
+        desugar_jdk_libs = '1.2.2'
         nav = '2.5.3'
         material3 = '1.0.1'
         activity_compose = '1.6.1'

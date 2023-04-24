@@ -32,9 +32,9 @@ data class WorkoutPayload(
     @Json(name = "sport")
     val sport: String,
     @Json(name = "calories")
-    val caloriesInKiloJules: Long,
+    val caloriesInKiloJules: Double,
     @Json(name = "distance")
-    val distanceInMeter: Long,
+    val distanceInMeter: Double,
     @Json(name = "heart_rate")
     val heartRate: List<QuantitySamplePayload>,
     @Json(name = "respiratory_rate")
@@ -42,6 +42,8 @@ data class WorkoutPayload(
 )
 
 data class ActivityPayload(
+    @Json(name = "day_summary")
+    val daySummary: ActivityDaySummary?,
     @Json(name = "active_energy_burned")
     val activeEnergyBurned: List<QuantitySamplePayload>,
     @Json(name = "basal_energy_burned")
