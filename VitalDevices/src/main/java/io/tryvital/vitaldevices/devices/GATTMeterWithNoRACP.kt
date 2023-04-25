@@ -1,6 +1,5 @@
 package io.tryvital.vitaldevices.devices
 
-import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic
@@ -13,23 +12,29 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Semaphore
 import no.nordicsemi.android.ble.BleManager
-import no.nordicsemi.android.ble.common.callback.RecordAccessControlPointResponse
-import no.nordicsemi.android.ble.common.data.RecordAccessControlPointData
 import no.nordicsemi.android.ble.data.Data
 import java.util.*
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.*
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
-// Standard Record Access Control Point characteristic as per BLE GATT
-private val racpCharacteristicUUID =
-    UUID.fromString("00002A52-0000-1000-8000-00805f9b34fb")
-
-abstract class GATTMeter<Sample>(
+/**
+ * GATT Meter base class but for devices not having implemented Record Access Control Point (RACP).
+ *
+ * These devices do not support the Read All Records operation, and do not post any notification upon
+ * end of data transfer. So we can only listen for incoming notifications passively, and ends the streaming
+ * based on a fixed timeout.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+abstract class GATTMeterWithNoRACP<Sample>(
     context: Context,
     private val serviceID: UUID,
     private val measurementCharacteristicID: UUID,
     private val scannedBluetoothDevice: BluetoothDevice,
     private val scannedDevice: ScannedDevice,
+    private val waitForNextValueTimeout: Duration = 2.seconds,
+    private val listenTimeout: Duration = 30.seconds,
 ) : BleManager(context) {
     private val vitalLogger = VitalLogger.getOrCreate()
 
@@ -37,19 +42,35 @@ abstract class GATTMeter<Sample>(
     // Note that replay buffer is zero sized, so no value is kept in memory in absence of subscribers.
     private val measurements = MutableSharedFlow<Sample>(replay = 0, extraBufferCapacity = Int.MAX_VALUE)
 
-    // Keep all incoming response in memory until we get to process them.
-    // Note that replay buffer is zero sized, so no value is kept in memory in absence of subscribers.
-    private val racpResponse = MutableSharedFlow<RecordAccessControlPointResponse>(replay = 0, extraBufferCapacity = Int.MAX_VALUE)
-
     private var measurementCharacteristic: BluetoothGattCharacteristic? = null
-    private var racpCharacteristic: BluetoothGattCharacteristic? = null
 
     private var deviceReady = MutableStateFlow(false)
 
     abstract fun mapRawData(device: BluetoothDevice, data: Data): Sample?
 
     @Suppress("MemberVisibilityCanBePrivate")
-    suspend fun pair(): Unit = suspendCancellableCoroutine { continuation ->
+    suspend fun pair() {
+        connect()
+
+        vitalLogger.logI("Explicit pairing by enabling indication on ${scannedDevice.name}")
+
+        // Enabling indications implicitly forces pairing.
+        // e.g., Omron does not respond to `ensureBond()` somehow when testing with Android BLE Stack.
+        suspendCancellableCoroutine { continuation ->
+            enableIndications(measurementCharacteristic)
+                .done {
+                    vitalLogger.logI("Successfully paired explicitly by enabling indication on ${scannedDevice.name}")
+                    continuation.resume(Unit)
+                }
+                .fail { _, status: Int ->
+                    vitalLogger.logI("Failed to pair explicitly by enabling indication (error $status)")
+                    continuation.resumeWithException(BluetoothError("Failed to explicitly pair (status code = $status)"))
+                }
+                .enqueue()
+        }
+    }
+
+    private suspend fun connect(): Unit = suspendCancellableCoroutine { continuation ->
         // The device is already connected. Don't bother to connect again.
         if (isConnected) {
             return@suspendCancellableCoroutine
@@ -76,25 +97,26 @@ abstract class GATTMeter<Sample>(
                     return@done
                 }
 
-                if (isBonded) {
-                    continuation.resume(Unit)
-                } else {
-                    vitalLogger.logI("Start bonding with ${scannedDevice.name}")
-
-                    bond(
-                        onDone = { continuation.resume(Unit) },
-                        onFail = { status ->
-                            continuation.resumeWithException(BluetoothError("Failed to bond (status code = $status"))
-                        }
-                    )
-                }
+                // Unlike GATTMeter, we do not force a bonding (pairing) as part of the connection
+                // process.
+                //
+                // Some of these RACP-less devices do not respond to ensureBond() from the Android
+                // BLE Stack, even though they can pair successfully when the pairing is implicitly
+                // initiated as part of enabling characteristic indications.
+                continuation.resume(Unit)
             }
             .enqueue()
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun read(): List<Sample> {
-        pair()
+        // Connect but without pairing.
+        //
+        // If we have not paired, it will happen implicitly when we attempt to enable
+        // indication on the measurement characteristic.
+        //
+        // Note that this is a different process from GATTMeter (for devices w/ RACP support)
+        connect()
 
         withTimeout(10 * 1000) {
             // Wait for deviceReady to be `true`, or timeout the flow after 10 seconds.
@@ -113,7 +135,7 @@ abstract class GATTMeter<Sample>(
     private fun readSamples(): Flow<List<Sample>> = channelFlow {
         vitalLogger.logI("Start reading from ${scannedDevice.name}")
 
-        val semaphore = Semaphore(2, 2)
+        val semaphore = Semaphore(1, 1)
 
         // (1) Start a new parallel job that listens to measurements and collect them into a list.
         val sampleCollector = launch {
@@ -125,7 +147,25 @@ abstract class GATTMeter<Sample>(
             // (2) other exceptions are thrown.
             measurements
                 .onSubscription { semaphore.release() }
-                .onCompletion {e ->
+                .transformLatest { record ->
+                    // Emit the record immediately.
+                    emit(record)
+                    vitalLogger.logI("Received one record from ${scannedDevice.name}; waiting for next record...")
+
+                    // Asynchronously start a `this.waitForNextValueTimeout` timeout.
+                    //
+                    // If a new record is delivered during the delay, this block will be cancelled
+                    // by `transformLatest`, before it spawns a new block with the new record.
+                    // In other words, the throw below would not be executed unless the timeout
+                    // is reached & without any subsequent record delivered.
+                    delay(this@GATTMeterWithNoRACP.waitForNextValueTimeout)
+
+                    // If we resume from `delay(_:)` because the timeout is indeed reached,
+                    // throw `NoMoreSamplesException` to end the read streaming.
+                    vitalLogger.logI("Stopped reading from ${scannedDevice.name} because no subsequent record is delivered before timeout.")
+                    throw NoMoreSamplesException
+                }
+                .onCompletion { e ->
                     if (e is NoMoreSamplesException || e?.cause is NoMoreSamplesException) {
                         assert(!this@channelFlow.isClosedForSend)
                         vitalLogger.logI("Emitting ${samples.count()} samples from ${scannedDevice.name}.")
@@ -140,52 +180,33 @@ abstract class GATTMeter<Sample>(
                 .toCollection(samples)
         }
 
-        // (2) Start a parallel job that listens to RACP response indication.
+        // (2) Start the listen timeout that would cancel sampleCollector.
         launch {
-            val response = racpResponse
-                .onSubscription { semaphore.release() }
-                .first()
-
-            if (response.isOperationCompleted) {
-                // Cancel the sample collector with `NoMoreSamplesException`, so that it stops
-                // collecting samples & sends out what it has.
-                sampleCollector.cancel(cause = NoMoreSamplesException)
-            } else {
-                // RACP operation has failed. Throw to error the whole flow.
-                throw BluetoothError("Received RACP failure response with code ${response.errorCode}")
-            }
+            // Asynchronously start a `this.listenTimeout` timeout, and throw
+            // NoMoreSamplesException to end the read streaming if the timeout is
+            // reached.
+            delay(this@GATTMeterWithNoRACP.listenTimeout)
+            vitalLogger.logI("Stopped reading from ${scannedDevice.name} because listen timeout is reached.")
+            sampleCollector.cancel(cause = NoMoreSamplesException)
         }
 
-        // (3) Wait until both jobs have started properly.
-        semaphore.acquire()
-        semaphore.acquire()
+        // (3) We enable notification to signal the RACP-less device to start
+        // sending values.
+        //
+        // If the pairing hasn't been done, this will start the pairing implicitly as well.
+        launch {
+            // Wait until the sampleCollector job has started properly.
+            semaphore.acquire()
 
-        // (4) Write to the RACP to initiate the Load All Records operation.
-        writeCharacteristic(
-            racpCharacteristic,
-            RecordAccessControlPointData.reportAllStoredRecords(),
-            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
-        )
-            .fail { _, status ->
-                vitalLogger.logI("Failed to write characteristic (status code = $status)")
-                this.close(BluetoothError("Failed to write to the RACP characteristic."))
-            }
-            .done { vitalLogger.logI("Successfully initiated the read operation via an RACP write.") }
-            .enqueue()
-    }
+            vitalLogger.logI("Enabling measurement indication on ${scannedDevice.name}")
 
-    @SuppressLint("MissingPermission")
-    private fun bond(onDone: () -> Unit, onFail: (Int) -> Unit) {
-        ensureBond()
-            .fail { _, status ->
-                vitalLogger.logI("Failed to bond (status code = $status)")
-                onFail(status)
-            }
-            .done {
-                vitalLogger.logI("Bonded with ${scannedDevice.name}")
-                onDone()
-            }
-            .enqueue()
+            enableIndications(measurementCharacteristic)
+                .fail { _, status: Int ->
+                    vitalLogger.logI("Failed to enabled measurement indication (error $status)")
+                    this@channelFlow.close(BluetoothError(message = "Failed to enabled measurement indication (error $status)"))
+                }
+                .enqueue()
+        }
     }
 
     override fun getGattCallback(): BleManagerGattCallback {
@@ -200,13 +221,12 @@ abstract class GATTMeter<Sample>(
             val service = gatt.getService(serviceID) ?: return false
 
             measurementCharacteristic = service.getCharacteristic(measurementCharacteristicID)
-            racpCharacteristic = service.getCharacteristic(racpCharacteristicUUID)
 
-            return measurementCharacteristic != null && racpCharacteristic != null
+            return measurementCharacteristic != null
         }
 
         override fun initialize() {
-            setNotificationCallback(measurementCharacteristic).with { device: BluetoothDevice, data: Data ->
+            setIndicationCallback(measurementCharacteristic).with { device: BluetoothDevice, data: Data ->
                 val sample = mapRawData(device, data) ?: return@with
                 val success = measurements.tryEmit(sample)
 
@@ -214,27 +234,12 @@ abstract class GATTMeter<Sample>(
                     vitalLogger.logI("Failed to emit measurement despite unlimited flow buffer size.")
                 }
             }
-            setIndicationCallback(racpCharacteristic).with { device: BluetoothDevice, data: Data ->
-                val response = RecordAccessControlPointResponse().apply {
-                    onDataReceived(device, data)
-                }
-                val success = racpResponse.tryEmit(response)
 
-                if (!success) {
-                    vitalLogger.logI("Failed to emit RACP response despite unlimited flow buffer size.")
-                }
-            }
-
-            enableNotifications(measurementCharacteristic)
-                .fail { _, status: Int ->
-                    vitalLogger.logI("Failed to enabled measurement notifications (error $status)")
-                }
-                .enqueue()
-            enableIndications(racpCharacteristic)
-                .fail { _, status: Int ->
-                    vitalLogger.logI("Failed to enabled RACP indications (error $status)")
-                }
-                .enqueue()
+            // Unlike a BLE device with RACP support, we do not want to enable BLE notification here.
+            // This is because some RACP-less devices may use the enablement as a signal to
+            // start sending records unilaterally, and a lot of them discards the records afterwards.
+            // In some cases, they also initiate pairing only when the BLE Central attempts to
+            // enable indication on a characteristic.
         }
 
         override fun onDeviceReady() {
@@ -242,7 +247,6 @@ abstract class GATTMeter<Sample>(
         }
 
         override fun onServicesInvalidated() {
-            racpCharacteristic = null
             measurementCharacteristic = null
             deviceReady.value = false
         }

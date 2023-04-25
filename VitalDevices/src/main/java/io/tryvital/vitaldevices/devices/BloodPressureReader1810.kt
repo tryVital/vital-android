@@ -24,7 +24,7 @@ class BloodPressureReader1810(
     context: Context,
     scannedBluetoothDevice: BluetoothDevice,
     scannedDevice: ScannedDevice,
-) : GATTMeter<BloodPressureSample>(
+) : GATTMeterWithNoRACP<BloodPressureSample>(
     context,
     serviceID = bpsServiceUUID,
     measurementCharacteristicID = bloodPressureMeasurementCharacteristicUUID,
