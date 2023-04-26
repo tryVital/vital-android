@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
@@ -14,6 +15,7 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
+import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.records.*
@@ -83,7 +85,7 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
-    private val sharedPreferences: SharedPreferences = context.getSharedPreferences(
+    internal val sharedPreferences: SharedPreferences = context.getSharedPreferences(
         prefsFileName, Context.MODE_PRIVATE
     )
 
@@ -92,27 +94,59 @@ class VitalHealthConnectManager private constructor(
     private val _status = MutableSharedFlow<SyncStatus>(replay = 1)
     val status: SharedFlow<SyncStatus> = _status
 
+    private val taskScope = CoroutineScope(Dispatchers.Default)
     private var observerJob: Job? = null
 
     init {
         vitalLogger.logI("VitalHealthConnectManager initialized")
         _status.tryEmit(SyncStatus.Unknown)
+
+        taskScope.launch { checkAndUpdatePermissions() }
     }
 
-    suspend fun getGrantedPermissions(context: Context): Set<String> {
-        return healthConnectClientProvider.getHealthConnectClient(context)
-            .permissionController.getGrantedPermissions()
+    @Suppress("unused")
+    fun createPermissionRequestContract(
+        readResources: Set<VitalResource> = emptySet(),
+        writeResources: Set<WritableVitalResource> = emptySet(),
+    ): ActivityResultContract<Unit, Deferred<PermissionOutcome>>
+        = VitalPermissionRequestContract(readResources, writeResources, this, taskScope)
+
+    @Suppress("unused")
+    fun hasAskedForPermission(resource: VitalResource): Boolean {
+        return sharedPreferences.getBoolean(UnSecurePrefKeys.readResourceGrant(resource), false)
     }
 
-    fun permissionsRequiredToWriteResources(resources: Set<VitalResource>): Set<String> {
+    @Suppress("unused")
+    fun hasAskedForPermission(resource: WritableVitalResource): Boolean {
+        return sharedPreferences.getBoolean(UnSecurePrefKeys.writeResourceGrant(resource), false)
+    }
+
+    suspend fun checkAndUpdatePermissions() {
+        val currentGrants = getGrantedPermissions(context)
+
+        val readResourcesByStatus = VitalResource.values()
+            .groupBy { currentGrants.containsAll(permissionsRequiredToSyncResources(setOf(it))) }
+        val writeResourcesByStatus = WritableVitalResource.values()
+            .groupBy { currentGrants.containsAll(permissionsRequiredToWriteResources(setOf(it))) }
+
+        sharedPreferences.edit().run {
+            readResourcesByStatus.forEach { (hasGranted, resources) ->
+                resources.forEach { putBoolean(UnSecurePrefKeys.readResourceGrant(it), hasGranted) }
+            }
+            writeResourcesByStatus.forEach { (hasGranted, resources) ->
+                resources.forEach { putBoolean(UnSecurePrefKeys.writeResourceGrant(it), hasGranted) }
+            }
+            apply()
+        }
+    }
+
+    internal fun permissionsRequiredToWriteResources(resources: Set<WritableVitalResource>): Set<String> {
         val recordTypes = mutableSetOf<KClass<out Record>>()
 
         for (resource in resources) {
             val records = when (resource) {
-                VitalResource.Water -> listOf(HydrationRecord::class)
-                VitalResource.BloodPressure -> listOf(BloodPressureRecord::class)
-                VitalResource.Glucose -> listOf(BloodGlucoseRecord::class)
-                else -> throw RecordWriteUnsupported(resource)
+                WritableVitalResource.Water -> listOf(HydrationRecord::class)
+                WritableVitalResource.Glucose -> listOf(BloodGlucoseRecord::class)
             }
 
             recordTypes.addAll(records)
@@ -121,7 +155,7 @@ class VitalHealthConnectManager private constructor(
         return recordTypes.map { HealthPermission.getWritePermission(it) }.toSet()
     }
 
-    fun permissionsRequiredToSyncResources(resources: Set<VitalResource>): Set<String> {
+    internal fun permissionsRequiredToSyncResources(resources: Set<VitalResource>): Set<String> {
         val recordTypes = mutableSetOf<KClass<out Record>>()
 
         for (resource in resources) {

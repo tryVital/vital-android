@@ -2,23 +2,27 @@ package io.tryvital.sample.ui.healthconnect
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.InstallMobile
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.health.connect.client.PermissionController
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthconnect.model.WritableVitalResource
+import kotlinx.coroutines.launch
 
 @Composable
 fun HealthConnectCard(
@@ -32,21 +36,17 @@ fun HealthConnectCard(
                 .fillMaxWidth()
         ) {
             Text("Health Connect", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+
             Spacer(modifier = Modifier.height(12.dp))
-            Box(Modifier.align(Alignment.CenterHorizontally)) {
-                Text("Availability", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            }
+
+            Text("Availability", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             AvailabilityInfo(state.available)
+
             Spacer(modifier = Modifier.height(12.dp))
+
             if (state.available == HealthConnectAvailability.Installed) {
-                Box(Modifier.align(Alignment.CenterHorizontally)) {
-                    Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                }
-                PermissionInfo(
-                    state.permissionsGranted,
-                    state.permissionsMissing,
-                    viewModel
-                )
+                Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                PermissionInfo(state.permissionsGranted, state.permissionsMissing, viewModel)
             }
         }
     }
@@ -54,94 +54,69 @@ fun HealthConnectCard(
 
 @Composable
 fun PermissionInfo(
-    permissionsGranted: List<String>,
-    permissionsMissing: List<String>,
+    permissionsGranted: List<VitalResource>,
+    permissionsMissing: List<VitalResource>,
     viewModel: HealthConnectViewModel
 ) {
-    when (permissionsGranted.isNotEmpty()) {
-        true -> Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                if (permissionsMissing.isEmpty()) "All permissions granted 👍" else "Some permissions missing 👀",
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                color = Color.Magenta
-            )
-            Text(
-                "Granted",
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-            )
-            Column {
+    val coroutineScope = rememberCoroutineScope()
+    val permissionsLauncher =
+        rememberLauncherForActivityResult(viewModel.createPermissionRequestContract()) { outcomeAsync ->
+            coroutineScope.launch {
+                val outcome = outcomeAsync.await()
+                Log.i("VitalPermissionOutcome", outcome.toString())
+                viewModel.checkPermissions()
+            }
+        }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        verticalArrangement = Arrangement.Top,
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            if (permissionsMissing.isEmpty()) "All permissions granted 👍" else "Some permissions missing 👀",
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            color = Color.Magenta,
+            textAlign = TextAlign.Start,
+        )
+
+        Row(Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(0.5F)) {
+                Text("Granted", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 permissionsGranted.forEach { permission ->
-                    Text(
-                        permission,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 11.sp,
-                        color = Color.DarkGray
-                    )
+                    Text(permission.toString(), fontWeight = FontWeight.Normal, fontSize = 11.sp)
+                }
+                if (permissionsGranted.isEmpty()) {
+                    Text("None", fontSize = 11.sp)
                 }
             }
-            Text(
-                "Missing",
-                fontWeight = FontWeight.Bold,
-                fontSize = 11.sp,
-            )
-            Column {
+
+            Column(Modifier.weight(0.5F)) {
+                Text("Missing", fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 permissionsMissing.forEach { permission ->
-                    Text(
-                        permission,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 11.sp,
-                        color = Color.Red
-                    )
+                    Text(permission.toString(), fontWeight = FontWeight.Normal, fontSize = 11.sp)
+                }
+                if (permissionsMissing.isEmpty()) {
+                    Text("None", fontSize = 11.sp)
                 }
             }
         }
-        false -> Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            contentAlignment = Alignment.Center
+
+        Spacer(Modifier.height(8.dp))
+        Button(
+            onClick = { permissionsLauncher.launch(Unit) },
+            contentPadding = ButtonDefaults.TextButtonContentPadding
         ) {
-            val context = LocalContext.current
-            val permissionsLauncher =
-                rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) {
-                    viewModel.checkPermissions(context)
-                }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "Not all permission granted", fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = Color.Magenta
-                )
-                Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        permissionsLauncher.launch(viewModel.permissionsRequired())
-                    },
-                    contentPadding = PaddingValues(
-                        start = 20.dp,
-                        top = 12.dp,
-                        end = 20.dp,
-                        bottom = 12.dp
-                    )
-                ) {
-                    Icon(
-                        Icons.Outlined.HealthAndSafety,
-                        contentDescription = null,
-                        modifier = Modifier.size(ButtonDefaults.IconSize)
-                    )
-                    Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                    Text("Request")
-                }
-
-            }
+            Icon(
+                Icons.Outlined.HealthAndSafety,
+                contentDescription = null,
+                modifier = Modifier.size(ButtonDefaults.IconSize)
+            )
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text("Request")
         }
     }
 }
