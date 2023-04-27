@@ -28,7 +28,7 @@ data class ManualProviderRequest(
     @Json(name = "user_id")
     val userId: String,
     @Json(name = "provider_id")
-    val providerId: String,
+    val providerId: String? = null,
 )
 
 data class CreateLinkResponse(
