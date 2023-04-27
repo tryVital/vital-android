@@ -5,7 +5,7 @@ import io.tryvital.vitalhealthconnect.model.processedresource.QuantitySample
 import java.util.*
 
 data class HCQuantitySample(
-    val value: String,
+    val value: Double,
     val unit: String,
     val startDate: Date,
     val endDate: Date,

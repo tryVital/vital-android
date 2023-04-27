@@ -99,9 +99,9 @@ data class SleepPayload(
 
 data class QuantitySamplePayload(
     @Json(name = "id")
-    val id: String,
+    val id: String? = null,
     @Json(name = "value")
-    val value: String,
+    val value: Double,
     @Json(name = "unit")
     val unit: String,
     @Json(name = "start_date")
