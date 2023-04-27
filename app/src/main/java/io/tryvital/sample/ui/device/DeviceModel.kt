@@ -70,17 +70,21 @@ class DeviceViewModel(
 
     fun connect(context: Context, scannedDevice: ScannedDevice) {
         viewModelScope.launch {
-            when (uiState.value.device.kind) {
-                Kind.BloodPressure -> vitalDeviceManager.bloodPressure(context, scannedDevice)
-                    .read()
-                    .let { sample ->
-                        viewModelState.update { it.copy(bloodPressureSamples = it.bloodPressureSamples + sample) }
-                    }
-                Kind.GlucoseMeter -> vitalDeviceManager.glucoseMeter(context, scannedDevice)
-                    .read()
-                    .let { sample ->
-                        viewModelState.update { it.copy(samples = it.samples + sample) }
-                    }
+            try {
+                when (uiState.value.device.kind) {
+                    Kind.BloodPressure -> vitalDeviceManager.bloodPressure(context, scannedDevice)
+                        .read()
+                        .let { sample ->
+                            viewModelState.update { it.copy(bloodPressureSamples = it.bloodPressureSamples + sample) }
+                        }
+                    Kind.GlucoseMeter -> vitalDeviceManager.glucoseMeter(context, scannedDevice)
+                        .read()
+                        .let { sample ->
+                            viewModelState.update { it.copy(samples = it.samples + sample) }
+                        }
+                }
+            } catch (e: BluetoothError) {
+                Toast.makeText(context, "Connection failed: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
     }
