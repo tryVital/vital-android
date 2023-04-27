@@ -2,6 +2,7 @@ package io.tryvital.client
 
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.ActivityService
+import io.tryvital.client.services.data.ProviderSlug
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -59,7 +60,11 @@ class ActivityServiceTest {
         assertEquals(1565.0, activity.caloriesTotal)
         assertEquals(1565.0, activity.caloriesActive)
         assertEquals("Fitbit", activity.source.name)
-        assertEquals("fitbit", activity.source.slug)
+        assertEquals(ProviderSlug.Fitbit, activity.source.slug)
+
+        val activity2 = response.activity[1]
+        assertEquals("Health Connect", activity2.source.name)
+        assertEquals(ProviderSlug.HealthConnect, activity2.source.slug)
     }
 
 }
@@ -104,8 +109,8 @@ const val fakeActivityResponse = """{
     "medium": null,
     "high": null,
     "source": {
-    "name": null,
-    "slug": null,
+    "name": "Health Connect",
+    "slug": "health_connect",
     "logo": null
 }
 }

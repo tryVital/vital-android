@@ -75,12 +75,6 @@ class HealthConnectViewModel(
         }
     }
 
-    fun linkProvider() {
-        viewModelScope.launch {
-            vitalHealthConnectManager.linkUserHealthConnectProvider("vitalexample://callback")
-        }
-    }
-
     fun sync() {
         viewModelScope.launch {
             vitalHealthConnectManager.apply {

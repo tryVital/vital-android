@@ -7,7 +7,7 @@ data class TimeseriesPayload<T> (
     @Json(name = "stage")
     val stage: String,
     @Json(name = "provider")
-    val provider: String,
+    val provider: ManualProviderSlug,
     @Json(name = "start_date")
     val startDate: Date?,
     @Json(name = "end_date")

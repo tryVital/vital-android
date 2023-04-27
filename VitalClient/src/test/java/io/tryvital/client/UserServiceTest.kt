@@ -3,6 +3,8 @@ package io.tryvital.client
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.UserService
 import io.tryvital.client.services.data.CreateUserRequest
+import io.tryvital.client.services.data.ManualProviderSlug
+import io.tryvital.client.services.data.ProviderSlug
 import io.tryvital.client.services.data.User
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -50,7 +52,7 @@ class UserServiceTest {
         val user = users!![0]
         validateFirstUser(user)
 
-        assertNull(users[1].connectedSources)
+        assert(users[1].connectedSources.isEmpty())
     }
 
     @Test
@@ -98,7 +100,7 @@ class UserServiceTest {
 
         val provider = response.providers[0]
         assertEquals(provider.name, "Fitbit")
-        assertEquals(provider.slug, "fitbit")
+        assertEquals(provider.slug, ProviderSlug.Fitbit)
     }
 
     @Test
@@ -158,7 +160,7 @@ class UserServiceTest {
         )
 
         val sut = UserService.create(retrofit)
-        val response = sut.deregisterProvider(userId, "strava")
+        val response = sut.deregisterProvider(userId, ProviderSlug.Strava)
         assertEquals("DELETE /user/$userId/strava HTTP/1.1", server.takeRequest().requestLine)
 
         assertEquals(response.success, true)
@@ -169,9 +171,13 @@ class UserServiceTest {
         assertEquals(userKey, user.userKey)
         assertEquals(clientUserId, user.clientUserId)
         assertEquals(teamId, user.teamId)
-        assertEquals(3, user.connectedSources?.size)
-        assertEquals("Fitbit", user.connectedSources?.get(0)?.source?.name)
-        assertEquals("fitbit", user.connectedSources?.get(0)?.source?.slug)
+
+        assertEquals(2, user.connectedSources.size)
+        assertEquals("Fitbit", user.connectedSources[0].source.name)
+        assertEquals(ProviderSlug.Fitbit, user.connectedSources[0].source.slug)
+
+        assertEquals("Health Connect", user.connectedSources[1].source.name)
+        assertEquals(ProviderSlug.HealthConnect, user.connectedSources[1].source.slug)
     }
 
     private lateinit var server: MockWebServer
@@ -202,15 +208,11 @@ class UserServiceTest {
         },
         {
           "source": {
-            "name": null,
-            "slug": null,
-            "logo": null
+            "name": "Health Connect",
+            "slug": "health_connect",
+            "logo": ""
           },
           "created_on": "2022-03-01T12:25:15.558385+00:00"
-        },
-        {
-          "source": null,
-          "created_on": null
         }
       ]
     },
@@ -220,7 +222,7 @@ class UserServiceTest {
       "team_id": "team_id_2",
       "client_user_id": "Test 2",
       "created_on": "2021-12-01T22:43:32.570793+00:00",
-      "connected_sources": null
+      "connected_sources": []
     }
   ]
 }"""
@@ -233,26 +235,22 @@ class UserServiceTest {
     "client_user_id": "Test 1",
     "created_on": "2021-04-02T16:03:11.847830+00:00",
     "connected_sources": [
-    {
-        "source": {
-        "name": "Fitbit",
-        "slug": "fitbit",
-        "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
-    },
-        "created_on": "2022-06-15T13:44:34.770879+00:00"
-    },
-    {
-        "source": {
-        "name": null,
-        "slug": null,
-        "logo": null
-    },
-        "created_on": "2022-03-01T12:25:15.558385+00:00"
-    },
-    {
-        "source": null,
-        "created_on": null
-    }
+        {
+            "source": {
+                "name": "Fitbit",
+                "slug": "fitbit",
+                "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
+            },
+            "created_on": "2022-06-15T13:44:34.770879+00:00"
+        },
+        {
+            "source": {
+                "name": "Health Connect",
+                "slug": "health_connect",
+                "logo": ""
+            },
+            "created_on": "2022-03-01T12:25:15.558385+00:00"
+        }
     ]
 }
 """
@@ -282,8 +280,6 @@ class UserServiceTest {
                 "name": "Fitbit",
                 "slug": "fitbit",
                 "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
-            },
-            {
             }
         ]
     }"""

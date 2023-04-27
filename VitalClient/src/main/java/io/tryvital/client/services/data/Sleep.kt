@@ -39,7 +39,7 @@ data class SleepData(
     val averageHrv: Double?,
     @Json(name = "respiratory_rate")
     val respiratoryRate: Double?,
-    val source: Source?,
+    val source: Source,
     @Json(name = "sleep_stream")
     val sleepStream: SleepStreamResponse?,
 )

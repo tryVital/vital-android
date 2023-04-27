@@ -5,28 +5,28 @@ import java.util.*
 
 data class User(
     @Json(name = "user_id")
-    val userId: String?,
+    val userId: String,
     @Json(name = "user_key")
     val userKey: String?,
     @Json(name = "team_id")
-    val teamId: String?,
+    val teamId: String,
     @Json(name = "client_user_id")
-    val clientUserId: String?,
+    val clientUserId: String,
     @Json(name = "created_on")
-    val createdOn: Date?,
+    val createdOn: Date,
     @Json(name = "connected_sources")
-    val connectedSources: List<ConnectedSource>?
+    val connectedSources: List<ConnectedSource>
 )
 
 data class ConnectedSource(
-    val source: Source?,
+    val source: Source,
     @Json(name = "created_on")
-    val createdOn: Date?
+    val createdOn: Date
 )
 
 data class Source(
-    val name: String?,
-    val slug: String?,
+    val name: String,
+    val slug: ProviderSlug,
     val logo: String?
 )
 

@@ -27,7 +27,7 @@ interface UserService {
     @DELETE("user/{user_id}/{provider}")
     suspend fun deregisterProvider(
         @Path("user_id") userId: String,
-        @Path("provider") provider: String,
+        @Path("provider") provider: ProviderSlug,
     ): DeregisterProviderResponse
 
     @POST("user/refresh/{user_id}")

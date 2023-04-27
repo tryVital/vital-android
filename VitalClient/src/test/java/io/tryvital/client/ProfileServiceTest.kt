@@ -2,6 +2,7 @@ package io.tryvital.client
 
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.ProfileService
+import io.tryvital.client.services.data.ProviderSlug
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -51,7 +52,7 @@ class ProfileServiceTest {
         assertEquals(userId, profile.userId)
         assertEquals(180.0, profile.height)
         assertEquals("Oura", profile.source?.name)
-        assertEquals("oura", profile.source?.slug)
+        assertEquals(ProviderSlug.Oura, profile.source?.slug)
     }
 
     @Test

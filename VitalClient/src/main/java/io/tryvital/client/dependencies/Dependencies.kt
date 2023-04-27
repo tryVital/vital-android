@@ -2,12 +2,16 @@ package io.tryvital.client.dependencies
 
 import android.content.Context
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
+import com.squareup.moshi.Json
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import com.squareup.moshi.rawType
 import io.tryvital.client.BuildConfig
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
+import io.tryvital.client.services.data.ManualProviderSlug
+import io.tryvital.client.services.data.ProviderSlug
 import io.tryvital.client.utils.ApiKeyInterceptor
 import io.tryvital.client.utils.VitalRequestInterceptor
 import io.tryvital.client.utils.LocalDateJsonAdapter
@@ -95,6 +99,8 @@ class Dependencies(
             .add(KotlinJsonAdapterFactory())
             .add(Date::class.java, Rfc3339DateJsonAdapter())
             .add(LocalDate::class.java, LocalDateJsonAdapter)
+            .add(ProviderSlug::class.java, ProviderSlug.jsonAdapter)
+            .add(ManualProviderSlug::class.java, ManualProviderSlug.jsonAdapter)
             .build()
 
         internal fun resolveUrl(region: Region, environment: Environment): String {
@@ -122,7 +128,9 @@ class Dependencies(
         ): Converter<*, String>? {
             return if (type === Date::class.java) {
                 DateQueryConverter.INSTANCE
-            } else null
+            } else {
+                null
+            }
         }
 
         private class DateQueryConverter : Converter<Date, String> {

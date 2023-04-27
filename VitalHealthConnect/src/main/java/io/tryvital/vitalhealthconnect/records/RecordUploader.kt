@@ -2,7 +2,6 @@ package io.tryvital.vitalhealthconnect.records
 
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
-import io.tryvital.vitalhealthconnect.providerId
 import java.util.*
 
 private const val stage = "daily"
@@ -103,7 +102,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
             vitalClient.summaryService.addSleeps(
                 userId, SummaryPayload(
                     stage = stage,
-                    provider = providerId,
+                    provider = ManualProviderSlug.HealthConnect,
                     startDate = startDate,
                     endDate = endDate,
                     timeZoneId = timeZoneId,
@@ -123,7 +122,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.summaryService.addBody(
             userId, SummaryPayload(
                 stage = stage,
-                provider = providerId,
+                provider = ManualProviderSlug.HealthConnect,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -142,7 +141,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.summaryService.addProfile(
             userId, SummaryPayload(
                 stage = stage,
-                provider = providerId,
+                provider = ManualProviderSlug.HealthConnect,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -162,7 +161,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
             vitalClient.summaryService.addActivities(
                 userId, SummaryPayload(
                     stage = stage,
-                    provider = providerId,
+                    provider = ManualProviderSlug.HealthConnect,
                     startDate = startDate,
                     endDate = endDate,
                     timeZoneId = timeZoneId,
@@ -183,7 +182,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
             vitalClient.summaryService.addWorkouts(
                 userId, SummaryPayload(
                     stage = stage,
-                    provider = providerId,
+                    provider = ManualProviderSlug.HealthConnect,
                     startDate = startDate,
                     endDate = endDate,
                     timeZoneId = timeZoneId,
@@ -204,7 +203,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
             vitalClient.vitalsService.sendGlucose(
                 userId, TimeseriesPayload(
                     stage = stage,
-                    provider = providerId,
+                    provider = ManualProviderSlug.HealthConnect,
                     startDate = startDate,
                     endDate = endDate,
                     timeZoneId = timeZoneId,
@@ -225,7 +224,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
             vitalClient.vitalsService.sendBloodPressure(
                 userId, TimeseriesPayload(
                     stage = stage,
-                    provider = providerId,
+                    provider = ManualProviderSlug.HealthConnect,
                     startDate = startDate,
                     endDate = endDate,
                     timeZoneId = timeZoneId,
@@ -246,7 +245,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
             vitalClient.vitalsService.sendHeartRate(
                 userId, TimeseriesPayload(
                     stage = stage,
-                    provider = providerId,
+                    provider = ManualProviderSlug.HealthConnect,
                     startDate = startDate,
                     endDate = endDate,
                     timeZoneId = timeZoneId,
@@ -267,7 +266,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
             vitalClient.vitalsService.sendHeartRateVariability(
                 userId, TimeseriesPayload(
                     stage = stage,
-                    provider = providerId,
+                    provider = ManualProviderSlug.HealthConnect,
                     startDate = startDate,
                     endDate = endDate,
                     timeZoneId = timeZoneId,
@@ -288,7 +287,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
             vitalClient.vitalsService.sendWater(
                 userId, TimeseriesPayload(
                     stage = stage,
-                    provider = providerId,
+                    provider = ManualProviderSlug.HealthConnect,
                     startDate = startDate,
                     endDate = endDate,
                     timeZoneId = timeZoneId,

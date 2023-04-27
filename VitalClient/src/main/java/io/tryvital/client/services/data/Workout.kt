@@ -52,7 +52,7 @@ data class Workout(
     val map: MapData?,
     @Json(name = "provider_id")
     val providerId: String?,
-    val source: Source?,
+    val source: Source,
 )
 
 data class Sport(

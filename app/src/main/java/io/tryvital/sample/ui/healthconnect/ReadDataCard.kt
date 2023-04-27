@@ -39,26 +39,6 @@ fun ReadDataCard(
                 Row {
                     Button(
                         onClick = {
-                            viewModel.linkProvider()
-                        },
-                        contentPadding = PaddingValues(
-                            start = 20.dp,
-                            top = 12.dp,
-                            end = 20.dp,
-                            bottom = 12.dp
-                        )
-                    ) {
-                        Icon(
-                            Icons.Outlined.Healing,
-                            contentDescription = null,
-                            modifier = Modifier.size(ButtonDefaults.IconSize)
-                        )
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text("Link Provider")
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Button(
-                        onClick = {
                             viewModel.sync()
                         },
                         contentPadding = PaddingValues(
