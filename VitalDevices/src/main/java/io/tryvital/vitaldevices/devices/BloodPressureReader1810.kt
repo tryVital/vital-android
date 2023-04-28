@@ -50,6 +50,7 @@ class BloodPressureReader1810(
                 unit = SampleType.BloodPressureSystolic.unit,
                 startDate = measurementTime,
                 endDate = measurementTime,
+                type = "cuff",
             ),
             diastolic = QuantitySamplePayload(
                 id = idPrefix + "diastolic",
@@ -57,6 +58,7 @@ class BloodPressureReader1810(
                 unit = SampleType.BloodPressureDiastolic.unit,
                 startDate = measurementTime,
                 endDate = measurementTime,
+                type = "cuff",
             ),
             pulse = response.pulseRate?.let { value ->
                 QuantitySamplePayload(
@@ -65,6 +67,7 @@ class BloodPressureReader1810(
                     unit = SampleType.HeartRate.unit,
                     startDate = measurementTime,
                     endDate = measurementTime,
+                    type = "cuff",
                 )
             }
         )
