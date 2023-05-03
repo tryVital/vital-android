@@ -114,14 +114,14 @@ internal class HealthConnectRecordProcessor(
             readBloodPressure.map {
                 BloodPressureSample(
                     systolic = HCQuantitySample(
-                        value = it.systolic.inMillimetersOfMercury.toString(),
+                        value = it.systolic.inMillimetersOfMercury,
                         unit = SampleType.BloodPressureSystolic.unit,
                         startDate = Date.from(it.time),
                         endDate = Date.from(it.time),
                         metadata = it.metadata,
                     ).toQuantitySample(currentDevice),
                     diastolic = HCQuantitySample(
-                        value = it.diastolic.inMillimetersOfMercury.toString(),
+                        value = it.diastolic.inMillimetersOfMercury,
                         unit = SampleType.BloodPressureDiastolic.unit,
                         startDate = Date.from(it.time),
                         endDate = Date.from(it.time),
@@ -142,7 +142,7 @@ internal class HealthConnectRecordProcessor(
         return TimeSeriesData.Glucose(
             readBloodGlucose.map {
                 HCQuantitySample(
-                    value = it.level.inMilligramsPerDeciliter.toString(),
+                    value = it.level.inMilligramsPerDeciliter,
                     unit = SampleType.GlucoseConcentrationMilligramPerDecilitre.unit,
                     startDate = Date.from(it.time),
                     endDate = Date.from(it.time),
@@ -171,7 +171,7 @@ internal class HealthConnectRecordProcessor(
         return TimeSeriesData.HeartRateVariabilityRmssd(
             heartRateRecords.map {
                 HCQuantitySample(
-                    value = it.heartRateVariabilityMillis.toString(),
+                    value = it.heartRateVariabilityMillis,
                     unit = SampleType.HeartRateVariabilityRmssd.unit,
                     startDate = Date.from(it.time),
                     endDate = Date.from(it.time),
@@ -191,7 +191,7 @@ internal class HealthConnectRecordProcessor(
         return TimeSeriesData.Water(
             readHydration.map {
                 HCQuantitySample(
-                    value = it.volume.inMilliliters.toString(),
+                    value = it.volume.inMilliliters,
                     unit = SampleType.Water.unit,
                     startDate = Date.from(it.startTime),
                     endDate = Date.from(it.endTime),
@@ -259,7 +259,7 @@ internal class HealthConnectRecordProcessor(
     ) = SummaryData.Body(
         bodyMass = weightRecords.map {
             HCQuantitySample(
-                value = it.weight.inKilograms.toString(),
+                value = it.weight.inKilograms,
                 unit = SampleType.Weight.unit,
                 startDate = Date.from(it.time),
                 endDate = Date.from(it.time),
@@ -268,7 +268,7 @@ internal class HealthConnectRecordProcessor(
         },
         bodyFatPercentage = bodyFatRecords.map {
             HCQuantitySample(
-                value = it.percentage.value.toString(),
+                value = it.percentage.value,
                 unit = SampleType.BodyFat.unit,
                 startDate = Date.from(it.time),
                 endDate = Date.from(it.time),
@@ -334,7 +334,7 @@ internal class HealthConnectRecordProcessor(
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
-                                value = SleepStage.Awake.id.toString(),
+                                value = SleepStage.Awake.id.toDouble(),
                                 unit = "stage",
                                 startDate = Date.from(sleepSession.startTime),
                                 endDate = Date.from(sleepSession.endTime),
@@ -346,7 +346,7 @@ internal class HealthConnectRecordProcessor(
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
-                                value = SleepStage.Deep.id.toString(),
+                                value = SleepStage.Deep.id.toDouble(),
                                 unit = "stage",
                                 startDate = Date.from(sleepSession.startTime),
                                 endDate = Date.from(sleepSession.endTime),
@@ -358,7 +358,7 @@ internal class HealthConnectRecordProcessor(
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
-                                value = SleepStage.Light.id.toString(),
+                                value = SleepStage.Light.id.toDouble(),
                                 unit = "stage",
                                 startDate = Date.from(sleepSession.startTime),
                                 endDate = Date.from(sleepSession.endTime),
@@ -370,7 +370,7 @@ internal class HealthConnectRecordProcessor(
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
-                                value = SleepStage.Rem.id.toString(),
+                                value = SleepStage.Rem.id.toDouble(),
                                 unit = "stage",
                                 startDate = Date.from(sleepSession.startTime),
                                 endDate = Date.from(sleepSession.endTime),
@@ -382,7 +382,7 @@ internal class HealthConnectRecordProcessor(
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
-                                value = SleepStage.Unknown.id.toString(),
+                                value = SleepStage.Unknown.id.toDouble(),
                                 unit = "stage",
                                 startDate = Date.from(sleepSession.startTime),
                                 endDate = Date.from(sleepSession.endTime),
@@ -394,7 +394,7 @@ internal class HealthConnectRecordProcessor(
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
-                                value = SleepStage.OutOfBed.id.toString(),
+                                value = SleepStage.OutOfBed.id.toDouble(),
                                 unit = "stage",
                                 startDate = Date.from(sleepSession.startTime),
                                 endDate = Date.from(sleepSession.endTime),
@@ -440,7 +440,7 @@ internal class HealthConnectRecordProcessor(
 
         val activeEnergyBurnedByDate = quantitySamplesByDate(activeEnergyBurned, zoneId, { it.startTime }) {
             HCQuantitySample(
-                value = it.energy.inKilojoules.toString(),
+                value = it.energy.inKilocalories,
                 unit = SampleType.ActiveCaloriesBurned.unit,
                 startDate = it.startTime.toDate(),
                 endDate = it.endTime.toDate(),
@@ -449,7 +449,7 @@ internal class HealthConnectRecordProcessor(
         }
         val basalMetabolicRateByDate = quantitySamplesByDate(basalMetabolicRate, zoneId, { it.time }) {
             HCQuantitySample(
-                value = (it.basalMetabolicRate.inWatts / 1000).toString(),
+                value = it.basalMetabolicRate.inKilocaloriesPerDay,
                 unit = SampleType.BasalMetabolicRate.unit,
                 startDate = it.time.toDate(),
                 endDate = it.time.toDate(),
@@ -458,7 +458,7 @@ internal class HealthConnectRecordProcessor(
         }
         val distanceByDate = quantitySamplesByDate(distance, zoneId, { it.startTime }) {
             HCQuantitySample(
-                value = it.distance.inMeters.toString(),
+                value = it.distance.inMeters,
                 unit = SampleType.Distance.unit,
                 startDate = it.startTime.toDate(),
                 endDate = it.endTime.toDate(),
@@ -467,7 +467,7 @@ internal class HealthConnectRecordProcessor(
         }
         val floorsClimbedByDate = quantitySamplesByDate(floorsClimbed, zoneId, { it.startTime }) {
             HCQuantitySample(
-                value = it.floors.toString(),
+                value = it.floors,
                 unit = SampleType.FloorsClimbed.unit,
                 startDate = it.startTime.toDate(),
                 endDate = it.endTime.toDate(),
@@ -476,7 +476,7 @@ internal class HealthConnectRecordProcessor(
         }
         val stepsByDate = quantitySamplesByDate(steps, zoneId, { it.startTime }) {
             HCQuantitySample(
-                value = it.count.toString(),
+                value = it.count.toDouble(),
                 unit = SampleType.Steps.unit,
                 startDate = it.startTime.toDate(),
                 endDate = it.endTime.toDate(),
@@ -486,7 +486,7 @@ internal class HealthConnectRecordProcessor(
         }
         val vo2MaxByDate = quantitySamplesByDate(vo2Max, zoneId, { it.time }) {
             HCQuantitySample(
-                value = it.vo2MillilitersPerMinuteKilogram.toString(),
+                value = it.vo2MillilitersPerMinuteKilogram,
                 unit = SampleType.Vo2Max.unit,
                 startDate = it.time.toDate(),
                 endDate = it.time.toDate(),
@@ -519,7 +519,7 @@ internal class HealthConnectRecordProcessor(
     ): List<QuantitySample> {
         return oxygenSaturationRecords.map {
             HCQuantitySample(
-                value = it.percentage.value.toString(),
+                value = it.percentage.value,
                 unit = SampleType.OxygenSaturation.unit,
                 startDate = Date.from(it.time),
                 endDate = Date.from(it.time),
@@ -534,7 +534,7 @@ internal class HealthConnectRecordProcessor(
     ): List<QuantitySample> {
         return readHeartRateVariabilityRmssdRecords.map {
             HCQuantitySample(
-                value = it.heartRateVariabilityMillis.toString(),
+                value = it.heartRateVariabilityMillis,
                 unit = SampleType.HeartRateVariabilityRmssd.unit,
                 startDate = it.time.toDate(),
                 endDate = it.time.toDate(),
@@ -549,7 +549,7 @@ internal class HealthConnectRecordProcessor(
     ): List<QuantitySample> {
         return respiratoryRateRecords.map {
             HCQuantitySample(
-                value = it.rate.toString(),
+                value = it.rate,
                 unit = SampleType.RespiratoryRate.unit,
                 startDate = it.time.toDate(),
                 endDate = it.time.toDate(),
@@ -570,7 +570,7 @@ internal class HealthConnectRecordProcessor(
                         it.fold(0L) { acc, sample -> acc + sample.beatsPerMinute } / it.size
 
                     HCQuantitySample(
-                        value = averagedSample.toString(),
+                        value = averagedSample.toDouble(),
                         unit = SampleType.HeartRate.unit,
                         startDate = it.first().time.toDate(),
                         endDate = it.last().time.toDate(),
@@ -586,7 +586,7 @@ internal class HealthConnectRecordProcessor(
     ): List<QuantitySample> {
         return heartRateRecords.map {
             HCQuantitySample(
-                value = it.beatsPerMinute.toString(),
+                value = it.beatsPerMinute.toDouble(),
                 unit = SampleType.HeartRate.unit,
                 startDate = it.time.toDate(),
                 endDate = it.time.toDate(),

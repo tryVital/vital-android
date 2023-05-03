@@ -46,7 +46,7 @@ class BloodPressureReader1810(
         return BloodPressureSample(
             systolic = QuantitySamplePayload(
                 id = idPrefix + "systolic",
-                value = response.systolic.toString(),
+                value = response.systolic.toDouble(),
                 unit = SampleType.BloodPressureSystolic.unit,
                 startDate = measurementTime,
                 endDate = measurementTime,
@@ -54,7 +54,7 @@ class BloodPressureReader1810(
             ),
             diastolic = QuantitySamplePayload(
                 id = idPrefix + "diastolic",
-                value = response.diastolic.toString(),
+                value = response.diastolic.toDouble(),
                 unit = SampleType.BloodPressureDiastolic.unit,
                 startDate = measurementTime,
                 endDate = measurementTime,
@@ -63,7 +63,7 @@ class BloodPressureReader1810(
             pulse = response.pulseRate?.let { value ->
                 QuantitySamplePayload(
                     id = idPrefix + "pulse",
-                    value = value.toString(),
+                    value = value.toDouble(),
                     unit = SampleType.HeartRate.unit,
                     startDate = measurementTime,
                     endDate = measurementTime,

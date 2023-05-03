@@ -4,8 +4,8 @@ import io.tryvital.client.services.data.QuantitySamplePayload
 import java.util.*
 
 data class QuantitySample(
-    val id: String,
-    val value: String,
+    val id: String? = null,
+    val value: Double,
     val unit: String,
     val startDate: Date,
     val endDate: Date,

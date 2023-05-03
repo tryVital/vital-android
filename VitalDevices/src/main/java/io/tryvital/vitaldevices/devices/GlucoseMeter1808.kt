@@ -56,7 +56,7 @@ class GlucoseMeter1808(
             // Prefixed with epoch in seconds to avoid sequence number conflicts
             // (due to new device and/or device reset)
             id = "${measurementTime.time / 1000}-${response.sequenceNumber}",
-            value = value.toString(),
+            value = value,
             unit = sampleType.unit,
             startDate = measurementTime,
             endDate = measurementTime,

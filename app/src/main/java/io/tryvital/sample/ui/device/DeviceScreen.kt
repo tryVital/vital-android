@@ -196,7 +196,7 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                     state.samples.forEach { sample ->
                         ListItem(
                             headlineText = {
-                                Text(text = sample.value + " " + sample.unit)
+                                Text(text = "${sample.value} ${sample.unit}")
                             },
                             supportingText = {
                                 Text(text = sample.startDate.toString())
@@ -211,7 +211,7 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                         ListItem(
                             headlineText = {
                                 Text(
-                                    text = "Systolic: " + sample.systolic + " ${sample.systolic.unit} " + "Diastolic: " + sample.diastolic + " ${sample.diastolic.unit} " + "Pulse: " + (sample.pulse?.let { it.value + " ${it.unit}" } ?: "null")
+                                    text = "Systolic: " + sample.systolic + " ${sample.systolic.unit} " + "Diastolic: " + sample.diastolic + " ${sample.diastolic.unit} " + "Pulse: " + (sample.pulse?.let { "${it.value} ${it.unit}" } ?: "null")
                                 )
                             },
                             supportingText = {
