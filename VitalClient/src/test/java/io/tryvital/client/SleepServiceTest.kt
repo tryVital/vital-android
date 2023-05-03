@@ -2,6 +2,7 @@ package io.tryvital.client
 
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.SleepService
+import io.tryvital.client.services.data.ProviderSlug
 import io.tryvital.client.services.data.SleepData
 import io.tryvital.client.services.data.SleepStreamResponse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -53,9 +54,12 @@ class SleepServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals(3, response.sleep.size)
+        assertEquals(2, response.sleep.size)
         val sleep = response.sleep[0]
         checkFirstSleep(sleep)
+
+        assertEquals("Health Connect", response.sleep[1].source.name)
+        assertEquals(ProviderSlug.HealthConnect, response.sleep[1].source.slug)
     }
 
     @Test
@@ -82,6 +86,9 @@ class SleepServiceTest {
         val sleep = response.sleep[0]
         checkFirstSleep(sleep)
         checkFirstSleepStream(sleep.sleepStream!!)
+
+        assertEquals("Health Connect", response.sleep[1].source.name)
+        assertEquals(ProviderSlug.HealthConnect, response.sleep[1].source.slug)
     }
 
     @Test
@@ -109,8 +116,8 @@ class SleepServiceTest {
         assertEquals(21480, sleep.duration)
         assertEquals(80.0, sleep.efficiency)
         assertEquals(17.12, sleep.respiratoryRate)
-        assertEquals("Oura", sleep.source!!.name)
-        assertEquals("oura", sleep.source!!.slug)
+        assertEquals("Oura", sleep.source.name)
+        assertEquals(ProviderSlug.Oura, sleep.source.slug)
     }
 
     private fun checkFirstSleepStream(sleepStream: SleepStreamResponse) {
@@ -184,35 +191,10 @@ const val fakeSleepDataResponse = """{
     "average_hrv": null,
     "respiratory_rate": null,
     "source": {
-    "name": null,
-    "slug": null,
+    "name": "Health Connect",
+    "slug": "health_connect",
     "logo": null
 },
-    "sleep_stream": null
-},
-{
-    "user_id": "user_id_1",
-    "user_key": "user_id_1",
-    "id": "id_2",
-    "date": "2022-07-14T00:00:00+00:00",
-    "bedtime_start": null,
-    "bedtime_stop": null,
-    "timezone_offset": null,
-    "duration": null,
-    "total": null,
-    "awake": null,
-    "light": null,
-    "rem": null,
-    "deep": null,
-    "score": null,
-    "hr_lowest": null,
-    "hr_average": null,
-    "efficiency": null,
-    "latency": null,
-    "temperature_delta": null,
-    "average_hrv": null,
-    "respiratory_rate": null,
-    "source": null,
     "sleep_stream": null
 }
 ]
@@ -316,8 +298,8 @@ const val fakeSleepStreamSeriesResponse = """{
     "average_hrv": null,
     "respiratory_rate": null,
     "source": {
-    "name": null,
-    "slug": null,
+    "name": "Health Connect",
+    "slug": "health_connect",
     "logo": null
 },
     "sleep_stream": {}

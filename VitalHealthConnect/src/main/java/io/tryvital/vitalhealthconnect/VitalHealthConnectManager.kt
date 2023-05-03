@@ -14,6 +14,7 @@ import androidx.work.*
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
+import io.tryvital.client.createConnectedSource
 import io.tryvital.client.services.data.*
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
@@ -28,8 +29,6 @@ import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.reflect.KClass
-
-internal const val providerId = "health_connect"
 
 internal val readRecordTypes = setOf(
     ExerciseSessionRecord::class,
@@ -210,22 +209,6 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
-    suspend fun linkUserHealthConnectProvider(callbackURI: String) {
-        val userId = checkUserId()
-
-        val token = vitalClient.linkService.createLink(
-            CreateLinkRequest(
-                userId, providerId, callbackURI
-            )
-        )
-
-        vitalClient.linkService.manualProvider(
-            provider = providerId, linkToken = token.linkToken!!, ManualProviderRequest(
-                userId = userId, providerId = providerId
-            )
-        )
-    }
-
     @SuppressLint("ApplySharedPref")
     suspend fun configureHealthConnectClient(
         logsEnabled: Boolean = false,
@@ -256,6 +239,10 @@ class VitalHealthConnectManager private constructor(
         val userId = checkUserId()
 
         try {
+            // TODO: VIT-2924 Move userId management to VitalClient
+            // TODO: VIT-2944 VitalClient to keep track of created connected sources in SharedPreferences.
+            vitalClient.createConnectedSource(ManualProviderSlug.HealthConnect, userId = userId)
+
             val changeToken = sharedPreferences.getString(UnSecurePrefKeys.changeTokenKey, null)
 
             if (changeToken == null) {

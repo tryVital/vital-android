@@ -34,8 +34,7 @@ interface LinkService {
 
     @POST("link/provider/manual/{provider}")
     suspend fun manualProvider(
-        @Path("provider") provider: String,
-        @Header("LinkToken") linkToken: String,
+        @Path("provider") provider: ManualProviderSlug,
         @Body request: ManualProviderRequest,
     ): ManualProviderResponse
 

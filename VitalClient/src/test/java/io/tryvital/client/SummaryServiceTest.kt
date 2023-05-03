@@ -45,7 +45,7 @@ class SummaryServiceTest {
             userId = userId,
             body = SummaryPayload(
                 stage = "dev",
-                provider = "manual",
+                provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
                 timeZoneId = null,
@@ -81,7 +81,7 @@ class SummaryServiceTest {
             userId = userId,
             body = SummaryPayload(
                 stage = "dev",
-                provider = "manual",
+                provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
                 timeZoneId = null,
@@ -109,7 +109,7 @@ class SummaryServiceTest {
             userId = userId,
             body = SummaryPayload(
                 stage = "dev",
-                provider = "manual",
+                provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
                 timeZoneId = null,
@@ -136,7 +136,7 @@ class SummaryServiceTest {
             userId = userId,
             body = SummaryPayload(
                 stage = "dev",
-                provider = "manual",
+                provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
                 timeZoneId = null,
@@ -160,7 +160,7 @@ class SummaryServiceTest {
             userId = userId,
             body = SummaryPayload(
                 stage = "dev",
-                provider = "manual",
+                provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
                 timeZoneId = null,
