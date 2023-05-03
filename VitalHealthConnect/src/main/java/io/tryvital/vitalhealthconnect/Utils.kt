@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthconnect.model.WritableVitalResource
 
 internal const val prefsFileName: String = "vital_health_connect_prefs"
 internal const val encryptedPrefsFileName: String = "safe_vital_health_connect_prefs"
@@ -15,11 +17,13 @@ object SecurePrefKeys{
     internal const val userIdKey = "userId"
 }
 
-object UnSecurePrefKeys{
+object UnSecurePrefKeys {
     internal const val loggerEnabledKey = "loggerEnabled"
     internal const val changeTokenKey = "changeToken"
     internal const val syncOnAppStartKey = "syncOnAppStartKey"
     internal const val numberOfDaysToBackFillKey = "numberOfDaysToBackFill"
+    internal fun readResourceGrant(resource: VitalResource) = "resource.read.$resource"
+    internal fun writeResourceGrant(resource: WritableVitalResource) = "resource.write.$resource"
 }
 
 internal suspend fun saveNewChangeToken(context: Context) {

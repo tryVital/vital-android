@@ -37,18 +37,13 @@ class HealthConnectViewModel(
         }
 
         checkAvailability(context)
-        checkPermissions(context)
+        checkPermissions()
     }
 
-    fun permissionsRequired(): Set<String> {
-        val read = vitalHealthConnectManager.permissionsRequiredToSyncResources(
-            setOf(VitalResource.Water, VitalResource.Glucose, VitalResource.Activity)
-        )
-        val write = vitalHealthConnectManager.permissionsRequiredToWriteResources(
-            setOf(VitalResource.Water, VitalResource.Glucose)
-        )
-        return read + write
-    }
+    fun createPermissionRequestContract() = vitalHealthConnectManager.createPermissionRequestContract(
+        readResources = VitalResource.values().toSet(),
+        writeResources = WritableVitalResource.values().toSet(),
+    )
 
     fun checkAvailability(context: Context) {
         viewModelState.update {
@@ -56,20 +51,20 @@ class HealthConnectViewModel(
         }
     }
 
-    fun checkPermissions(context: Context) {
+    fun checkPermissions() {
         viewModelScope.launch {
             val state = viewModelState.value
             if (state.available != HealthConnectAvailability.Installed)
                 return@launch
 
-            val permissionsRequired = this@HealthConnectViewModel.permissionsRequired()
-            val permissionsGranted = vitalHealthConnectManager.getGrantedPermissions(context)
-            val permissionsMissing = permissionsRequired - permissionsGranted
+            val allResources = VitalResource.values().toSet()
+            val permissionsGranted = allResources.filter(vitalHealthConnectManager::hasAskedForPermission).toSet()
+            val permissionsMissing = allResources - permissionsGranted
 
             viewModelState.update {
                 it.copy(
-                    permissionsGranted = permissionsGranted.sorted(),
-                    permissionsMissing = permissionsMissing.sorted()
+                    permissionsGranted = permissionsGranted.sortedBy(VitalResource::name),
+                    permissionsMissing = permissionsMissing.sortedBy(VitalResource::name),
                 )
             }
         }
@@ -142,8 +137,8 @@ class HealthConnectViewModel(
 
 data class HealthConnectViewModelState(
     val available: HealthConnectAvailability? = null,
-    val permissionsGranted: List<String> = listOf(),
-    val permissionsMissing: List<String> = listOf(),
+    val permissionsGranted: List<VitalResource> = listOf(),
+    val permissionsMissing: List<VitalResource> = listOf(),
     val user: User,
     val syncStatus: String = "",
 )
