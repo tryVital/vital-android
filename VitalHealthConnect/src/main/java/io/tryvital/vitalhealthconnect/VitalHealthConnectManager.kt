@@ -93,14 +93,21 @@ class VitalHealthConnectManager private constructor(
     private val _status = MutableSharedFlow<SyncStatus>(replay = 1)
     val status: SharedFlow<SyncStatus> = _status
 
-    private val taskScope = CoroutineScope(Dispatchers.Default)
-    private var observerJob: Job? = null
+    // Use SupervisorJob so that:
+    // 1. child job failure would not cancel the whole scope (it would by default of structured concurrency).
+    // 2. cancelling the scope would cancel all running child jobs.
+    private val taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     init {
         vitalLogger.logI("VitalHealthConnectManager initialized")
         _status.tryEmit(SyncStatus.Unknown)
 
         taskScope.launch { checkAndUpdatePermissions() }
+    }
+
+    @Suppress("unused")
+    fun close() {
+        taskScope.cancel()
     }
 
     @Suppress("unused")
@@ -443,17 +450,19 @@ class VitalHealthConnectManager private constructor(
             ).build()
         )
 
-        observerJob?.cancel()
-        observerJob = CoroutineScope(Dispatchers.Main).launch {
-            launch {
-                work.workInfosLiveData.observeForever { workInfos ->
-                    updateStatusFromJob(workInfos)
-                }
+        taskScope.launch(Dispatchers.Main) {
+            val observer = androidx.lifecycle.Observer<List<WorkInfo>> { workInfos ->
+                updateStatusFromJob(workInfos)
             }
+            work.workInfosLiveData.observeForever(observer)
             work.enqueue()
-        }
 
-        work.enqueue()
+            try {
+                awaitCancellation()
+            } catch (e: Throwable) {
+                work.workInfosLiveData.removeObserver(observer)
+            }
+        }
     }
 
     private fun startWorkerForAllData(userId: String, healthResource: Set<VitalResource>) {
@@ -477,18 +486,22 @@ class VitalHealthConnectManager private constructor(
             ).build()
         )
 
-        observerJob?.cancel()
-        observerJob = CoroutineScope(Dispatchers.Main).launch {
-            launch {
-                work.workInfosLiveData.observeForever { workInfos ->
-                    updateStatusFromJob(workInfos)
-                }
+        taskScope.launch(Dispatchers.Main) {
+            val observer = androidx.lifecycle.Observer<List<WorkInfo>> { workInfos ->
+                updateStatusFromJob(workInfos)
             }
+            work.workInfosLiveData.observeForever(observer)
             work.enqueue()
+
+            try {
+                awaitCancellation()
+            } catch (e: Throwable) {
+                work.workInfosLiveData.removeObserver(observer)
+            }
         }
     }
 
-    private fun updateStatusFromJob(workInfos: MutableList<WorkInfo>) {
+    private fun updateStatusFromJob(workInfos: List<WorkInfo>) {
         workInfos.forEach {
             when (it.state) {
                 WorkInfo.State.RUNNING -> {
