@@ -10,6 +10,7 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Volume
+import androidx.lifecycle.asFlow
 import androidx.work.*
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
@@ -22,12 +23,13 @@ import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceD
 import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Semaphore
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
 internal val readRecordTypes = setOf(
@@ -92,6 +94,8 @@ class VitalHealthConnectManager private constructor(
 
     private val _status = MutableSharedFlow<SyncStatus>(replay = 1)
     val status: SharedFlow<SyncStatus> = _status
+
+    private val currentSyncCall = Semaphore(1, 0)
 
     // Use SupervisorJob so that:
     // 1. child job failure would not cancel the whole scope (it would by default of structured concurrency).
@@ -246,6 +250,8 @@ class VitalHealthConnectManager private constructor(
         val userId = checkUserId()
 
         try {
+            currentSyncCall.acquire()
+
             // TODO: VIT-2924 Move userId management to VitalClient
             // TODO: VIT-2944 VitalClient to keep track of created connected sources in SharedPreferences.
             vitalClient.createConnectedSource(ManualProviderSlug.HealthConnect, userId = userId)
@@ -280,9 +286,12 @@ class VitalHealthConnectManager private constructor(
                     startWorkerForChanges(userId, healthResource)
                 }
             }
+
         } catch (e: Exception) {
             vitalLogger.logE("Error syncing data", e)
             _status.tryEmit(SyncStatus.Unknown)
+        } finally {
+            currentSyncCall.release()
         }
     }
 
@@ -435,70 +444,73 @@ class VitalHealthConnectManager private constructor(
         sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
     }
 
-    private fun startWorkerForChanges(userId: String, healthResource: Set<VitalResource>) {
-        val work = WorkManager.getInstance(context).beginUniqueWork(
-            "UploadChangesWorker",
-            ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<UploadChangesWorker>().setInputData(
-                UploadChangesWorker.createInputData(
-                    userId = userId,
-                    region = vitalClient.region,
-                    environment = vitalClient.environment,
-                    apiKey = vitalClient.apiKey,
-                    resource = healthResource
-                )
-            ).build()
-        )
+    private suspend fun startWorkerForChanges(userId: String, healthResource: Set<VitalResource>) {
+        val workRequest = OneTimeWorkRequestBuilder<UploadChangesWorker>().setInputData(
+            UploadChangesWorker.createInputData(
+                userId = userId,
+                region = vitalClient.region,
+                environment = vitalClient.environment,
+                apiKey = vitalClient.apiKey,
+                resource = healthResource
+            )
+        ).build()
 
-        taskScope.launch(Dispatchers.Main) {
-            val observer = androidx.lifecycle.Observer<List<WorkInfo>> { workInfos ->
-                updateStatusFromJob(workInfos)
-            }
-            work.workInfosLiveData.observeForever(observer)
-            work.enqueue()
-
-            try {
-                awaitCancellation()
-            } catch (e: Throwable) {
-                work.workInfosLiveData.removeObserver(observer)
-            }
-        }
+        return executeWork(workRequest, "UploadChangesWorker")
     }
 
-    private fun startWorkerForAllData(userId: String, healthResource: Set<VitalResource>) {
+    private suspend fun startWorkerForAllData(userId: String, healthResource: Set<VitalResource>) {
+        val workRequest = OneTimeWorkRequestBuilder<UploadAllDataWorker>().setInputData(
+            UploadAllDataWorker.createInputData(
+                startTime = Instant.now().minus(
+                    encryptedSharedPreferences.getInt(
+                        UnSecurePrefKeys.numberOfDaysToBackFillKey, 30
+                    ).toLong(), ChronoUnit.DAYS
+                ),
+                endTime = Instant.now(),
+                userId = userId,
+                region = vitalClient.region,
+                environment = vitalClient.environment,
+                apiKey = vitalClient.apiKey,
+                resource = healthResource
+            )
+        ).build()
+
+        return executeWork(workRequest, "UploadAllDataWorker")
+    }
+
+    /**
+     * Execute the given work request.
+     * Suspend until the work has succeeded, cancelled or failed.
+     *
+     * Worker status change will be mirrored to SDK sync status via [updateStatusFromJob].
+     */
+    private suspend fun executeWork(workRequest: OneTimeWorkRequest, uniqueWorkName: String) {
         val work = WorkManager.getInstance(context).beginUniqueWork(
-            "UploadAllDataWorker",
+            uniqueWorkName,
             ExistingWorkPolicy.REPLACE,
-            OneTimeWorkRequestBuilder<UploadAllDataWorker>().setInputData(
-                UploadAllDataWorker.createInputData(
-                    startTime = Instant.now().minus(
-                        encryptedSharedPreferences.getInt(
-                            UnSecurePrefKeys.numberOfDaysToBackFillKey, 30
-                        ).toLong(), ChronoUnit.DAYS
-                    ),
-                    endTime = Instant.now(),
-                    userId = userId,
-                    region = vitalClient.region,
-                    environment = vitalClient.environment,
-                    apiKey = vitalClient.apiKey,
-                    resource = healthResource
-                )
-            ).build()
+            workRequest
         )
 
-        taskScope.launch(Dispatchers.Main) {
-            val observer = androidx.lifecycle.Observer<List<WorkInfo>> { workInfos ->
-                updateStatusFromJob(workInfos)
+        // Launch the work in `taskScope` so that it can be cancelled immediately when the whole
+        // VitalHealthConnectManager is closed, independent of the caller of executeWork().
+        val job = work.workInfosLiveData.asFlow()
+            .mapNotNull { workInfos -> workInfos.firstOrNull { it.id == workRequest.id } }
+            .transformWhile { info ->
+                emit(info)
+                return@transformWhile when (info.state) {
+                    // Work is running; continue the observation
+                    WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> true
+                    // Work has ended; stop the observation
+                    WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED, WorkInfo.State.FAILED -> false
+                }
             }
-            work.workInfosLiveData.observeForever(observer)
-            work.enqueue()
+            .onEach { updateStatusFromJob(listOf(it)) }
+            .onStart { work.enqueue() }
+            .flowOn(Dispatchers.Main)
+            .launchIn(taskScope)
 
-            try {
-                awaitCancellation()
-            } catch (e: Throwable) {
-                work.workInfosLiveData.removeObserver(observer)
-            }
-        }
+        // Wait for the job to complete.
+        job.join()
     }
 
     private fun updateStatusFromJob(workInfos: List<WorkInfo>) {
