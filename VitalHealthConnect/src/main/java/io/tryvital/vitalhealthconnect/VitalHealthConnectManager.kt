@@ -23,6 +23,7 @@ import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceD
 import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Semaphore
 import java.time.Instant
@@ -92,7 +93,9 @@ class VitalHealthConnectManager private constructor(
 
     private val vitalLogger = vitalClient.vitalLogger
 
-    private val _status = MutableSharedFlow<SyncStatus>(replay = 1)
+    // Unlimited buffering for slow subscribers.
+    // https://github.com/Kotlin/kotlinx.coroutines/issues/2034#issuecomment-630381961
+    private val _status = MutableSharedFlow<SyncStatus>(replay = 1, extraBufferCapacity = Int.MAX_VALUE)
     val status: SharedFlow<SyncStatus> = _status
 
     private val currentSyncCall = Semaphore(1, 0)
