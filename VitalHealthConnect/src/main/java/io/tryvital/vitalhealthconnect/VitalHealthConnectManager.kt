@@ -2,10 +2,13 @@ package io.tryvital.vitalhealthconnect
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
+import android.net.Uri
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectClient.Companion.ACTION_HEALTH_CONNECT_SETTINGS
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.units.BloodGlucose
@@ -583,6 +586,23 @@ class VitalHealthConnectManager private constructor(
                 HealthConnectClient.SDK_AVAILABLE -> HealthConnectAvailability.Installed
                 HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> HealthConnectAvailability.NotInstalled
                 else -> HealthConnectAvailability.NotSupportedSDK
+            }
+        }
+
+        @Suppress("unused")
+        fun openHealthConnect(context: Context) {
+            when (isAvailable(context)) {
+                HealthConnectAvailability.NotSupportedSDK -> {}
+                HealthConnectAvailability.NotInstalled -> {
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        data = Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")
+                        setPackage("com.android.vending")
+                    }
+                    context.startActivity(intent)
+                }
+                HealthConnectAvailability.Installed -> {
+                    context.startActivity(Intent(ACTION_HEALTH_CONNECT_SETTINGS))
+                }
             }
         }
 
