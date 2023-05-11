@@ -11,8 +11,6 @@ import androidx.health.connect.client.response.ChangesResponse
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
-import io.tryvital.client.Environment
-import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
@@ -25,9 +23,6 @@ import kotlinx.coroutines.withContext
 import java.util.*
 
 private const val userIdKey = "userId"
-private const val regionKey = "region"
-private const val environmentKey = "environment"
-private const val apiKeyKey = "apiKey"
 private const val resourcesKey = "resourcesKey"
 
 class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
@@ -38,14 +33,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
     )
 
     private val vitalClient: VitalClient by lazy {
-        VitalClient(
-            applicationContext,
-            Region.valueOf(inputData.getString(regionKey) ?: Region.US.toString()),
-            Environment.valueOf(
-                inputData.getString(environmentKey) ?: Environment.Sandbox.toString()
-            ),
-            inputData.getString(apiKeyKey) ?: ""
-        )
+        VitalClient.getForWorker(applicationContext)
     }
 
     private val recordProcessor: RecordProcessor by lazy {
@@ -485,14 +473,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
     companion object {
         fun createInputData(
             userId: String,
-            region: Region,
-            environment: Environment,
-            apiKey: String,
             resource: Set<VitalResource>
         ): Data {
             return Data.Builder().putString(userIdKey, userId)
-                .putString(regionKey, region.toString())
-                .putString(environmentKey, environment.toString()).putString(apiKeyKey, apiKey)
                 .putStringArray(resourcesKey, resource.map { it.name }.toTypedArray()).build()
         }
     }

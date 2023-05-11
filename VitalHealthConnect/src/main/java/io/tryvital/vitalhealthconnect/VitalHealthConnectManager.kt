@@ -12,25 +12,20 @@ import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Volume
 import androidx.lifecycle.asFlow
 import androidx.work.*
-import io.tryvital.client.Environment
-import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSource
 import io.tryvital.client.services.data.*
-import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Semaphore
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
 internal val readRecordTypes = setOf(
@@ -67,14 +62,10 @@ internal fun vitalRecordTypes(healthPermission: Set<String>): Set<KClass<out Rec
 class VitalHealthConnectManager private constructor(
     private val context: Context,
     private val healthConnectClientProvider: HealthConnectClientProvider,
-    private val apiKey: String,
-    private val region: Region,
-    private val environment: Environment,
+    private val vitalClient: VitalClient,
     private val recordReader: RecordReader,
     private val recordProcessor: RecordProcessor,
 ) {
-    private val vitalClient: VitalClient = VitalClient(context, region, environment, apiKey)
-
     private val encryptedSharedPreferences: SharedPreferences by lazy {
         try {
             createEncryptedSharedPreferences(context)
@@ -217,7 +208,7 @@ class VitalHealthConnectManager private constructor(
             commit()
         }
 
-        if (hasConfigSet()) {
+        if (vitalClient.isConfigured) {
             vitalLogger.logI("User ID set, starting sync")
             syncData(healthResources)
         }
@@ -231,11 +222,14 @@ class VitalHealthConnectManager private constructor(
     ) {
         vitalLogger.enabled = logsEnabled
 
-        encryptedSharedPreferences.edit()
-            .putString(SecurePrefKeys.apiKeyKey, apiKey)
-            .putString(SecurePrefKeys.regionKey, region.name)
-            .putString(SecurePrefKeys.environmentKey, environment.name)
-            .commit()
+        val configuration = vitalClient.configuration
+        if (configuration != null) {
+            encryptedSharedPreferences.edit()
+                .putString(SecurePrefKeys.apiKeyKey, configuration.apiKey)
+                .putString(SecurePrefKeys.regionKey, configuration.region.name)
+                .putString(SecurePrefKeys.environmentKey, configuration.environment.name)
+                .commit()
+        }
 
         sharedPreferences.edit()
             .putBoolean(UnSecurePrefKeys.loggerEnabledKey, logsEnabled)
@@ -451,9 +445,6 @@ class VitalHealthConnectManager private constructor(
         val workRequest = OneTimeWorkRequestBuilder<UploadChangesWorker>().setInputData(
             UploadChangesWorker.createInputData(
                 userId = userId,
-                region = vitalClient.region,
-                environment = vitalClient.environment,
-                apiKey = vitalClient.apiKey,
                 resource = healthResource
             )
         ).build()
@@ -471,9 +462,6 @@ class VitalHealthConnectManager private constructor(
                 ),
                 endTime = Instant.now(),
                 userId = userId,
-                region = vitalClient.region,
-                environment = vitalClient.environment,
-                apiKey = vitalClient.apiKey,
                 resource = healthResource
             )
         ).build()
@@ -586,20 +574,13 @@ class VitalHealthConnectManager private constructor(
             }
         }
 
-        fun create(
-            context: Context,
-            apiKey: String,
-            region: Region,
-            environment: Environment,
-        ): VitalHealthConnectManager {
+        fun create(context: Context): VitalHealthConnectManager {
             val healthConnectClientProvider = HealthConnectClientProvider()
 
             return VitalHealthConnectManager(
                 context,
                 healthConnectClientProvider,
-                apiKey,
-                region,
-                environment,
+                VitalClient.getOrCreate(context),
                 HealthConnectRecordReader(context, healthConnectClientProvider),
                 HealthConnectRecordProcessor(
                     HealthConnectRecordReader(context, healthConnectClientProvider),

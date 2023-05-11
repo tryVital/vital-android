@@ -23,7 +23,7 @@ class SummaryServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(apiKey = apiKey),
+            Dependencies.createHttpClient(apiKeyProvider = ApiKeyProvider.Constant("")),
             Dependencies.createMoshi()
         )
     }

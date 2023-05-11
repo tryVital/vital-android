@@ -1,6 +1,7 @@
 package io.tryvital.sample
 
 import android.app.Application
+import io.tryvital.client.Configuration
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
@@ -13,19 +14,16 @@ val region = Region.EU
 val environment = Environment.Sandbox
 
 class VitalApp : Application() {
-    val client = VitalClient(
-        context = this,
-        region = region,
-        environment = environment,
-        apiKey = apiKey
-    )
+    val client = VitalClient.getOrCreate(this).apply {
+        configure(Configuration(region, environment, apiKey))
+    }
 
     val userRepository by lazy {
         UserRepository.create()
     }
 
     val vitalHealthConnectManager by lazy {
-        VitalHealthConnectManager.create(this, apiKey, region, environment)
+        VitalHealthConnectManager.create(this)
     }
 
     val vitalDeviceManager by lazy {
