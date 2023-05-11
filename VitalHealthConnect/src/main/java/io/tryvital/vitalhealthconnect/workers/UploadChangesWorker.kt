@@ -13,6 +13,7 @@ import androidx.work.Data
 import androidx.work.WorkerParameters
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
+import io.tryvital.client.VITAL_PERFS_FILE_NAME
 import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
@@ -34,7 +35,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
 
     private val sharedPreferences: SharedPreferences = appContext.getSharedPreferences(
-        prefsFileName, Context.MODE_PRIVATE
+        VITAL_PERFS_FILE_NAME, Context.MODE_PRIVATE
     )
 
     private val vitalClient: VitalClient by lazy {

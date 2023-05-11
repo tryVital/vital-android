@@ -17,20 +17,17 @@ import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSource
 import io.tryvital.client.services.data.*
-import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Semaphore
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.util.*
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
 internal val readRecordTypes = setOf(
@@ -74,6 +71,7 @@ class VitalHealthConnectManager private constructor(
     private val recordProcessor: RecordProcessor,
 ) {
     private val vitalClient: VitalClient = VitalClient(context, region, environment, apiKey)
+    val sharedPreferences get() = vitalClient.sharedPreferences
 
     private val encryptedSharedPreferences: SharedPreferences by lazy {
         try {
@@ -86,10 +84,6 @@ class VitalHealthConnectManager private constructor(
             return@lazy createEncryptedSharedPreferences(context)
         }
     }
-
-    internal val sharedPreferences: SharedPreferences = context.getSharedPreferences(
-        prefsFileName, Context.MODE_PRIVATE
-    )
 
     private val vitalLogger = vitalClient.vitalLogger
 

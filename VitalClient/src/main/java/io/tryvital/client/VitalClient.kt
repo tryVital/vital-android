@@ -1,8 +1,11 @@
 package io.tryvital.client
 
 import android.content.Context
+import android.content.SharedPreferences
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.*
+
+const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 
 @Suppress("unused")
 class VitalClient(
@@ -11,6 +14,12 @@ class VitalClient(
     val environment: Environment = Environment.Sandbox,
     val apiKey: String,
 ) {
+
+    val sharedPreferences: SharedPreferences by lazy {
+        context.getSharedPreferences(
+            VITAL_PERFS_FILE_NAME, Context.MODE_PRIVATE
+        )
+    }
 
     private val dependencies: Dependencies by lazy {
         Dependencies(context, region, environment, apiKey)
