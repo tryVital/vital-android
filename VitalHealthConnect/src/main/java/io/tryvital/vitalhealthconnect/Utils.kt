@@ -4,10 +4,10 @@ import android.content.Context
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import io.tryvital.client.VITAL_PERFS_FILE_NAME
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.WritableVitalResource
 
-internal const val prefsFileName: String = "vital_health_connect_prefs"
 internal const val encryptedPrefsFileName: String = "safe_vital_health_connect_prefs"
 
 object SecurePrefKeys{
@@ -28,7 +28,7 @@ object UnSecurePrefKeys {
 
 internal suspend fun saveNewChangeToken(context: Context) {
     val sharedPreferences = context.getSharedPreferences(
-        prefsFileName,
+        VITAL_PERFS_FILE_NAME,
         Context.MODE_PRIVATE
     )
 

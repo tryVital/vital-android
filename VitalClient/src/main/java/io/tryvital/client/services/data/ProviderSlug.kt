@@ -8,6 +8,7 @@ import com.squareup.moshi.adapters.EnumJsonAdapter
 
 @JsonClass(generateAdapter = false)
 enum class ManualProviderSlug {
+    // Enum names here should match ProviderSlug.
     @Json(name = "beurer_ble") BeurerBLE,
     @Json(name = "omron_ble") OmronBLE,
     @Json(name = "accuchek_ble") AccuchekBLE,
@@ -20,6 +21,8 @@ enum class ManualProviderSlug {
     // Use the Json name also when converting to string.
     // This is intended for Retrofit request parameter serialization.
     override fun toString() = getJsonName(this)
+
+    fun toProviderSlug() = ProviderSlug.valueOf(name)
 
     companion object {
         val jsonAdapter: EnumJsonAdapter<ManualProviderSlug>

@@ -7,7 +7,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.vitaldevices.VitalDeviceManager
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 
-const val apiKey = "sk_eu_S5LdXTS_CAtdFrkX9OYsiVq_jGHaIXtZyBPbBtPkzhA"
+const val apiKey = "API_KEY"
 
 val region = Region.EU
 val environment = Environment.Sandbox
