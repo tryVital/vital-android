@@ -138,6 +138,10 @@ class VitalHealthConnectManager private constructor(
     }
 
     suspend fun checkAndUpdatePermissions() {
+        if (isAvailable(context) != HealthConnectAvailability.Installed) {
+            return
+        }
+
         val currentGrants = getGrantedPermissions(context)
 
         val readResourcesByStatus = VitalResource.values()
@@ -220,7 +224,7 @@ class VitalHealthConnectManager private constructor(
             commit()
         }
 
-        if (hasConfigSet()) {
+        if (hasConfigSet() && isAvailable(context) == HealthConnectAvailability.Installed) {
             vitalLogger.logI("User ID set, starting sync")
             syncData(healthResources)
         }
@@ -246,7 +250,7 @@ class VitalHealthConnectManager private constructor(
             .putInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, numberOfDaysToBackFill)
             .commit()
 
-        if (hasUserId()) {
+        if (hasUserId() && isAvailable(context) == HealthConnectAvailability.Installed) {
             vitalLogger.logI("Configuration set, starting sync")
             syncData(healthResources)
         }

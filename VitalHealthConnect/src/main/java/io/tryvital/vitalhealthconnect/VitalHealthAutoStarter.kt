@@ -6,6 +6,7 @@ import androidx.startup.Initializer
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.utils.VitalLogger
+import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -47,6 +48,11 @@ class VitalHealthAutoStarter(private val context: Context) {
     }
 
     private fun startSync() {
+        if (VitalHealthConnectManager.isAvailable(context) != HealthConnectAvailability.Installed) {
+            vitalLogger.logI("Health Connect is unavailable; will not start sync on startup")
+            return
+        }
+
         try {
             if (sharedPreferences.contains(UnSecurePrefKeys.syncOnAppStartKey)) {
                 val region = encryptedSharedPreferences.getString(SecurePrefKeys.regionKey, null)
