@@ -25,23 +25,29 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
         return
     }
 
+    fun recordConnectedSourceExistence() {
+        sharedPreferences.edit()
+            .putBoolean(VitalClientPrefKeys.userHasConnectedTo(slug), true)
+            .apply()
+    }
+
     try {
         // Remote Miss: Try to create the manual connected source.
         linkService.manualProvider(
             provider = provider,
             request = ManualProviderRequest(userId = userId)
         )
+        recordConnectedSourceExistence()
+
     } catch (exception: HttpException) {
-        // A 409 means that there's a already a connected source, so we can fail gracefully.
-        if (exception.code() != 409) {
-            // Rethrow any other exception.
+        if (exception.code() == 409) {
+            // A 409 means that there is already a connected source for the specified provider.
+            recordConnectedSourceExistence()
+        } else {
+            // Rethrow the exception.
             throw exception
         }
     }
-
-    sharedPreferences.edit()
-        .putBoolean(VitalClientPrefKeys.userHasConnectedTo(slug), true)
-        .apply()
 }
 
 // TODO: VIT-2924 Move userId management to VitalClient
