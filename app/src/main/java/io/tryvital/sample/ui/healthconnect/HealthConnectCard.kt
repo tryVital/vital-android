@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.InstallMobile
+import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,6 +59,7 @@ fun PermissionInfo(
     permissionsMissing: List<VitalResource>,
     viewModel: HealthConnectViewModel
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val permissionsLauncher =
         rememberLauncherForActivityResult(viewModel.createPermissionRequestContract()) { outcomeAsync ->
@@ -106,17 +108,33 @@ fun PermissionInfo(
         }
 
         Spacer(Modifier.height(8.dp))
-        Button(
-            onClick = { permissionsLauncher.launch(Unit) },
-            contentPadding = ButtonDefaults.TextButtonContentPadding
-        ) {
-            Icon(
-                Icons.Outlined.HealthAndSafety,
-                contentDescription = null,
-                modifier = Modifier.size(ButtonDefaults.IconSize)
-            )
-            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-            Text("Request")
+
+        Row(Modifier.fillMaxWidth()) {
+            Button(
+                onClick = { permissionsLauncher.launch(Unit) },
+                contentPadding = ButtonDefaults.TextButtonContentPadding
+            ) {
+                Icon(
+                    Icons.Outlined.HealthAndSafety,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Request")
+            }
+
+            Button(
+                onClick = { viewModel.openHealthConnect(context) },
+                contentPadding = ButtonDefaults.TextButtonContentPadding
+            ) {
+                Icon(
+                    Icons.Outlined.Link,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Open Health Connect")
+            }
         }
     }
 }

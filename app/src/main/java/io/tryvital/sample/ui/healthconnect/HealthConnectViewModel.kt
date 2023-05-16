@@ -51,6 +51,8 @@ class HealthConnectViewModel(
         }
     }
 
+    fun openHealthConnect(context: Context) = VitalHealthConnectManager.openHealthConnect(context)
+
     fun checkPermissions() {
         viewModelScope.launch {
             val state = viewModelState.value
