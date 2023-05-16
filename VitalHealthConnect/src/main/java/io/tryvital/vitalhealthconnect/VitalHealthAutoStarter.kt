@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import androidx.startup.Initializer
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
+import io.tryvital.client.VITAL_PERFS_FILE_NAME
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +28,7 @@ class VitalHealthAutoStarter(private val context: Context) {
     private val vitalLogger = VitalLogger.getOrCreate()
 
     private val sharedPreferences: SharedPreferences = context.getSharedPreferences(
-        prefsFileName, Context.MODE_PRIVATE
+        VITAL_PERFS_FILE_NAME, Context.MODE_PRIVATE
     )
 
     private val encryptedSharedPreferences: SharedPreferences by lazy {
