@@ -8,15 +8,6 @@ import io.tryvital.client.VITAL_PERFS_FILE_NAME
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.WritableVitalResource
 
-internal const val encryptedPrefsFileName: String = "safe_vital_health_connect_prefs"
-
-object SecurePrefKeys{
-    internal const val regionKey = "region"
-    internal const val environmentKey = "environment"
-    internal const val apiKeyKey = "apiKey"
-    internal const val userIdKey = "userId"
-}
-
 object UnSecurePrefKeys {
     internal const val loggerEnabledKey = "loggerEnabled"
     internal const val changeTokenKey = "changeToken"
@@ -44,14 +35,6 @@ internal suspend fun saveNewChangeToken(context: Context) {
         ).apply()
     }
 }
-
-internal fun createEncryptedSharedPreferences(context: Context) = EncryptedSharedPreferences.create(
-    encryptedPrefsFileName,
-    MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
-    context,
-    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-)
 
 internal suspend fun getGrantedPermissions(context: Context) =
     HealthConnectClientProvider().getHealthConnectClient(context)

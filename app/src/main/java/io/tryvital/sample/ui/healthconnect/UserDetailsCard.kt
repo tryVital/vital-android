@@ -3,6 +3,8 @@ package io.tryvital.sample.ui.healthconnect
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,6 +21,7 @@ import io.tryvital.sample.ui.users.IconAction
 @Composable
 fun UserDetailsCard(
     state: HealthConnectViewModelState,
+    viewModel: HealthConnectViewModel
 ) {
     val clipboardManager: ClipboardManager = LocalClipboardManager.current
 
@@ -43,6 +46,18 @@ fun UserDetailsCard(
                     description = "Copy User id",
                 ) {
                     clipboardManager.setText(AnnotatedString(userId))
+                }
+            }
+            Row {
+                Column {
+                    Text(if (state.isCurrentSDKUser) "Is Current SDK User" else "Not Current SDK User")
+                }
+                Spacer(Modifier.weight(1f))
+                Button(
+                    onClick = { viewModel.toggleSDKCurrentUserState() },
+                    contentPadding = ButtonDefaults.TextButtonContentPadding
+                ) {
+                    Text(if (state.isCurrentSDKUser) "Reset SDK" else "Set as SDK user")
                 }
             }
             Row {

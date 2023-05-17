@@ -67,26 +67,12 @@ internal fun vitalRecordTypes(healthPermission: Set<String>): Set<KClass<out Rec
 class VitalHealthConnectManager private constructor(
     private val context: Context,
     private val healthConnectClientProvider: HealthConnectClientProvider,
-    private val apiKey: String,
-    private val region: Region,
-    private val environment: Environment,
+    val vitalClient: VitalClient,
     private val recordReader: RecordReader,
     private val recordProcessor: RecordProcessor,
 ) {
-    private val vitalClient: VitalClient = VitalClient(context, region, environment, apiKey)
     val sharedPreferences get() = vitalClient.sharedPreferences
-
-    private val encryptedSharedPreferences: SharedPreferences by lazy {
-        try {
-            createEncryptedSharedPreferences(context)
-        } catch (e: Exception) {
-            vitalLogger.logE(
-                "Failed to decrypt shared preferences, creating new encrypted shared preferences", e
-            )
-            context.deleteSharedPreferences(encryptedPrefsFileName)
-            return@lazy createEncryptedSharedPreferences(context)
-        }
-    }
+    val encryptedSharedPreferences get() = vitalClient.encryptedSharedPreferences
 
     private val vitalLogger = vitalClient.vitalLogger
 
@@ -100,7 +86,7 @@ class VitalHealthConnectManager private constructor(
     // Use SupervisorJob so that:
     // 1. child job failure would not cancel the whole scope (it would by default of structured concurrency).
     // 2. cancelling the scope would cancel all running child jobs.
-    private val taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     init {
         vitalLogger.logI("VitalHealthConnectManager initialized")
@@ -120,15 +106,16 @@ class VitalHealthConnectManager private constructor(
     }
 
     /**
-     * Erase all SDK settings and persistent state for the current user, in addition to closing
-     * this instance via [close].
+     * Erase all SDK settings and persistent state for the current user.
      *
      * You typically only need to [cleanUp] when your application has logged out the current user.
      */
+    @SuppressLint("ApplySharedPref")
     @Suppress("unused")
     fun cleanUp() {
-        close()
-        encryptedSharedPreferences.edit().clear().apply()
+        taskScope.cancel()
+        taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
         vitalClient.cleanUp()
     }
 
@@ -229,32 +216,16 @@ class VitalHealthConnectManager private constructor(
     }
 
     @SuppressLint("ApplySharedPref")
-    suspend fun setUserId(userId: String) {
-        encryptedSharedPreferences.edit().apply {
-            putString(SecurePrefKeys.userIdKey, userId)
-            remove(UnSecurePrefKeys.changeTokenKey)
-            commit()
-        }
-
-        if (hasConfigSet() && isAvailable(context) == HealthConnectAvailability.Installed) {
-            vitalLogger.logI("User ID set, starting sync")
-            syncData(healthResources)
-        }
-    }
-
-    @SuppressLint("ApplySharedPref")
-    suspend fun configureHealthConnectClient(
+    fun configureHealthConnectClient(
         logsEnabled: Boolean = false,
         syncOnAppStart: Boolean = true,
         numberOfDaysToBackFill: Int = 30,
     ) {
-        vitalLogger.enabled = logsEnabled
+        if (!vitalClient.isConfigured) {
+            throw IllegalStateException("VitalClient has not been configured.")
+        }
 
-        encryptedSharedPreferences.edit()
-            .putString(SecurePrefKeys.apiKeyKey, apiKey)
-            .putString(SecurePrefKeys.regionKey, region.name)
-            .putString(SecurePrefKeys.environmentKey, environment.name)
-            .commit()
+        vitalLogger.enabled = logsEnabled
 
         sharedPreferences.edit()
             .putBoolean(UnSecurePrefKeys.loggerEnabledKey, logsEnabled)
@@ -262,14 +233,16 @@ class VitalHealthConnectManager private constructor(
             .putInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, numberOfDaysToBackFill)
             .commit()
 
-        if (hasUserId() && isAvailable(context) == HealthConnectAvailability.Installed) {
+        if (vitalClient.hasUserId() && isAvailable(context) == HealthConnectAvailability.Installed) {
             vitalLogger.logI("Configuration set, starting sync")
-            syncData(healthResources)
+            taskScope.launch {
+                syncData(healthResources)
+            }
         }
     }
 
     suspend fun syncData(healthResource: Set<VitalResource> = healthResources) {
-        val userId = checkUserId()
+        val userId = vitalClient.checkUserId()
 
         try {
             currentSyncCall.acquire()
@@ -574,23 +547,6 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
-    private fun checkUserId(): String {
-        return encryptedSharedPreferences.getString(SecurePrefKeys.userIdKey, null)
-            ?: throw IllegalStateException(
-                "You need to call setUserId before you can read the health data"
-            )
-    }
-
-    private fun hasUserId(): Boolean {
-        return encryptedSharedPreferences.getString(SecurePrefKeys.userIdKey, null) != null
-    }
-
-    private fun hasConfigSet(): Boolean {
-        return encryptedSharedPreferences.getString(SecurePrefKeys.apiKeyKey, null) != null &&
-                encryptedSharedPreferences.getString(SecurePrefKeys.regionKey, null) != null &&
-                encryptedSharedPreferences.getString(SecurePrefKeys.environmentKey, null) != null
-    }
-
     companion object {
         private const val packageName = "com.google.android.apps.healthdata"
 
@@ -623,18 +579,14 @@ class VitalHealthConnectManager private constructor(
 
         fun create(
             context: Context,
-            apiKey: String,
-            region: Region,
-            environment: Environment,
+            vitalClient: VitalClient
         ): VitalHealthConnectManager {
             val healthConnectClientProvider = HealthConnectClientProvider()
 
             return VitalHealthConnectManager(
                 context,
                 healthConnectClientProvider,
-                apiKey,
-                region,
-                environment,
+                vitalClient,
                 HealthConnectRecordReader(context, healthConnectClientProvider),
                 HealthConnectRecordProcessor(
                     HealthConnectRecordReader(context, healthConnectClientProvider),

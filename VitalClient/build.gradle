@@ -9,7 +9,7 @@ android {
     namespace 'io.tryvital.client'
 
     defaultConfig {
-        minSdk 21
+        minSdk 24
         targetSdk 33
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -43,6 +43,7 @@ android {
 
 dependencies {
     implementation "androidx.browser:browser:$browser"
+    implementation "androidx.security:security-crypto:$security_crypto"
 
     implementation "com.squareup.retrofit2:retrofit:$retrofit"
     implementation "com.squareup.retrofit2:converter-moshi:$retrofit"

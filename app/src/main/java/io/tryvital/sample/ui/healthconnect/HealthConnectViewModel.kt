@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.User
 import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
@@ -17,14 +18,21 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import kotlin.system.exitProcess
 
 class HealthConnectViewModel(
+    private val vitalClient: VitalClient,
     private val vitalHealthConnectManager: VitalHealthConnectManager,
     private val userRepository: UserRepository
 ) : ViewModel() {
+    private val isCurrentSDKUser
+        get() = userRepository.selectedUser!!.userId == vitalHealthConnectManager.vitalClient.currentUserId
 
     private val viewModelState =
-        MutableStateFlow(HealthConnectViewModelState(user = userRepository.selectedUser!!))
+        MutableStateFlow(HealthConnectViewModelState(
+            user = userRepository.selectedUser!!,
+            isCurrentSDKUser = isCurrentSDKUser,
+        ))
     val uiState = viewModelState.asStateFlow()
 
     fun init(context: Context) {
@@ -38,6 +46,21 @@ class HealthConnectViewModel(
 
         checkAvailability(context)
         checkPermissions()
+    }
+
+    fun toggleSDKCurrentUserState() {
+        if (isCurrentSDKUser) {
+            vitalHealthConnectManager.cleanUp()
+            vitalHealthConnectManager.vitalClient.cleanUp()
+        } else {
+            vitalClient.configure()
+            vitalHealthConnectManager.configureHealthConnectClient()
+            vitalHealthConnectManager.vitalClient.setUserId(
+                userRepository.selectedUser!!.userId
+            )
+        }
+
+        viewModelState.update { it.copy(isCurrentSDKUser = this.isCurrentSDKUser) }
     }
 
     fun createPermissionRequestContract() = vitalHealthConnectManager.createPermissionRequestContract(
@@ -74,16 +97,12 @@ class HealthConnectViewModel(
 
     fun sync() {
         viewModelScope.launch {
-            vitalHealthConnectManager.apply {
-                setUserId(userRepository.selectedUser!!.userId!!)
-                configureHealthConnectClient(true)
-            }
+            vitalHealthConnectManager.syncData()
         }
     }
 
     fun addWater() {
         viewModelScope.launch {
-            vitalHealthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
             vitalHealthConnectManager.writeRecord(
                 WritableVitalResource.Water,
                 Instant.now(),
@@ -95,7 +114,6 @@ class HealthConnectViewModel(
 
     fun addGlucose() {
         viewModelScope.launch {
-            vitalHealthConnectManager.setUserId(userRepository.selectedUser!!.userId!!)
             vitalHealthConnectManager.writeRecord(
                 WritableVitalResource.Glucose,
                 Instant.now(),
@@ -120,12 +138,13 @@ class HealthConnectViewModel(
 
     companion object {
         fun provideFactory(
+            vitalClient: VitalClient,
             vitalHealthConnectManager: VitalHealthConnectManager,
             userRepository: UserRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return HealthConnectViewModel(vitalHealthConnectManager, userRepository) as T
+                return HealthConnectViewModel(vitalClient, vitalHealthConnectManager, userRepository) as T
             }
         }
     }
@@ -136,5 +155,6 @@ data class HealthConnectViewModelState(
     val permissionsGranted: List<VitalResource> = listOf(),
     val permissionsMissing: List<VitalResource> = listOf(),
     val user: User,
+    val isCurrentSDKUser: Boolean,
     val syncStatus: String = "",
 )
