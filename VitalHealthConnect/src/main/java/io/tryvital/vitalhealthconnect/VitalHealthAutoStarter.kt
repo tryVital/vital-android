@@ -3,9 +3,7 @@ package io.tryvital.vitalhealthconnect
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.startup.Initializer
-import io.tryvital.client.Environment
-import io.tryvital.client.Region
-import io.tryvital.client.VITAL_PERFS_FILE_NAME
+import io.tryvital.client.*
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import kotlinx.coroutines.CoroutineScope
@@ -27,72 +25,7 @@ class VitalHealthInitializer : Initializer<VitalHealthAutoStarter> {
 class VitalHealthAutoStarter(private val context: Context) {
     private val vitalLogger = VitalLogger.getOrCreate()
 
-    private val sharedPreferences: SharedPreferences = context.getSharedPreferences(
-        VITAL_PERFS_FILE_NAME, Context.MODE_PRIVATE
-    )
-
-    private val encryptedSharedPreferences: SharedPreferences by lazy {
-        try {
-            createEncryptedSharedPreferences(context)
-        } catch (e: Exception) {
-            vitalLogger.logE(
-                "Failed to decrypt shared preferences, creating new encrypted shared preferences", e
-            )
-            context.deleteSharedPreferences(encryptedPrefsFileName)
-            return@lazy createEncryptedSharedPreferences(context)
-        }
-    }
-
     init {
-        vitalLogger.enabled = sharedPreferences.getBoolean(UnSecurePrefKeys.loggerEnabledKey, false)
-        startSync()
-    }
-
-    private fun startSync() {
-        if (VitalHealthConnectManager.isAvailable(context) != HealthConnectAvailability.Installed) {
-            vitalLogger.logI("Health Connect is unavailable; will not start sync on startup")
-            return
-        }
-
-        try {
-            if (sharedPreferences.contains(UnSecurePrefKeys.syncOnAppStartKey)) {
-                val region = encryptedSharedPreferences.getString(SecurePrefKeys.regionKey, null)
-                val environment =
-                    encryptedSharedPreferences.getString(SecurePrefKeys.environmentKey, null)
-                val apiKey = encryptedSharedPreferences.getString(SecurePrefKeys.apiKeyKey, null)
-                val userIdKey = encryptedSharedPreferences.getString(SecurePrefKeys.userIdKey, null)
-
-                if (region == null) {
-                    vitalLogger.logI("No region is saved, will not start sync on startup")
-                    return
-                }
-                if (environment == null) {
-                    vitalLogger.logI("No environment is saved, will not start sync on startup")
-                    return
-                }
-                if (apiKey == null) {
-                    vitalLogger.logI("No api key is saved, will not start sync on startup")
-                    return
-                }
-
-                if (userIdKey == null) {
-                    vitalLogger.logI("No user id is saved, will not start sync on startup")
-                    return
-                }
-
-                CoroutineScope(Job() + Dispatchers.IO).launch {
-                    VitalHealthConnectManager.create(
-                        context,
-                        apiKey,
-                        Region.valueOf(region),
-                        Environment.valueOf(environment)
-                    ).syncData()
-                }
-            } else {
-                vitalLogger.logI("Sync on app start is not enabled, will not start sync on startup")
-            }
-        } catch (e: Exception) {
-            vitalLogger.logE("Failed to start sync on startup", e)
-        }
+        // TODO: Reimplement this after we have singletonized the SDK
     }
 }

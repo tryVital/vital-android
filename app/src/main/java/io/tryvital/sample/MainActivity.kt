@@ -40,6 +40,7 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(Screen.HealthConnect.route) {
                         HealthConnectScreen(
+                            client,
                             vitalHealthConnectManager,
                             userRepository,
                             navController,

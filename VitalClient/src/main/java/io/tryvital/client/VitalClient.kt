@@ -1,11 +1,20 @@
 package io.tryvital.client
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKeys
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.*
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
+const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
+
+const val VITAL_ENCRYPTED_USER_ID_KEY: String = "userId"
+const val VITAL_ENCRYPTED_REGION_KEY = "region"
+const val VITAL_ENCRYPTED_ENVIRONMENT_KEY = "environment"
+const val VITAL_ENCRYPTED_API_KEY_KEY = "apiKey"
 
 @Suppress("unused")
 class VitalClient(
@@ -19,6 +28,18 @@ class VitalClient(
         context.getSharedPreferences(
             VITAL_PERFS_FILE_NAME, Context.MODE_PRIVATE
         )
+    }
+
+    val encryptedSharedPreferences: SharedPreferences by lazy {
+        try {
+            createEncryptedSharedPreferences(context)
+        } catch (e: Exception) {
+            vitalLogger.logE(
+                "Failed to decrypt shared preferences, creating new encrypted shared preferences", e
+            )
+            context.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
+            return@lazy createEncryptedSharedPreferences(context)
+        }
     }
 
     private val dependencies: Dependencies by lazy {
@@ -65,7 +86,51 @@ class VitalClient(
         dependencies.vitalLogger
     }
 
+    val isConfigured: Boolean
+        get() = encryptedSharedPreferences.getString(VITAL_ENCRYPTED_API_KEY_KEY, null) != null &&
+                encryptedSharedPreferences.getString(VITAL_ENCRYPTED_ENVIRONMENT_KEY, null) != null &&
+                encryptedSharedPreferences.getString(VITAL_ENCRYPTED_REGION_KEY, null) != null
+
+    val currentUserId: String?
+        get() = encryptedSharedPreferences.getString(VITAL_ENCRYPTED_USER_ID_KEY, null)
+
     fun cleanUp() {
         sharedPreferences.edit().clear().apply()
+        encryptedSharedPreferences.edit().clear().apply()
+    }
+
+    // TODO: Shift config injection from initializer, and support config change.
+    fun configure() {
+        encryptedSharedPreferences.edit()
+            .putString(VITAL_ENCRYPTED_API_KEY_KEY, apiKey)
+            .putString(VITAL_ENCRYPTED_REGION_KEY, region.name)
+            .putString(VITAL_ENCRYPTED_ENVIRONMENT_KEY, environment.name)
+            .apply()
+    }
+
+    @SuppressLint("ApplySharedPref")
+    fun setUserId(userId: String) {
+        encryptedSharedPreferences.edit().apply {
+            putString(VITAL_ENCRYPTED_USER_ID_KEY, userId)
+            apply()
+        }
+    }
+
+    fun checkUserId(): String {
+        return currentUserId ?: throw IllegalStateException(
+            "You need to call setUserId before you can read the health data"
+        )
+    }
+
+    fun hasUserId(): Boolean {
+        return encryptedSharedPreferences.getString(VITAL_ENCRYPTED_USER_ID_KEY, null) != null
     }
 }
+
+fun createEncryptedSharedPreferences(context: Context) = EncryptedSharedPreferences.create(
+    VITAL_ENCRYPTED_PERFS_FILE_NAME,
+    MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
+    context,
+    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+)
