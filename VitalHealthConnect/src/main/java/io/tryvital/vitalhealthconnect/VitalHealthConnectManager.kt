@@ -109,9 +109,27 @@ class VitalHealthConnectManager private constructor(
         taskScope.launch { checkAndUpdatePermissions() }
     }
 
+    /**
+     * Stop any running task, and close this VitalHealthConnectManager instance.
+     *
+     * Note that this is not [cleanUp], which erases all SDK settings and persistent state.
+     */
     @Suppress("unused")
     fun close() {
         taskScope.cancel()
+    }
+
+    /**
+     * Erase all SDK settings and persistent state for the current user, in addition to closing
+     * this instance via [close].
+     *
+     * You typically only need to [cleanUp] when your application has logged out the current user.
+     */
+    @Suppress("unused")
+    fun cleanUp() {
+        close()
+        encryptedSharedPreferences.edit().clear().apply()
+        vitalClient.cleanUp()
     }
 
     @Suppress("unused")

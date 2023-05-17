@@ -64,4 +64,8 @@ class VitalClient(
     val vitalLogger by lazy {
         dependencies.vitalLogger
     }
+
+    fun cleanUp() {
+        sharedPreferences.edit().clear().apply()
+    }
 }
