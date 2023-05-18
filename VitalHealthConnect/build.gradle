@@ -55,6 +55,10 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:$kotlinx_coroutines"
     implementation "androidx.work:work-runtime-ktx:$work_runtime"
 
+    implementation "com.squareup.moshi:moshi:$moshi"
+    implementation "com.squareup.moshi:moshi-kotlin:$moshi"
+    implementation "com.squareup.moshi:moshi-adapters:$moshi"
+
     testImplementation "junit:junit:$junit"
     androidTestImplementation "androidx.test.ext:junit:$test_ext"
     androidTestImplementation "androidx.test.espresso:espresso-core:$test_espresso"
