@@ -44,7 +44,7 @@ class SummaryServiceTest {
         val response = summaryService.addWorkouts(
             userId = userId,
             body = SummaryPayload(
-                stage = "dev",
+                stage = DataStage.Daily,
                 provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
@@ -80,7 +80,7 @@ class SummaryServiceTest {
         val response = summaryService.addProfile(
             userId = userId,
             body = SummaryPayload(
-                stage = "dev",
+                stage = DataStage.Daily,
                 provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
@@ -108,7 +108,7 @@ class SummaryServiceTest {
         val response = summaryService.addBody(
             userId = userId,
             body = SummaryPayload(
-                stage = "dev",
+                stage = DataStage.Daily,
                 provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
@@ -135,7 +135,7 @@ class SummaryServiceTest {
         val response = summaryService.addSleeps(
             userId = userId,
             body = SummaryPayload(
-                stage = "dev",
+                stage = DataStage.Daily,
                 provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,
@@ -159,7 +159,7 @@ class SummaryServiceTest {
         val response = summaryService.addActivities(
             userId = userId,
             body = SummaryPayload(
-                stage = "dev",
+                stage = DataStage.Daily,
                 provider = ManualProviderSlug.Manual,
                 startDate = null,
                 endDate = null,

@@ -175,44 +175,10 @@ class VitalHealthConnectManager private constructor(
     }
 
     internal fun permissionsRequiredToSyncResources(resources: Set<VitalResource>): Set<String> {
-        val recordTypes = mutableSetOf<KClass<out Record>>()
-
-        for (resource in resources) {
-            val records = when (resource) {
-                VitalResource.Water -> listOf(HydrationRecord::class)
-                VitalResource.ActiveEnergyBurned -> listOf(ActiveCaloriesBurnedRecord::class)
-                VitalResource.Activity -> listOf(
-                    ActiveCaloriesBurnedRecord::class,
-                    BasalMetabolicRateRecord::class,
-                    StepsRecord::class,
-                    DistanceRecord::class,
-                    FloorsClimbedRecord::class,
-                )
-                VitalResource.BasalEnergyBurned -> listOf(BasalMetabolicRateRecord::class)
-                VitalResource.BloodPressure -> listOf(BloodPressureRecord::class)
-                VitalResource.Body -> listOf(
-                    BodyFatRecord::class,
-                    WeightRecord::class,
-                )
-                VitalResource.Glucose -> listOf(BloodGlucoseRecord::class)
-                VitalResource.HeartRate -> listOf(HeartRateRecord::class)
-                VitalResource.HeartRateVariability -> listOf(HeartRateVariabilityRmssdRecord::class)
-                VitalResource.Profile -> listOf(HeightRecord::class)
-                VitalResource.Sleep -> listOf(
-                    SleepSessionRecord::class,
-                    SleepStageRecord::class,
-                )
-                VitalResource.Steps -> listOf(StepsRecord::class)
-                VitalResource.Workout -> listOf(
-                    ExerciseSessionRecord::class,
-                    HeartRateRecord::class,
-                )
-            }
-
-            recordTypes.addAll(records)
-        }
-
-        return recordTypes.map { HealthPermission.getReadPermission(it) }.toSet()
+        return resources
+            .flatMapTo(mutableSetOf()) { it.recordTypeDependencies() }
+            .map { HealthPermission.getReadPermission(it) }
+            .toSet()
     }
 
     @SuppressLint("ApplySharedPref")
