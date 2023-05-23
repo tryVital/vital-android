@@ -5,7 +5,7 @@ import java.util.*
 
 data class SummaryPayload<T>(
     @Json(name = "stage")
-    val stage: String,
+    val stage: DataStage,
     @Json(name = "provider")
     val provider: ManualProviderSlug,
     @Json(name = "start_date")

@@ -4,7 +4,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
 import java.util.*
 
-private const val stage = "daily"
+private val stage = DataStage.Daily
 
 interface RecordUploader {
 
