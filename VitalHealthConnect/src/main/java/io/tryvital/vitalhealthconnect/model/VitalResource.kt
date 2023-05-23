@@ -122,6 +122,11 @@ fun VitalResource.recordTypeDependencies(): List<KClass<out Record>> = when (thi
     VitalResource.Sleep -> listOf(
         SleepSessionRecord::class,
         SleepStageRecord::class,
+        HeartRateRecord::class,
+        HeartRateVariabilityRmssdRecord::class,
+        RespiratoryRateRecord::class,
+        RestingHeartRateRecord::class,
+        OxygenSaturationRecord::class,
     )
     VitalResource.Steps -> listOf(StepsRecord::class)
     VitalResource.Workout -> listOf(
