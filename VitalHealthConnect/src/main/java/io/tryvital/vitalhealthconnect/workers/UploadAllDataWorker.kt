@@ -284,13 +284,16 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         timeZoneId: String?
     ) {
         reportStatus(VitalResource.Sleep, syncing)
+        val sessions = recordReader.readSleepSession(startTime, endTime)
         val sleepPayloads =
             recordProcessor.processSleepFromRecords(
                 startTime,
                 endTime,
                 currentDevice,
-                recordReader.readSleepSession(startTime, endTime),
-                recordReader.readSleepStages(startTime, endTime)
+                sessions,
+                sessions.associateWith {
+                    recordReader.readSleepStages(it.startTime, it.endTime)
+                }
             )
         if (sleepPayloads.samples.isEmpty()) {
             reportStatus(VitalResource.Sleep, nothingToSync)

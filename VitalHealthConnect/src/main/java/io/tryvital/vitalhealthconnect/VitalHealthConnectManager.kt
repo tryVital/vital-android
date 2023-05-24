@@ -296,106 +296,18 @@ class VitalHealthConnectManager private constructor(
     @Suppress("unused")
     suspend fun read(
         resource: VitalResource,
-        startDate: Instant,
-        endDate: Instant
+        startTime: Instant,
+        endTime: Instant
     ): ProcessedResourceData {
-        val currentDevice = Build.MODEL
-
-        suspend fun readActivities(): ProcessedResourceData {
-            val activities = recordProcessor.processActivitiesFromRecords(
-                startDate,
-                endDate,
-                TimeZone.getDefault(),
-                currentDevice,
-                recordReader.readActiveEnergyBurned(startDate, endDate),
-                recordReader.readBasalMetabolicRate(startDate, endDate),
-                recordReader.readSteps(startDate, endDate),
-                recordReader.readDistance(startDate, endDate),
-                recordReader.readFloorsClimbed(startDate, endDate),
-                recordReader.readVo2Max(startDate, endDate),
-            )
-            return ProcessedResourceData.Summary(activities)
-        }
-
-        return when (resource) {
-            VitalResource.ActiveEnergyBurned -> readActivities()
-            VitalResource.BasalEnergyBurned -> readActivities()
-            VitalResource.BloodPressure -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processBloodPressureFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readBloodPressure(startDate, endDate)
-                )
-            )
-            VitalResource.Glucose -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processGlucoseFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readBloodGlucose(startDate, endDate)
-                )
-            )
-            VitalResource.HeartRate -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processHeartRateFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readHeartRate(startDate, endDate)
-                )
-            )
-            VitalResource.Steps -> readActivities()
-            VitalResource.Water -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processWaterFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readHydration(startDate, endDate)
-                )
-            )
-            VitalResource.Body -> ProcessedResourceData.Summary(
-                recordProcessor.processBodyFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readWeights(startDate, endDate),
-                    recordReader.readBodyFat(startDate, endDate)
-                )
-            )
-            VitalResource.Profile -> ProcessedResourceData.Summary(
-                recordProcessor.processProfileFromRecords(
-                    startDate,
-                    endDate,
-                    recordReader.readHeights(startDate, endDate)
-                )
-            )
-            VitalResource.Sleep -> ProcessedResourceData.Summary(
-                recordProcessor.processSleepFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readSleepSession(startDate, endDate),
-                    recordReader.readSleepStages(startDate, endDate),
-                )
-            )
-            VitalResource.Activity -> readActivities()
-            VitalResource.Workout -> ProcessedResourceData.Summary(
-                recordProcessor.processWorkoutsFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readExerciseSessions(startDate, endDate)
-                )
-            )
-            VitalResource.HeartRateVariability -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processHeartRateVariabilityRmssFromRecords(
-                    startDate,
-                    endDate,
-                    currentDevice,
-                    recordReader.readHeartRateVariabilityRmssd(startDate, endDate)
-                )
-            )
-        }
+        return readResourceByTimeRange(
+            resource,
+            startTime = startTime,
+            endTime = endTime,
+            timeZone = TimeZone.getDefault(),
+            currentDevice = Build.MODEL,
+            reader = recordReader,
+            processor = recordProcessor,
+        )
     }
 
     @Suppress("unused")
