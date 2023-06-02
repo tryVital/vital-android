@@ -303,8 +303,6 @@ class VitalHealthConnectManager private constructor(
 
         suspend fun readActivities(): ProcessedResourceData {
             val activities = recordProcessor.processActivitiesFromRecords(
-                startDate,
-                endDate,
                 TimeZone.getDefault(),
                 currentDevice,
                 recordReader.readActiveEnergyBurned(startDate, endDate),
@@ -322,24 +320,18 @@ class VitalHealthConnectManager private constructor(
             VitalResource.BasalEnergyBurned -> readActivities()
             VitalResource.BloodPressure -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processBloodPressureFromRecords(
-                    startDate,
-                    endDate,
                     currentDevice,
                     recordReader.readBloodPressure(startDate, endDate)
                 )
             )
             VitalResource.Glucose -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processGlucoseFromRecords(
-                    startDate,
-                    endDate,
                     currentDevice,
                     recordReader.readBloodGlucose(startDate, endDate)
                 )
             )
             VitalResource.HeartRate -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processHeartRateFromRecords(
-                    startDate,
-                    endDate,
                     currentDevice,
                     recordReader.readHeartRate(startDate, endDate)
                 )
@@ -347,16 +339,12 @@ class VitalHealthConnectManager private constructor(
             VitalResource.Steps -> readActivities()
             VitalResource.Water -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processWaterFromRecords(
-                    startDate,
-                    endDate,
                     currentDevice,
                     recordReader.readHydration(startDate, endDate)
                 )
             )
             VitalResource.Body -> ProcessedResourceData.Summary(
                 recordProcessor.processBodyFromRecords(
-                    startDate,
-                    endDate,
                     currentDevice,
                     recordReader.readWeights(startDate, endDate),
                     recordReader.readBodyFat(startDate, endDate)
@@ -364,15 +352,11 @@ class VitalHealthConnectManager private constructor(
             )
             VitalResource.Profile -> ProcessedResourceData.Summary(
                 recordProcessor.processProfileFromRecords(
-                    startDate,
-                    endDate,
                     recordReader.readHeights(startDate, endDate)
                 )
             )
             VitalResource.Sleep -> ProcessedResourceData.Summary(
                 recordProcessor.processSleepFromRecords(
-                    startDate,
-                    endDate,
                     currentDevice,
                     recordReader.readSleepSession(startDate, endDate),
                     recordReader.readSleepStages(startDate, endDate),
@@ -381,16 +365,12 @@ class VitalHealthConnectManager private constructor(
             VitalResource.Activity -> readActivities()
             VitalResource.Workout -> ProcessedResourceData.Summary(
                 recordProcessor.processWorkoutsFromRecords(
-                    startDate,
-                    endDate,
                     currentDevice,
                     recordReader.readExerciseSessions(startDate, endDate)
                 )
             )
             VitalResource.HeartRateVariability -> ProcessedResourceData.TimeSeries(
                 recordProcessor.processHeartRateVariabilityRmssFromRecords(
-                    startDate,
-                    endDate,
                     currentDevice,
                     recordReader.readHeartRateVariabilityRmssd(startDate, endDate)
                 )

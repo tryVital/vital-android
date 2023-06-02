@@ -153,7 +153,7 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     ) {
         reportStatus(VitalResource.Water, syncing)
         val waters = recordProcessor.processWaterFromRecords(
-            startTime, endTime, currentDevice, recordReader.readHydration(startTime, endTime)
+            currentDevice, recordReader.readHydration(startTime, endTime)
         )
 
         if (waters.samples.isEmpty()) {
@@ -179,7 +179,7 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     ) {
         reportStatus(VitalResource.HeartRate, syncing)
         val heartRatePayloads = recordProcessor.processHeartRateFromRecords(
-            startTime, endTime, currentDevice, recordReader.readHeartRate(startTime, endTime)
+            currentDevice, recordReader.readHeartRate(startTime, endTime)
         )
         if (heartRatePayloads.samples.isEmpty()) {
             reportStatus(VitalResource.HeartRate, nothingToSync)
@@ -204,8 +204,6 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     ) {
         reportStatus(VitalResource.HeartRateVariability, syncing)
         val heartRatePayloads = recordProcessor.processHeartRateVariabilityRmssFromRecords(
-            startTime,
-            endTime,
             currentDevice,
             recordReader.readHeartRateVariabilityRmssd(startTime, endTime)
         )
@@ -232,7 +230,7 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     ) {
         reportStatus(VitalResource.BloodPressure, syncing)
         val bloodPressurePayloads = recordProcessor.processBloodPressureFromRecords(
-            startTime, endTime, currentDevice, recordReader.readBloodPressure(
+            currentDevice, recordReader.readBloodPressure(
                 startTime, endTime,
             )
         )
@@ -259,7 +257,7 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     ) {
         reportStatus(VitalResource.Glucose, syncing)
         val glucosePayloads = recordProcessor.processGlucoseFromRecords(
-            startTime, endTime, currentDevice, recordReader.readBloodGlucose(startTime, endTime)
+            currentDevice, recordReader.readBloodGlucose(startTime, endTime)
         )
         if (glucosePayloads.samples.isEmpty()) {
             reportStatus(VitalResource.Glucose, nothingToSync)
@@ -286,8 +284,6 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         reportStatus(VitalResource.Sleep, syncing)
         val sleepPayloads =
             recordProcessor.processSleepFromRecords(
-                startTime,
-                endTime,
                 currentDevice,
                 recordReader.readSleepSession(startTime, endTime),
                 recordReader.readSleepStages(startTime, endTime)
@@ -317,8 +313,6 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         reportStatus(VitalResource.Body, syncing)
         val bodyPayload =
             recordProcessor.processBodyFromRecords(
-                startTime,
-                endTime,
                 currentDevice,
                 recordReader.readWeights(startTime, endTime),
                 recordReader.readBodyFat(startTime, endTime),
@@ -343,8 +337,6 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     ) {
         reportStatus(VitalResource.Profile, syncing)
         val profilePayload = recordProcessor.processProfileFromRecords(
-            startTime,
-            endTime,
             recordReader.readHeights(startTime, endTime)
         )
         recordUploader.uploadProfile(
@@ -368,8 +360,6 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     ) {
         reportStatus(VitalResource.Activity, syncing)
         val activityPayloads = recordProcessor.processActivitiesFromRecords(
-            startTime,
-            endTime,
             TimeZone.getDefault(),
             currentDevice,
             recordReader.readActiveEnergyBurned(startTime, endTime),
@@ -404,7 +394,7 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
     ) {
         reportStatus(VitalResource.Workout, syncing)
         val workoutPayloads = recordProcessor.processWorkoutsFromRecords(
-            startTime, endTime, currentDevice, recordReader.readExerciseSessions(startTime, endTime)
+            currentDevice, recordReader.readExerciseSessions(startTime, endTime)
         )
         if (workoutPayloads.samples.isEmpty()) {
             reportStatus(VitalResource.Workout, nothingToSync)
