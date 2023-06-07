@@ -21,10 +21,8 @@ internal suspend fun readResourceByTimeRange(
 ): ProcessedResourceData {
     suspend fun <Record, T: TimeSeriesData> readTimeseries(
         read: suspend (Instant, Instant) -> List<Record>,
-        process: suspend (Instant, Instant, String, List<Record>) -> T
+        process: suspend (String, List<Record>) -> T
     ): ProcessedResourceData = process(
-        startTime,
-        endTime,
         currentDevice,
         read(startTime, endTime)
     ).let(ProcessedResourceData::TimeSeries)
@@ -34,8 +32,6 @@ internal suspend fun readResourceByTimeRange(
             throw IllegalArgumentException("Unexpected resource post remapped(): $resource")
 
         VitalResource.Activity -> processor.processActivitiesFromRecords(
-            startTime = startTime,
-            endTime = endTime,
             timeZone = timeZone,
             currentDevice = currentDevice,
             activeEnergyBurned = reader.readActiveEnergyBurned(startTime, endTime),
@@ -47,16 +43,12 @@ internal suspend fun readResourceByTimeRange(
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Workout -> processor.processWorkoutsFromRecords(
-            startTime = startTime,
-            endTime = endTime,
             fallbackDeviceModel = currentDevice,
             exerciseRecords = reader.readExerciseSessions(startTime, endTime)
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Sleep -> reader.readSleepSession(startTime, endTime).let { sessions ->
             processor.processSleepFromRecords(
-                startTime = startTime,
-                endTime = endTime,
                 fallbackDeviceModel = currentDevice,
                 sleepSessionRecords = sessions,
                 readSleepStages = sessions.associateWith { session ->
@@ -69,16 +61,12 @@ internal suspend fun readResourceByTimeRange(
         }
 
         VitalResource.Body -> processor.processBodyFromRecords(
-            startTime = startTime,
-            endTime = endTime,
             fallbackDeviceModel = currentDevice,
             weightRecords = reader.readWeights(startTime, endTime),
             bodyFatRecords = reader.readBodyFat(startTime, endTime),
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Profile -> processor.processProfileFromRecords(
-            startTime = startTime,
-            endTime = endTime,
             heightRecords = reader.readHeights(startTime, endTime)
         ).let(ProcessedResourceData::Summary)
 

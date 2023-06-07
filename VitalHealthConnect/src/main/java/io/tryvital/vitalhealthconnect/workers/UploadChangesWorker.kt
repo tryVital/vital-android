@@ -224,7 +224,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 bloodPressureEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processBloodPressureFromRecords(
-                    bloodPressureStartTime, bloodPressureEndTime, currentDevice, bloodPressure
+                    currentDevice, bloodPressure
                 ).samples.map { it.toBloodPressurePayload() })
 
             reportStatus(VitalResource.BloodPressure, synced)
@@ -247,7 +247,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 waterEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processWaterFromRecords(
-                    waterStartTime, waterEndTime, currentDevice, water
+                    currentDevice, water
                 ).samples.map { it.toQuantitySamplePayload() })
 
             reportStatus(VitalResource.Water, synced)
@@ -269,7 +269,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 heartRateEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processHeartRateFromRecords(
-                    heartRateStartTime, heartRateEndTime, currentDevice, heartRate
+                    currentDevice, heartRate
                 ).samples.map { it.toQuantitySamplePayload() })
 
             reportStatus(VitalResource.HeartRate, synced)
@@ -294,7 +294,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 heartRateEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processHeartRateVariabilityRmssFromRecords(
-                    heartRateStartTime, heartRateEndTime, currentDevice, rmssdRecords
+                    currentDevice, rmssdRecords
                 ).samples.map { it.toQuantitySamplePayload() })
 
             reportStatus(VitalResource.HeartRateVariability, synced)
@@ -319,7 +319,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 bloodGlucoseEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processGlucoseFromRecords(
-                    bloodGlucoseStartTime, bloodGlucoseEndTime, currentDevice, bloodGlucose
+                    currentDevice, bloodGlucose
                 ).samples.map { it.toQuantitySamplePayload() })
 
             reportStatus(VitalResource.Glucose, synced)
@@ -346,8 +346,6 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 sleepEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processSleepFromRecords(
-                    sleepStartTime,
-                    sleepEndTime,
                     currentDevice,
                     sleeps,
                     sleeps.associateWith {
@@ -387,8 +385,6 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 activityEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processActivitiesFromRecords(
-                    activityStartTime,
-                    activityEndTime,
                     TimeZone.getDefault(),
                     currentDevice,
                     activeEnergyBurned,
@@ -420,7 +416,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 exercisesEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processWorkoutsFromRecords(
-                    exercisesStartTime, exercisesEndTime, currentDevice, exercises
+                    currentDevice, exercises
                 ).samples.map { it.toWorkoutPayload() })
 
             reportStatus(VitalResource.Workout, synced)
@@ -447,7 +443,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 bodyEndTime.toDate(),
                 timeZoneId,
                 recordProcessor.processBodyFromRecords(
-                    bodyStartTime, bodyEndTime, currentDevice, weights, bodyFats
+                    currentDevice, weights, bodyFats
                 ).toBodyPayload()
             )
             reportStatus(VitalResource.Body, synced)
@@ -468,7 +464,7 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 height.time.toDate(),
                 height.time.toDate(),
                 timeZoneId,
-                recordProcessor.processProfileFromRecords(height.time, height.time, heights)
+                recordProcessor.processProfileFromRecords(heights)
                     .toProfilePayload()
             )
             reportStatus(VitalResource.Profile, synced)
