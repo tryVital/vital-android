@@ -64,7 +64,7 @@ interface RecordProcessor {
     suspend fun processSleepFromRecords(
         fallbackDeviceModel: String,
         sleepSessionRecords: List<SleepSessionRecord>,
-        readSleepStages: List<SleepStageRecord>
+        readSleepStages: Map<SleepSessionRecord, List<SleepStageRecord>>
     ): SummaryData.Sleeps
 
     suspend fun processActivitiesFromRecords(
@@ -244,7 +244,7 @@ internal class HealthConnectRecordProcessor(
     override suspend fun processSleepFromRecords(
         fallbackDeviceModel: String,
         sleepSessionRecords: List<SleepSessionRecord>,
-        readSleepStages: List<SleepStageRecord>
+        readSleepStages: Map<SleepSessionRecord, List<SleepStageRecord>>
     ): SummaryData.Sleeps {
         return SummaryData.Sleeps(
             processSleeps(fallbackDeviceModel, sleepSessionRecords, readSleepStages)
@@ -254,7 +254,7 @@ internal class HealthConnectRecordProcessor(
     private suspend fun processSleeps(
         fallbackDeviceModel: String,
         sleeps: List<SleepSessionRecord>,
-        sleepStages: List<SleepStageRecord>,
+        sleepStages: Map<SleepSessionRecord, List<SleepStageRecord>>,
     ): List<Sleep> {
         return sleeps.filterForAcceptedSleepDataSources().map { sleepSession ->
             val heartRateRecord =
@@ -271,6 +271,7 @@ internal class HealthConnectRecordProcessor(
             val oxygenSaturationRecord =
                 recordReader.readOxygenSaturation(sleepSession.startTime, sleepSession.endTime)
 
+            val stages = sleepStages[sleepSession] ?: listOf()
             Sleep(
                 id = sleepSession.metadata.id,
                 startDate = Date.from(sleepSession.startTime),
@@ -292,7 +293,7 @@ internal class HealthConnectRecordProcessor(
                     fallbackDeviceModel
                 ),
                 stages = SleepStages(
-                    awakeSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_AWAKE }
+                    awakeSleepSamples = stages.filter { it.stage == SleepStageRecord.STAGE_TYPE_AWAKE }
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
@@ -304,7 +305,7 @@ internal class HealthConnectRecordProcessor(
                                 deviceModel = fallbackDeviceModel,
                             )
                         },
-                    deepSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_DEEP }
+                    deepSleepSamples = stages.filter { it.stage == SleepStageRecord.STAGE_TYPE_DEEP }
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
@@ -316,7 +317,7 @@ internal class HealthConnectRecordProcessor(
                                 deviceModel = fallbackDeviceModel,
                             )
                         },
-                    lightSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_LIGHT }
+                    lightSleepSamples = stages.filter { it.stage == SleepStageRecord.STAGE_TYPE_LIGHT }
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
@@ -328,7 +329,7 @@ internal class HealthConnectRecordProcessor(
                                 deviceModel = fallbackDeviceModel,
                             )
                         },
-                    remSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_REM }
+                    remSleepSamples = stages.filter { it.stage == SleepStageRecord.STAGE_TYPE_REM }
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
@@ -340,7 +341,7 @@ internal class HealthConnectRecordProcessor(
                                 deviceModel = fallbackDeviceModel,
                             )
                         },
-                    unknownSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_UNKNOWN }
+                    unknownSleepSamples = stages.filter { it.stage == SleepStageRecord.STAGE_TYPE_UNKNOWN }
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,
@@ -352,7 +353,7 @@ internal class HealthConnectRecordProcessor(
                                 deviceModel = fallbackDeviceModel,
                             )
                         },
-                    outOfBedSleepSamples = sleepStages.filter { it.stage == SleepStageRecord.STAGE_TYPE_OUT_OF_BED }
+                    outOfBedSleepSamples = stages.filter { it.stage == SleepStageRecord.STAGE_TYPE_OUT_OF_BED }
                         .map { sleepStage ->
                             QuantitySample(
                                 id = sleepStage.metadata.id,

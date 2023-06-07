@@ -49,12 +49,13 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
         )
     }
 
-    private val recordProcessor: RecordProcessor by lazy {
-        val healthConnectClientProvider = HealthConnectClientProvider()
+    private val provider by lazy { HealthConnectClientProvider() }
+    private val recordReader by lazy { HealthConnectRecordReader(applicationContext, provider) }
 
+    private val recordProcessor: RecordProcessor by lazy {
         HealthConnectRecordProcessor(
-            HealthConnectRecordReader(applicationContext, healthConnectClientProvider),
-            HealthConnectRecordAggregator(applicationContext, healthConnectClientProvider),
+            recordReader,
+            HealthConnectRecordAggregator(applicationContext, provider),
         )
     }
 
@@ -347,7 +348,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
                 recordProcessor.processSleepFromRecords(
                     currentDevice,
                     sleeps,
-                    stages,
+                    sleeps.associateWith {
+                        recordReader.readSleepStages(it.startTime, it.endTime)
+                    },
                 ).samples.map { it.toSleepPayload() })
             reportStatus(VitalResource.Sleep, synced)
         } else {

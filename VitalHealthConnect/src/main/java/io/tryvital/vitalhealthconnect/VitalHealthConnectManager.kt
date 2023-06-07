@@ -296,86 +296,18 @@ class VitalHealthConnectManager private constructor(
     @Suppress("unused")
     suspend fun read(
         resource: VitalResource,
-        startDate: Instant,
-        endDate: Instant
+        startTime: Instant,
+        endTime: Instant
     ): ProcessedResourceData {
-        val currentDevice = Build.MODEL
-
-        suspend fun readActivities(): ProcessedResourceData {
-            val activities = recordProcessor.processActivitiesFromRecords(
-                TimeZone.getDefault(),
-                currentDevice,
-                recordReader.readActiveEnergyBurned(startDate, endDate),
-                recordReader.readBasalMetabolicRate(startDate, endDate),
-                recordReader.readSteps(startDate, endDate),
-                recordReader.readDistance(startDate, endDate),
-                recordReader.readFloorsClimbed(startDate, endDate),
-                recordReader.readVo2Max(startDate, endDate),
-            )
-            return ProcessedResourceData.Summary(activities)
-        }
-
-        return when (resource) {
-            VitalResource.ActiveEnergyBurned -> readActivities()
-            VitalResource.BasalEnergyBurned -> readActivities()
-            VitalResource.BloodPressure -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processBloodPressureFromRecords(
-                    currentDevice,
-                    recordReader.readBloodPressure(startDate, endDate)
-                )
-            )
-            VitalResource.Glucose -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processGlucoseFromRecords(
-                    currentDevice,
-                    recordReader.readBloodGlucose(startDate, endDate)
-                )
-            )
-            VitalResource.HeartRate -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processHeartRateFromRecords(
-                    currentDevice,
-                    recordReader.readHeartRate(startDate, endDate)
-                )
-            )
-            VitalResource.Steps -> readActivities()
-            VitalResource.Water -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processWaterFromRecords(
-                    currentDevice,
-                    recordReader.readHydration(startDate, endDate)
-                )
-            )
-            VitalResource.Body -> ProcessedResourceData.Summary(
-                recordProcessor.processBodyFromRecords(
-                    currentDevice,
-                    recordReader.readWeights(startDate, endDate),
-                    recordReader.readBodyFat(startDate, endDate)
-                )
-            )
-            VitalResource.Profile -> ProcessedResourceData.Summary(
-                recordProcessor.processProfileFromRecords(
-                    recordReader.readHeights(startDate, endDate)
-                )
-            )
-            VitalResource.Sleep -> ProcessedResourceData.Summary(
-                recordProcessor.processSleepFromRecords(
-                    currentDevice,
-                    recordReader.readSleepSession(startDate, endDate),
-                    recordReader.readSleepStages(startDate, endDate),
-                )
-            )
-            VitalResource.Activity -> readActivities()
-            VitalResource.Workout -> ProcessedResourceData.Summary(
-                recordProcessor.processWorkoutsFromRecords(
-                    currentDevice,
-                    recordReader.readExerciseSessions(startDate, endDate)
-                )
-            )
-            VitalResource.HeartRateVariability -> ProcessedResourceData.TimeSeries(
-                recordProcessor.processHeartRateVariabilityRmssFromRecords(
-                    currentDevice,
-                    recordReader.readHeartRateVariabilityRmssd(startDate, endDate)
-                )
-            )
-        }
+        return readResourceByTimeRange(
+            resource,
+            startTime = startTime,
+            endTime = endTime,
+            timeZone = TimeZone.getDefault(),
+            currentDevice = Build.MODEL,
+            reader = recordReader,
+            processor = recordProcessor,
+        )
     }
 
     @Suppress("unused")
