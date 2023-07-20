@@ -2,10 +2,10 @@ package io.tryvital.vitalhealthconnect.records
 
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_INT_TO_STRING_MAP
+import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
 import io.tryvital.vitalhealthconnect.ext.toDate
-import io.tryvital.vitalhealthconnect.model.HCActivitySummary
 import io.tryvital.vitalhealthconnect.model.HCQuantitySample
 import io.tryvital.vitalhealthconnect.model.processedresource.*
 import kotlinx.coroutines.*
@@ -27,23 +27,23 @@ interface RecordProcessor {
     suspend fun processGlucoseFromRecords(
         currentDevice: String,
         readBloodGlucose: List<BloodGlucoseRecord>
-    ): TimeSeriesData.Glucose
+    ): TimeSeriesData.QuantitySamples
 
     suspend fun processHeartRateFromRecords(
         currentDevice: String,
         heartRateRecords: List<HeartRateRecord>
-    ): TimeSeriesData.HeartRate
+    ): TimeSeriesData.QuantitySamples
 
 
     fun processHeartRateVariabilityRmssFromRecords(
         currentDevice: String,
         heartRateRecords: List<HeartRateVariabilityRmssdRecord>
-    ): TimeSeriesData.HeartRateVariabilityRmssd
+    ): TimeSeriesData.QuantitySamples
 
     fun processWaterFromRecords(
         currentDevice: String,
         readHydration: List<HydrationRecord>
-    ): TimeSeriesData.Water
+    ): TimeSeriesData.QuantitySamples
 
     suspend fun processBodyFromRecords(
         fallbackDeviceModel: String,
@@ -114,8 +114,9 @@ internal class HealthConnectRecordProcessor(
     override suspend fun processGlucoseFromRecords(
         currentDevice: String,
         readBloodGlucose: List<BloodGlucoseRecord>
-    ): TimeSeriesData.Glucose {
-        return TimeSeriesData.Glucose(
+    ): TimeSeriesData.QuantitySamples {
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.BloodGlucose,
             readBloodGlucose.map {
                 HCQuantitySample(
                     value = it.level.inMilligramsPerDeciliter,
@@ -130,8 +131,9 @@ internal class HealthConnectRecordProcessor(
     override suspend fun processHeartRateFromRecords(
         currentDevice: String,
         heartRateRecords: List<HeartRateRecord>
-    ): TimeSeriesData.HeartRate {
-        return TimeSeriesData.HeartRate(
+    ): TimeSeriesData.QuantitySamples {
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.HeartRate,
             mapHearthRate(heartRateRecords, currentDevice)
         )
     }
@@ -139,8 +141,9 @@ internal class HealthConnectRecordProcessor(
     override fun processHeartRateVariabilityRmssFromRecords(
         currentDevice: String,
         heartRateRecords: List<HeartRateVariabilityRmssdRecord>
-    ): TimeSeriesData.HeartRateVariabilityRmssd {
-        return TimeSeriesData.HeartRateVariabilityRmssd(
+    ): TimeSeriesData.QuantitySamples {
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.HeartRateVariability,
             heartRateRecords.map {
                 HCQuantitySample(
                     value = it.heartRateVariabilityMillis,
@@ -157,8 +160,9 @@ internal class HealthConnectRecordProcessor(
     override fun processWaterFromRecords(
         currentDevice: String,
         readHydration: List<HydrationRecord>
-    ): TimeSeriesData.Water {
-        return TimeSeriesData.Water(
+    ): TimeSeriesData.QuantitySamples {
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.Water,
             readHydration.map {
                 HCQuantitySample(
                     value = it.volume.inMilliliters,

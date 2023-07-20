@@ -15,6 +15,7 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VITAL_PERFS_FILE_NAME
 import io.tryvital.client.VitalClient
+import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
 import io.tryvital.vitalhealthconnect.ext.toDate
@@ -242,7 +243,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             val waterStartTime = water.minOf { it.startTime }
             val waterEndTime = water.maxOf { it.endTime }
 
-            recordUploader.uploadWater(userId,
+            recordUploader.uploadQuantitySamples(
+                IngestibleTimeseriesResource.Water,
+                userId,
                 waterStartTime.toDate(),
                 waterEndTime.toDate(),
                 timeZoneId,
@@ -264,7 +267,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             val heartRateStartTime = heartRate.minOf { it.startTime }
             val heartRateEndTime = heartRate.maxOf { it.endTime }
 
-            recordUploader.uploadHeartRate(userId,
+            recordUploader.uploadQuantitySamples(
+                IngestibleTimeseriesResource.HeartRate,
+                userId,
                 heartRateStartTime.toDate(),
                 heartRateEndTime.toDate(),
                 timeZoneId,
@@ -289,7 +294,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             val heartRateStartTime = rmssdRecords.minOf { it.time }
             val heartRateEndTime = rmssdRecords.maxOf { it.time }
 
-            recordUploader.uploadHeartRateVariability(userId,
+            recordUploader.uploadQuantitySamples(
+                IngestibleTimeseriesResource.HeartRateVariability,
+                userId,
                 heartRateStartTime.toDate(),
                 heartRateEndTime.toDate(),
                 timeZoneId,
@@ -314,7 +321,9 @@ class UploadChangesWorker(appContext: Context, workerParams: WorkerParameters) :
             val bloodGlucoseStartTime = bloodGlucose.minOf { it.time }
             val bloodGlucoseEndTime = bloodGlucose.maxOf { it.time }
 
-            recordUploader.uploadGlucose(userId,
+            recordUploader.uploadQuantitySamples(
+                IngestibleTimeseriesResource.BloodGlucose,
+                userId,
                 bloodGlucoseStartTime.toDate(),
                 bloodGlucoseEndTime.toDate(),
                 timeZoneId,

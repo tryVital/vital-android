@@ -20,15 +20,6 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         )
     }
 
-    suspend fun sendGlucose(
-        userId: String,
-        glucosePayloads: TimeseriesPayload<List<QuantitySamplePayload>>,
-    ) {
-        return timeSeries.timeseriesPost(
-            userId = userId, resource = "glucose", payload = glucosePayloads,
-        )
-    }
-
     suspend fun getCholesterol(
         cholesterolType: CholesterolType,
         userId: String,
@@ -101,35 +92,14 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         )
     }
 
-    suspend fun sendHeartRate(
+    suspend fun sendQuantitySamples(
+        resource: IngestibleTimeseriesResource,
         userId: String,
         timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
     ) {
         return timeSeries.timeseriesPost(
             userId = userId,
-            resource = "heartrate",
-            payload = timeseriesPayload
-        )
-    }
-
-    suspend fun sendHeartRateVariability(
-        userId: String,
-        timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
-    ) {
-        return timeSeries.timeseriesPost(
-            userId = userId,
-            resource = "heartrate_variability",
-            payload = timeseriesPayload
-        )
-    }
-
-    suspend fun sendWater(
-        userId: String,
-        timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
-    ) {
-        return timeSeries.timeseriesPost(
-            userId = userId,
-            resource = "water",
+            resource = resource.toString(),
             payload = timeseriesPayload
         )
     }
