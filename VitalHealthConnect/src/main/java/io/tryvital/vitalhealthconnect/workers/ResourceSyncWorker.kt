@@ -2,6 +2,10 @@ package io.tryvital.vitalhealthconnect.workers
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
+import androidx.health.connect.client.changes.Change
+import androidx.health.connect.client.request.ChangesTokenRequest
+import androidx.health.connect.client.response.ChangesResponse
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
@@ -13,14 +17,21 @@ import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
+import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
+import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthconnect.model.recordTypeChangesToTriggerSync
 import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordAggregator
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordProcessor
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordReader
 import kotlinx.coroutines.delay
+import java.time.Duration
+import java.time.Instant
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.*
 
 internal val moshi by lazy {
@@ -142,18 +153,149 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
     override suspend fun doWork(): Result {
         val state = sharedPreferences.getJson<ResourceSyncState>(input.resource.syncStateKey)
             ?: ResourceSyncState.Historical
+        val timeZone = TimeZone.getDefault()
 
         when (state) {
-            is ResourceSyncState.Historical -> {}
-            is ResourceSyncState.Incremental -> {}
+            is ResourceSyncState.Historical -> historicalBackfill(state, timeZone)
+            is ResourceSyncState.Incremental -> incrementalBackfill(state, timeZone)
         }
 
         return Result.failure()
     }
 
+    private suspend fun historicalBackfill(state: ResourceSyncState.Historical, timeZone: TimeZone) {
+        val now = ZonedDateTime.now(timeZone.toZoneId())
+        val start = now.minus(30, ChronoUnit.DAYS)
+
+        genericBackfill(
+            stage = DataStage.Historical,
+            start = start.toInstant(),
+            end = now.toInstant(),
+            timeZone = timeZone,
+        )
+    }
+
+    private suspend fun incrementalBackfill(state: ResourceSyncState.Incremental, timeZone: TimeZone) {
+        val userId = vitalClient.checkUserId()
+        val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
+
+        var token = state.changesToken
+        var changes: ChangesResponse
+
+        do {
+            changes = client.getChanges(token)
+            token = state.changesToken
+
+            if (changes.changesTokenExpired) {
+                return genericBackfill(
+                    stage = DataStage.Daily,
+                    start = state.lastSync.toInstant(),
+                    end = Instant.now(),
+                    timeZone = timeZone,
+                )
+            }
+
+            val delta = processChangesResponse(
+                resource = input.resource,
+                responses = changes,
+                timeZone = timeZone,
+                currentDevice = Build.MODEL,
+                reader = recordReader,
+                processor = recordProcessor,
+            )
+
+            // TODO: Mark as daily stage
+            uploadResources(
+                delta,
+                uploader = recordUploader,
+                // Daily stage does not pass start ..< end
+                start = null,
+                end = null,
+                timeZoneId = timeZone.id,
+                userId = userId,
+            )
+
+        } while (changes.hasMore)
+
+        setIncremental(token = token)
+    }
+
+    private suspend fun genericBackfill(stage: DataStage, start: Instant, end: Instant, timeZone: TimeZone) {
+        val userId = vitalClient.checkUserId()
+        val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
+        var token = client.getChangesToken(
+            ChangesTokenRequest(
+                recordTypes = input.resource.recordTypeChangesToTriggerSync().toSet(),
+            )
+        )
+
+        // TODO: Chunk by days
+        val history = readResourceByTimeRange(
+            resource = input.resource,
+            startTime = start,
+            endTime = end,
+            timeZone = timeZone,
+            currentDevice = Build.MODEL,
+            reader = recordReader,
+            processor = recordProcessor,
+        )
+
+        // TODO: Mark daily vs historical stage + isFinal = false
+        uploadResources(
+            history,
+            uploader = recordUploader,
+            // Historical stage must pass the same start ..< end throughout all the chunks.
+            start = start.toDate(),
+            end = end.toDate(),
+            timeZoneId = timeZone.id,
+            userId = userId,
+        )
+
+        var changes: ChangesResponse
+
+        do {
+            changes = client.getChanges(token)
+            check(!changes.changesTokenExpired)
+
+            token = changes.nextChangesToken
+
+            val delta = processChangesResponse(
+                resource = input.resource,
+                responses = changes,
+                timeZone = timeZone,
+                currentDevice = Build.MODEL,
+                reader = recordReader,
+                processor = recordProcessor,
+            )
+
+            // TODO: Mark as historical stage + isFinal = true
+            uploadResources(
+                delta,
+                uploader = recordUploader,
+                // Historical stage must pass the same start ..< end throughout all the chunks.
+                start = start.toDate(),
+                end = end.toDate(),
+                timeZoneId = timeZone.id,
+                userId = userId,
+            )
+        } while (changes.hasMore)
+
+        setIncremental(token = token)
+    }
+
+    private fun setIncremental(token: String) {
+        val newState = ResourceSyncState.Incremental(token, lastSync = Date())
+
+        sharedPreferences.edit()
+            .putJson<ResourceSyncState>(input.resource.syncStateKey, newState)
+            .apply()
+    }
+
     private suspend fun reportStatus(resource: VitalResource, status: String) {
         setProgress(
-            Data.Builder().putString(statusTypeKey, resource.name).putString(syncStatusKey, status)
+            Data.Builder()
+                .putString(statusTypeKey, resource.name)
+                .putString(syncStatusKey, status)
                 .build()
         )
         delay(100)
