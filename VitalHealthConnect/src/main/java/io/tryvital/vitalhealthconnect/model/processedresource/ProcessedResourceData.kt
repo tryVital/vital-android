@@ -2,6 +2,7 @@ package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.BodyPayload
 import io.tryvital.client.services.data.ProfilePayload
+import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import java.util.*
 
 sealed class ProcessedResourceData {
@@ -10,11 +11,8 @@ sealed class ProcessedResourceData {
 }
 
 sealed class TimeSeriesData {
-    data class Glucose(val samples: List<QuantitySample>) : TimeSeriesData()
     data class BloodPressure(val samples: List<BloodPressureSample>) : TimeSeriesData()
-    data class HeartRate(val samples: List<QuantitySample>) : TimeSeriesData()
-    data class HeartRateVariabilityRmssd(val samples: List<QuantitySample>) : TimeSeriesData()
-    data class Water(val samples: List<QuantitySample>) : TimeSeriesData()
+    data class QuantitySamples(val resource: IngestibleTimeseriesResource, val samples: List<QuantitySample>) : TimeSeriesData()
 }
 
 sealed class SummaryData {

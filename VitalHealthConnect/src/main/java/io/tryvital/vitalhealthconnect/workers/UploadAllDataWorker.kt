@@ -9,6 +9,7 @@ import androidx.work.WorkerParameters
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
+import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.*
 import io.tryvital.vitalhealthconnect.ext.toDate
@@ -159,7 +160,9 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         if (waters.samples.isEmpty()) {
             reportStatus(VitalResource.Water, nothingToSync)
         } else {
-            recordUploader.uploadWater(userId,
+            recordUploader.uploadQuantitySamples(
+                IngestibleTimeseriesResource.Water,
+                userId,
                 startDate,
                 endDate,
                 timeZoneId,
@@ -184,7 +187,9 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         if (heartRatePayloads.samples.isEmpty()) {
             reportStatus(VitalResource.HeartRate, nothingToSync)
         } else {
-            recordUploader.uploadHeartRate(userId,
+            recordUploader.uploadQuantitySamples(
+                IngestibleTimeseriesResource.HeartRate,
+                userId,
                 startDate,
                 endDate,
                 timeZoneId,
@@ -210,7 +215,9 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         if (heartRatePayloads.samples.isEmpty()) {
             reportStatus(VitalResource.HeartRateVariability, nothingToSync)
         } else {
-            recordUploader.uploadHeartRateVariability(userId,
+            recordUploader.uploadQuantitySamples(
+                IngestibleTimeseriesResource.HeartRateVariability,
+                userId,
                 startDate,
                 endDate,
                 timeZoneId,
@@ -262,7 +269,9 @@ class UploadAllDataWorker(appContext: Context, workerParams: WorkerParameters) :
         if (glucosePayloads.samples.isEmpty()) {
             reportStatus(VitalResource.Glucose, nothingToSync)
         } else {
-            recordUploader.uploadGlucose(userId,
+            recordUploader.uploadQuantitySamples(
+                IngestibleTimeseriesResource.BloodGlucose,
+                userId,
                 startDate,
                 endDate,
                 timeZoneId,

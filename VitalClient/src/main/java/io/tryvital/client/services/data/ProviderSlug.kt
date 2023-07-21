@@ -5,6 +5,7 @@ package io.tryvital.client.services.data
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.adapters.EnumJsonAdapter
+import io.tryvital.client.utils.getJsonName
 
 @JsonClass(generateAdapter = false)
 enum class ManualProviderSlug {
@@ -73,6 +74,3 @@ enum class ProviderSlug {
             get() = EnumJsonAdapter.create(ProviderSlug::class.java).withUnknownFallback(Unrecognized)
     }
 }
-
-private fun getJsonName(value: Enum<*>) = value.javaClass
-    .getField(value.name).getAnnotation(Json::class.java)?.name ?: value.name
