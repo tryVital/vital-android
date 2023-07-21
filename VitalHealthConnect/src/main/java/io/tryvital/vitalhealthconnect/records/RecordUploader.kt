@@ -4,7 +4,6 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
 import java.util.*
 
-private val stage = DataStage.Daily
 
 interface RecordUploader {
 
@@ -14,6 +13,7 @@ interface RecordUploader {
         endDate: Date?,
         timeZoneId: String?,
         sleepPayloads: List<SleepPayload>,
+        stage: DataStage = DataStage.Daily,
     )
 
     suspend fun uploadBody(
@@ -21,7 +21,8 @@ interface RecordUploader {
         startDate: Date?,
         endDate: Date?,
         timeZoneId: String?,
-        bodyPayload: BodyPayload
+        bodyPayload: BodyPayload,
+        stage: DataStage = DataStage.Daily,
     )
 
     suspend fun uploadProfile(
@@ -29,7 +30,8 @@ interface RecordUploader {
         startDate: Date?,
         endDate: Date?,
         timeZoneId: String?,
-        profilePayload: ProfilePayload
+        profilePayload: ProfilePayload,
+        stage: DataStage = DataStage.Daily,
     )
 
     suspend fun uploadActivities(
@@ -38,6 +40,7 @@ interface RecordUploader {
         endDate: Date?,
         timeZoneId: String?,
         activityPayloads: List<ActivityPayload>,
+        stage: DataStage = DataStage.Daily,
     )
 
     suspend fun uploadWorkouts(
@@ -46,6 +49,7 @@ interface RecordUploader {
         endDate: Date?,
         timeZoneId: String?,
         workoutPayloads: List<WorkoutPayload>,
+        stage: DataStage = DataStage.Daily,
     )
 
     suspend fun uploadBloodPressure(
@@ -53,7 +57,8 @@ interface RecordUploader {
         startDate: Date?,
         endDate: Date?,
         timeZoneId: String?,
-        bloodPressurePayloads: List<BloodPressureSamplePayload>
+        bloodPressurePayloads: List<BloodPressureSamplePayload>,
+        stage: DataStage = DataStage.Daily,
     )
 
     suspend fun uploadQuantitySamples(
@@ -62,7 +67,8 @@ interface RecordUploader {
         startDate: Date?,
         endDate: Date?,
         timeZoneId: String?,
-        quantitySamples: List<QuantitySamplePayload>
+        quantitySamples: List<QuantitySamplePayload>,
+        stage: DataStage = DataStage.Daily,
     )
 }
 
@@ -73,6 +79,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         endDate: Date?,
         timeZoneId: String?,
         sleepPayloads: List<SleepPayload>,
+        stage: DataStage,
     ) {
         if (sleepPayloads.isNotEmpty()) {
             vitalClient.summaryService.addSleeps(
@@ -93,7 +100,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Date?,
         endDate: Date?,
         timeZoneId: String?,
-        bodyPayload: BodyPayload
+        bodyPayload: BodyPayload,
+        stage: DataStage,
     ) {
         vitalClient.summaryService.addBody(
             userId, SummaryPayload(
@@ -112,7 +120,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Date?,
         endDate: Date?,
         timeZoneId: String?,
-        profilePayload: ProfilePayload
+        profilePayload: ProfilePayload,
+        stage: DataStage,
     ) {
         vitalClient.summaryService.addProfile(
             userId, SummaryPayload(
@@ -132,6 +141,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         endDate: Date?,
         timeZoneId: String?,
         activityPayloads: List<ActivityPayload>,
+        stage: DataStage,
     ) {
         if (activityPayloads.isNotEmpty()) {
             vitalClient.summaryService.addActivities(
@@ -153,6 +163,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         endDate: Date?,
         timeZoneId: String?,
         workoutPayloads: List<WorkoutPayload>,
+        stage: DataStage,
     ) {
         if (workoutPayloads.isNotEmpty()) {
             vitalClient.summaryService.addWorkouts(
@@ -174,7 +185,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Date?,
         endDate: Date?,
         timeZoneId: String?,
-        quantitySamples: List<QuantitySamplePayload>
+        quantitySamples: List<QuantitySamplePayload>,
+        stage: DataStage,
     ) {
         if (quantitySamples.isNotEmpty()) {
             vitalClient.vitalsService.sendQuantitySamples(
@@ -195,7 +207,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Date?,
         endDate: Date?,
         timeZoneId: String?,
-        bloodPressurePayloads: List<BloodPressureSamplePayload>
+        bloodPressurePayloads: List<BloodPressureSamplePayload>,
+        stage: DataStage,
     ) {
         if (bloodPressurePayloads.isNotEmpty()) {
             vitalClient.vitalsService.sendBloodPressure(

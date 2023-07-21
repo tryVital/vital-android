@@ -22,6 +22,8 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
+import io.tryvital.vitalhealthconnect.model.processedresource.merged
 import io.tryvital.vitalhealthconnect.model.recordTypeChangesToTriggerSync
 import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordAggregator
@@ -204,13 +206,10 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
                 processor = recordProcessor,
             )
 
-            // TODO: Mark as daily stage
             uploadResources(
                 delta,
                 uploader = recordUploader,
-                // Daily stage does not pass start ..< end
-                start = null,
-                end = null,
+                stage = DataStage.Daily,
                 timeZoneId = timeZone.id,
                 userId = userId,
             )
@@ -229,8 +228,15 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
             )
         )
 
+        val (stageStart, stageEnd) = when (stage) {
+            // Historical stage must pass the same start ..< end throughout all the chunks.
+            DataStage.Historical -> Pair(start, end)
+            DataStage.Daily -> Pair(null, null)
+        }
+
         // TODO: Chunk by days
-        val history = readResourceByTimeRange(
+        val allData = mutableListOf<ProcessedResourceData>()
+        allData += readResourceByTimeRange(
             resource = input.resource,
             startTime = start,
             endTime = end,
@@ -238,17 +244,6 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
             currentDevice = Build.MODEL,
             reader = recordReader,
             processor = recordProcessor,
-        )
-
-        // TODO: Mark daily vs historical stage + isFinal = false
-        uploadResources(
-            history,
-            uploader = recordUploader,
-            // Historical stage must pass the same start ..< end throughout all the chunks.
-            start = start.toDate(),
-            end = end.toDate(),
-            timeZoneId = timeZone.id,
-            userId = userId,
         )
 
         var changes: ChangesResponse
@@ -259,7 +254,7 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
 
             token = changes.nextChangesToken
 
-            val delta = processChangesResponse(
+            allData += processChangesResponse(
                 resource = input.resource,
                 responses = changes,
                 timeZone = timeZone,
@@ -268,17 +263,17 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
                 processor = recordProcessor,
             )
 
-            // TODO: Mark as historical stage + isFinal = true
-            uploadResources(
-                delta,
-                uploader = recordUploader,
-                // Historical stage must pass the same start ..< end throughout all the chunks.
-                start = start.toDate(),
-                end = end.toDate(),
-                timeZoneId = timeZone.id,
-                userId = userId,
-            )
         } while (changes.hasMore)
+
+        uploadResources(
+            allData.merged(),
+            uploader = recordUploader,
+            stage = stage,
+            start = stageStart?.toDate(),
+            end = stageEnd?.toDate(),
+            timeZoneId = timeZone.id,
+            userId = userId,
+        )
 
         setIncremental(token = token)
     }
