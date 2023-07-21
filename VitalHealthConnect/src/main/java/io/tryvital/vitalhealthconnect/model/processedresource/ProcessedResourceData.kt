@@ -1,10 +1,9 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.BodyPayload
-import io.tryvital.client.services.data.ProfilePayload
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
-import java.lang.IllegalArgumentException
-import java.util.*
+import io.tryvital.client.services.data.ProfilePayload
+import java.util.Date
 
 sealed class ProcessedResourceData {
     data class Summary(val summaryData: SummaryData) : ProcessedResourceData()

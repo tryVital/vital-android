@@ -1,8 +1,19 @@
 package io.tryvital.vitalhealthconnect.records
 
 import io.tryvital.client.VitalClient
-import io.tryvital.client.services.data.*
-import java.util.*
+import io.tryvital.client.services.data.ActivityPayload
+import io.tryvital.client.services.data.BloodPressureSamplePayload
+import io.tryvital.client.services.data.BodyPayload
+import io.tryvital.client.services.data.DataStage
+import io.tryvital.client.services.data.IngestibleTimeseriesResource
+import io.tryvital.client.services.data.ManualProviderSlug
+import io.tryvital.client.services.data.ProfilePayload
+import io.tryvital.client.services.data.QuantitySamplePayload
+import io.tryvital.client.services.data.SleepPayload
+import io.tryvital.client.services.data.SummaryPayload
+import io.tryvital.client.services.data.TimeseriesPayload
+import io.tryvital.client.services.data.WorkoutPayload
+import java.util.Date
 
 
 interface RecordUploader {

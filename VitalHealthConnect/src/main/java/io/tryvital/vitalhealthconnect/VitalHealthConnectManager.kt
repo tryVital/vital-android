@@ -3,7 +3,6 @@ package io.tryvital.vitalhealthconnect
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.SharedPreferences
 import android.net.Uri
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContract
@@ -15,8 +14,6 @@ import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Volume
 import androidx.lifecycle.asFlow
 import androidx.work.*
-import io.tryvital.client.Environment
-import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.data.*
@@ -29,7 +26,6 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Semaphore
 import java.time.Instant
 import java.time.ZoneOffset
-import java.time.temporal.ChronoUnit
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -301,12 +297,6 @@ class VitalHealthConnectManager private constructor(
             reader = recordReader,
             processor = recordProcessor,
         )
-    }
-
-    @Suppress("unused")
-    fun resetChangeToken() {
-        vitalLogger.logI("Resetting change token")
-        sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
     }
 
     /**

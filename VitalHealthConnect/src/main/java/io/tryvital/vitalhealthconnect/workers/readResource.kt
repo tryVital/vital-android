@@ -4,11 +4,10 @@ import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.remapped
-import io.tryvital.vitalhealthconnect.records.RecordAggregator
 import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import java.time.Instant
-import java.util.*
+import java.util.TimeZone
 
 internal suspend fun readResourceByTimeRange(
     resource: VitalResource,

@@ -1,7 +1,7 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.SleepPayload
-import java.util.*
+import java.util.Date
 
 data class Sleep(
     val id: String,
