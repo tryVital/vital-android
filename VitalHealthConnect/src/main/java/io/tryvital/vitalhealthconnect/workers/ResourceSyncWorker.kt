@@ -162,7 +162,8 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
             is ResourceSyncState.Incremental -> incrementalBackfill(state, timeZone)
         }
 
-        return Result.failure()
+        // TODO: Report synced vs nothing to sync
+        return Result.success()
     }
 
     private suspend fun historicalBackfill(state: ResourceSyncState.Historical, timeZone: TimeZone) {
@@ -284,16 +285,6 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
         sharedPreferences.edit()
             .putJson<ResourceSyncState>(input.resource.syncStateKey, newState)
             .apply()
-    }
-
-    private suspend fun reportStatus(resource: VitalResource, status: String) {
-        setProgress(
-            Data.Builder()
-                .putString(statusTypeKey, resource.name)
-                .putString(syncStatusKey, status)
-                .build()
-        )
-        delay(100)
     }
 }
 

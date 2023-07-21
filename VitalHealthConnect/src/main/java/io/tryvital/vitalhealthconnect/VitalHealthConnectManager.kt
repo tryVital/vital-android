@@ -136,6 +136,12 @@ class VitalHealthConnectManager private constructor(
         return sharedPreferences.getBoolean(UnSecurePrefKeys.writeResourceGrant(resource), false)
     }
 
+    fun resourcesWithReadPermission(): Set<VitalResource> {
+        return VitalResource.values()
+            .filter { sharedPreferences.getBoolean(UnSecurePrefKeys.readResourceGrant(it), false) }
+            .toSet()
+    }
+
     suspend fun checkAndUpdatePermissions() {
         if (isAvailable(context) != HealthConnectAvailability.Installed) {
             return
@@ -207,7 +213,7 @@ class VitalHealthConnectManager private constructor(
         }
     }
 
-    suspend fun syncData(healthResource: Set<VitalResource> = healthResources) {
+    suspend fun syncData(resources: Set<VitalResource>? = null) {
         val userId = vitalClient.checkUserId()
 
         try {
@@ -216,35 +222,22 @@ class VitalHealthConnectManager private constructor(
             // TODO: VIT-2924 Move userId management to VitalClient
             vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect, userId = userId)
 
-            val changeToken = sharedPreferences.getString(UnSecurePrefKeys.changeTokenKey, null)
+            checkAndUpdatePermissions()
 
-            if (changeToken == null) {
-                vitalLogger.logI("No change token found, syncing all data")
+            val available = resourcesWithReadPermission()
+            val candidate = resources?.let { resources.intersect(available) } ?: available
 
-                startWorkerForAllData(userId, healthResource)
-            } else {
-                val changes = try {
-                    healthConnectClientProvider.getHealthConnectClient(context)
-                        .getChanges(changeToken)
-                } catch (e: Exception) {
-                    vitalLogger.logE("Failed to get changes", e)
-                    sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
-                    null
+            if (candidate.isEmpty()) {
+                return
+            }
+
+            coroutineScope {
+                val jobs = candidate.map { resource ->
+                    launch {
+                        startSyncWorker(resource)
+                    }
                 }
-
-                if (changes == null) {
-                    vitalLogger.logI("Change token problem, syncing all data")
-                    startWorkerForAllData(userId, healthResource)
-                } else if (changes.changesTokenExpired) {
-                    vitalLogger.logI("Changes token expired, reading all data")
-                    startWorkerForAllData(userId, healthResource)
-                } else if (changes.changes.isEmpty()) {
-                    vitalLogger.logI("No changes to sync")
-                    healthResources.map { _status.tryEmit(SyncStatus.ResourceNothingToSync(it)) }
-                } else {
-                    vitalLogger.logI("Syncing ${changes.changes.size} changes")
-                    startWorkerForChanges(userId, healthResource)
-                }
+                jobs.forEach { it.join() }
             }
 
         } catch (e: Exception) {
@@ -316,49 +309,24 @@ class VitalHealthConnectManager private constructor(
         sharedPreferences.edit().remove(UnSecurePrefKeys.changeTokenKey).apply()
     }
 
-    private suspend fun startWorkerForChanges(userId: String, healthResource: Set<VitalResource>) {
-        val workRequest = OneTimeWorkRequestBuilder<UploadChangesWorker>().setInputData(
-            UploadChangesWorker.createInputData(
-                userId = userId,
-                region = vitalClient.region,
-                environment = vitalClient.environment,
-                apiKey = vitalClient.apiKey,
-                resource = healthResource
-            )
-        ).build()
-
-        return executeWork(workRequest, "UploadChangesWorker")
-    }
-
-    private suspend fun startWorkerForAllData(userId: String, healthResource: Set<VitalResource>) {
-        val workRequest = OneTimeWorkRequestBuilder<UploadAllDataWorker>().setInputData(
-            UploadAllDataWorker.createInputData(
-                startTime = Instant.now().minus(
-                    encryptedSharedPreferences.getInt(
-                        UnSecurePrefKeys.numberOfDaysToBackFillKey, 30
-                    ).toLong(), ChronoUnit.DAYS
-                ),
-                endTime = Instant.now(),
-                userId = userId,
-                region = vitalClient.region,
-                environment = vitalClient.environment,
-                apiKey = vitalClient.apiKey,
-                resource = healthResource
-            )
-        ).build()
-
-        return executeWork(workRequest, "UploadAllDataWorker")
-    }
-
     /**
-     * Execute the given work request.
-     * Suspend until the work has succeeded, cancelled or failed.
+     * Start a new `ResourceSyncWorker` for the specified [resource].
+     * Suspend until the worker has succeeded, cancelled or failed.
      *
      * Worker status change will be mirrored to SDK sync status via [updateStatusFromJob].
      */
-    private suspend fun executeWork(workRequest: OneTimeWorkRequest, uniqueWorkName: String) {
+    private suspend fun startSyncWorker(resource: VitalResource) {
+        val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>().setInputData(
+            ResourceSyncWorkerInput(
+                resource = resource,
+                region = vitalClient.region,
+                environment = vitalClient.environment,
+                apiKey = vitalClient.apiKey,
+            ).toData()
+        ).build()
+
         val work = WorkManager.getInstance(context).beginUniqueWork(
-            uniqueWorkName,
+            "ResourceSyncWorker.${resource}",
             ExistingWorkPolicy.REPLACE,
             workRequest
         )
@@ -376,7 +344,7 @@ class VitalHealthConnectManager private constructor(
                     WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED, WorkInfo.State.FAILED -> false
                 }
             }
-            .onEach { updateStatusFromJob(listOf(it)) }
+            .onEach { updateStatusFromJob(listOf(it), resource) }
             .onStart { work.enqueue() }
             .flowOn(Dispatchers.Main)
             .launchIn(taskScope)
@@ -385,35 +353,10 @@ class VitalHealthConnectManager private constructor(
         job.join()
     }
 
-    private fun updateStatusFromJob(workInfos: List<WorkInfo>) {
+    private fun updateStatusFromJob(workInfos: List<WorkInfo>, resource: VitalResource) {
         workInfos.forEach {
             when (it.state) {
-                WorkInfo.State.RUNNING -> {
-                    it.progress.getString(statusTypeKey)?.run {
-                        val resource = VitalResource.valueOf(this)
-
-                        when (it.progress.getString(syncStatusKey)!!) {
-                            synced -> _status.tryEmit(
-                                SyncStatus.ResourceSyncingComplete(
-                                    resource
-                                )
-                            )
-                            syncing -> _status.tryEmit(
-                                SyncStatus.ResourceSyncing(
-                                    resource
-                                )
-                            )
-                            nothingToSync -> _status.tryEmit(
-                                SyncStatus.ResourceNothingToSync(
-                                    resource
-                                )
-                            )
-                            else -> {
-                                // Do nothing
-                            }
-                        }
-                    }
-                }
+                WorkInfo.State.RUNNING -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
                 WorkInfo.State.SUCCEEDED -> _status.tryEmit(SyncStatus.SyncingCompleted)
                 WorkInfo.State.FAILED -> _status.tryEmit(SyncStatus.Unknown)
                 WorkInfo.State.ENQUEUED,
