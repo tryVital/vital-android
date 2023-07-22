@@ -63,12 +63,11 @@ internal fun vitalRecordTypes(healthPermission: Set<String>): Set<KClass<out Rec
 class VitalHealthConnectManager private constructor(
     private val context: Context,
     private val healthConnectClientProvider: HealthConnectClientProvider,
-    val vitalClient: VitalClient,
+    private val vitalClient: VitalClient,
     private val recordReader: RecordReader,
     private val recordProcessor: RecordProcessor,
 ) {
     val sharedPreferences get() = vitalClient.sharedPreferences
-    val encryptedSharedPreferences get() = vitalClient.encryptedSharedPreferences
 
     private val vitalLogger = vitalClient.vitalLogger
 
@@ -307,12 +306,7 @@ class VitalHealthConnectManager private constructor(
      */
     private suspend fun startSyncWorker(resource: VitalResource) {
         val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>().setInputData(
-            ResourceSyncWorkerInput(
-                resource = resource,
-                region = vitalClient.region,
-                environment = vitalClient.environment,
-                apiKey = vitalClient.apiKey,
-            ).toData()
+            ResourceSyncWorkerInput(resource = resource).toData()
         ).build()
 
         val work = WorkManager.getInstance(context).beginUniqueWork(
@@ -361,6 +355,8 @@ class VitalHealthConnectManager private constructor(
     companion object {
         private const val packageName = "com.google.android.apps.healthdata"
 
+        private var sharedInstance: VitalHealthConnectManager? = null
+
         @Suppress("unused")
         fun isAvailable(context: Context): HealthConnectAvailability {
             return when (HealthConnectClient.sdkStatus(context, packageName)) {
@@ -388,22 +384,26 @@ class VitalHealthConnectManager private constructor(
             }
         }
 
-        fun create(
-            context: Context,
-            vitalClient: VitalClient
-        ): VitalHealthConnectManager {
-            val healthConnectClientProvider = HealthConnectClientProvider()
+        fun getOrCreate(context: Context): VitalHealthConnectManager = synchronized(VitalHealthConnectManager) {
+            var instance = sharedInstance
 
-            return VitalHealthConnectManager(
-                context,
-                healthConnectClientProvider,
-                vitalClient,
-                HealthConnectRecordReader(context, healthConnectClientProvider),
-                HealthConnectRecordProcessor(
+            if (instance == null) {
+                val healthConnectClientProvider = HealthConnectClientProvider()
+
+                instance = VitalHealthConnectManager(
+                    context,
+                    healthConnectClientProvider,
+                    VitalClient.getOrCreate(context),
                     HealthConnectRecordReader(context, healthConnectClientProvider),
-                    HealthConnectRecordAggregator(context, healthConnectClientProvider),
+                    HealthConnectRecordProcessor(
+                        HealthConnectRecordReader(context, healthConnectClientProvider),
+                        HealthConnectRecordAggregator(context, healthConnectClientProvider),
+                    )
                 )
-            )
+                sharedInstance = instance
+            }
+
+            return instance
         }
     }
 }

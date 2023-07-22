@@ -26,7 +26,7 @@ class HealthConnectViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
     private val isCurrentSDKUser
-        get() = userRepository.selectedUser!!.userId == vitalHealthConnectManager.vitalClient.currentUserId
+        get() = userRepository.selectedUser!!.userId == vitalClient.currentUserId
 
     private val viewModelState =
         MutableStateFlow(HealthConnectViewModelState(
@@ -51,11 +51,10 @@ class HealthConnectViewModel(
     fun toggleSDKCurrentUserState() {
         if (isCurrentSDKUser) {
             vitalHealthConnectManager.cleanUp()
-            vitalHealthConnectManager.vitalClient.cleanUp()
+            vitalClient.cleanUp()
         } else {
-            vitalClient.configure()
             vitalHealthConnectManager.configureHealthConnectClient()
-            vitalHealthConnectManager.vitalClient.setUserId(
+            vitalClient.setUserId(
                 userRepository.selectedUser!!.userId
             )
         }
