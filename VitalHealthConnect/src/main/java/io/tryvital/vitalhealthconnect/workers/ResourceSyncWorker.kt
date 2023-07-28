@@ -3,13 +3,11 @@ package io.tryvital.vitalhealthconnect.workers
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
-import androidx.health.connect.client.changes.Change
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
-import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
@@ -25,16 +23,18 @@ import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.merged
 import io.tryvital.vitalhealthconnect.model.recordTypeChangesToTriggerSync
-import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordAggregator
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordProcessor
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordReader
-import kotlinx.coroutines.delay
-import java.time.Duration
+import io.tryvital.vitalhealthconnect.records.RecordProcessor
+import io.tryvital.vitalhealthconnect.records.RecordReader
+import io.tryvital.vitalhealthconnect.records.RecordUploader
+import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import java.util.*
+import java.util.Date
+import java.util.TimeZone
 
 internal val moshi by lazy {
     Moshi.Builder()

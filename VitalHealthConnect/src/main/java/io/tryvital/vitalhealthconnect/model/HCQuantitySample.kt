@@ -2,7 +2,7 @@ package io.tryvital.vitalhealthconnect.model
 
 import androidx.health.connect.client.records.metadata.Metadata
 import io.tryvital.vitalhealthconnect.model.processedresource.QuantitySample
-import java.util.*
+import java.util.Date
 
 data class HCQuantitySample(
     val value: Double,

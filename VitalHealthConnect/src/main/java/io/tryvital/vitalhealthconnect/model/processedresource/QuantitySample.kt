@@ -1,7 +1,7 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.QuantitySamplePayload
-import java.util.*
+import java.util.Date
 
 data class QuantitySample(
     val id: String? = null,
