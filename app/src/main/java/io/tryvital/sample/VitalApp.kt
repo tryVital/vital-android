@@ -13,15 +13,8 @@ val region = Region.US
 val environment = Environment.Sandbox
 
 class VitalApp : Application() {
-    val client by lazy {
-        VitalClient(
-            context = this,
-            region = region,
-            environment = environment,
-            apiKey = apiKey
-        ).apply {
-            configure()
-        }
+    val client = VitalClient.getOrCreate(applicationContext).apply {
+        configure(region, environment, apiKey)
     }
 
     val userRepository by lazy {
@@ -29,7 +22,7 @@ class VitalApp : Application() {
     }
 
     val vitalHealthConnectManager by lazy {
-        VitalHealthConnectManager.create(this, client).apply {
+        VitalHealthConnectManager.getOrCreate(this).apply {
             configureHealthConnectClient()
         }
     }

@@ -23,7 +23,7 @@ class BodyServiceTest {
 
         retrofit = Dependencies.createRetrofit(
             server.url("").toString(),
-            Dependencies.createHttpClient(apiKey = apiKey),
+            Dependencies.createHttpClient(null, StaticConfiguration(apiKey = apiKey)),
             Dependencies.createMoshi()
         )
     }

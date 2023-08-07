@@ -46,17 +46,9 @@ internal val moshi by lazy {
 
 data class ResourceSyncWorkerInput(
     val resource: VitalResource,
-
-    // TODO: Remove after SDK singletonization
-    val region: Region,
-    val environment: Environment,
-    val apiKey: String,
 ) {
     fun toData(): Data = Data.Builder().run {
         putString("resource", resource.toString())
-        putString("environment", environment.name)
-        putString("region", region.name)
-        putString("apiKey", apiKey)
         build()
     }
 
@@ -65,13 +57,6 @@ data class ResourceSyncWorkerInput(
             resource = VitalResource.valueOf(
                 data.getString("resource") ?: throw IllegalArgumentException("Missing resource")
             ),
-            environment = Environment.valueOf(
-                data.getString("environment") ?: throw IllegalArgumentException("Missing environment")
-            ),
-            region = Region.valueOf(
-                data.getString("region") ?: throw IllegalArgumentException("Missing region")
-            ),
-            apiKey = data.getString("apiKey") ?: throw IllegalArgumentException("Missing API key"),
         )
     }
 }
@@ -96,7 +81,7 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
     }
 
     private val vitalClient: VitalClient by lazy {
-        VitalClient(applicationContext, input.region, input.environment, input.apiKey)
+        VitalClient.getOrCreate(applicationContext)
     }
     private val sharedPreferences: SharedPreferences get() = vitalClient.sharedPreferences
     private val healthConnectClientProvider by lazy { HealthConnectClientProvider() }

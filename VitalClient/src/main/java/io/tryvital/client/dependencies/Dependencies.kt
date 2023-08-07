@@ -8,8 +8,10 @@ import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.squareup.moshi.rawType
 import io.tryvital.client.BuildConfig
+import io.tryvital.client.ConfigurationReader
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
+import io.tryvital.client.VitalClientUnconfigured
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.ProviderSlug
 import io.tryvital.client.utils.ApiKeyInterceptor
@@ -29,15 +31,13 @@ import java.time.LocalDate
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-class Dependencies(
+internal class Dependencies(
     context: Context,
-    region: Region,
-    environment: Environment,
-    apiKey: String
+    configurationReader: ConfigurationReader
 ) {
 
     private val httpClient: OkHttpClient by lazy {
-        createHttpClient(context, apiKey)
+        createHttpClient(context, configurationReader)
     }
     private val moshi: Moshi by lazy {
         createMoshi()
@@ -48,12 +48,12 @@ class Dependencies(
     }
 
     val retrofit: Retrofit by lazy {
-        createRetrofit(resolveUrl(region, environment), httpClient, moshi)
+        createRetrofit(resolveUrl(configurationReader), httpClient, moshi)
     }
 
 
     companion object {
-        internal fun createHttpClient(context: Context? = null, apiKey: String): OkHttpClient {
+        internal fun createHttpClient(context: Context? = null, configurationReader: ConfigurationReader): OkHttpClient {
             val cacheSizeInMB: Long = 2 * 1024 * 1024
 
             val loggingInterceptor = HttpLoggingInterceptor()
@@ -77,7 +77,7 @@ class Dependencies(
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
                 .addInterceptor(VitalRequestInterceptor())
-                .addNetworkInterceptor(ApiKeyInterceptor(apiKey))
+                .addNetworkInterceptor(ApiKeyInterceptor(configurationReader))
                 .addInterceptor(loggingInterceptor)
                 .build()
         }
@@ -103,7 +103,10 @@ class Dependencies(
             .add(ManualProviderSlug::class.java, ManualProviderSlug.jsonAdapter)
             .build()
 
-        internal fun resolveUrl(region: Region, environment: Environment): String {
+        internal fun resolveUrl(configurationReader: ConfigurationReader): String {
+            val region = configurationReader.region ?: throw VitalClientUnconfigured()
+            val environment = configurationReader.environment ?: throw VitalClientUnconfigured()
+
             val urls = mapOf(
                 Region.EU to mapOf(
                     Environment.Production to "https://api.eu.tryvital.io",

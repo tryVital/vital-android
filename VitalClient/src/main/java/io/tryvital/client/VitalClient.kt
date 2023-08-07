@@ -7,23 +7,13 @@ import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.*
+import java.util.concurrent.atomic.AtomicReference
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
 
-const val VITAL_ENCRYPTED_USER_ID_KEY: String = "userId"
-const val VITAL_ENCRYPTED_REGION_KEY = "region"
-const val VITAL_ENCRYPTED_ENVIRONMENT_KEY = "environment"
-const val VITAL_ENCRYPTED_API_KEY_KEY = "apiKey"
-
 @Suppress("unused")
-class VitalClient(
-    context: Context,
-    val region: Region,
-    val environment: Environment = Environment.Sandbox,
-    val apiKey: String,
-) {
-
+class VitalClient internal constructor(context: Context) {
     val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences(
             VITAL_PERFS_FILE_NAME, Context.MODE_PRIVATE
@@ -42,8 +32,10 @@ class VitalClient(
         }
     }
 
+    private val configurationReader = SharedPreferencesConfigurationReader(encryptedSharedPreferences)
+
     private val dependencies: Dependencies by lazy {
-        Dependencies(context, region, environment, apiKey)
+        Dependencies(context, configurationReader)
     }
 
     val activityService by lazy {
@@ -87,9 +79,9 @@ class VitalClient(
     }
 
     val isConfigured: Boolean
-        get() = encryptedSharedPreferences.getString(VITAL_ENCRYPTED_API_KEY_KEY, null) != null &&
-                encryptedSharedPreferences.getString(VITAL_ENCRYPTED_ENVIRONMENT_KEY, null) != null &&
-                encryptedSharedPreferences.getString(VITAL_ENCRYPTED_REGION_KEY, null) != null
+        get() = configurationReader.region != null &&
+                configurationReader.environment != null &&
+                configurationReader.apiKey != null
 
     val currentUserId: String?
         get() = encryptedSharedPreferences.getString(VITAL_ENCRYPTED_USER_ID_KEY, null)
@@ -100,7 +92,7 @@ class VitalClient(
     }
 
     // TODO: Shift config injection from initializer, and support config change.
-    fun configure() {
+    fun configure(region: Region, environment: Environment, apiKey: String) {
         encryptedSharedPreferences.edit()
             .putString(VITAL_ENCRYPTED_API_KEY_KEY, apiKey)
             .putString(VITAL_ENCRYPTED_REGION_KEY, region.name)
@@ -124,6 +116,20 @@ class VitalClient(
 
     fun hasUserId(): Boolean {
         return encryptedSharedPreferences.getString(VITAL_ENCRYPTED_USER_ID_KEY, null) != null
+    }
+
+    companion object {
+        private var sharedInstance: VitalClient? = null
+
+        fun getOrCreate(context: Context): VitalClient = synchronized(VitalClient) {
+            var instance = sharedInstance
+            if (instance == null) {
+                instance = VitalClient(context)
+                sharedInstance = instance
+            }
+            instance = VitalClient(context)
+            return instance
+        }
     }
 }
 
