@@ -226,13 +226,14 @@ class VitalHealthConnectManager private constructor(
                 return
             }
 
-            coroutineScope {
-                val jobs = candidate.map { resource ->
-                    launch {
-                        startSyncWorker(resource)
-                    }
-                }
-                jobs.forEach { it.join() }
+            // Remap and deduplicate resources before spawning workers
+            // e.g. (Activity | ActiveEnergyBurned | BasalEnergyBurned) -> Activity
+            val remappedCandidates = candidate.mapTo(mutableSetOf()) { it.remapped() }
+
+            // Sync each resource one by one for now to lower the possibility of
+            // triggering rate limit
+            for (resource in remappedCandidates) {
+                startSyncWorker(resource)
             }
 
         } catch (e: Exception) {
@@ -305,9 +306,10 @@ class VitalHealthConnectManager private constructor(
      * Worker status change will be mirrored to SDK sync status via [updateStatusFromJob].
      */
     private suspend fun startSyncWorker(resource: VitalResource) {
-        val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>().setInputData(
-            ResourceSyncWorkerInput(resource = resource).toData()
-        ).build()
+        val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>()
+            .setInputData(ResourceSyncWorkerInput(resource = resource).toData())
+            .addTag(resource.name)
+            .build()
 
         val work = WorkManager.getInstance(context).beginUniqueWork(
             "ResourceSyncWorker.${resource}",

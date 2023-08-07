@@ -62,7 +62,7 @@ data class ResourceSyncWorkerInput(
 }
 
 sealed class ResourceSyncState {
-    object Historical : ResourceSyncState()
+    data class Historical(val start: Date, val end: Date) : ResourceSyncState()
     data class Incremental(val changesToken: String, val lastSync: Date) : ResourceSyncState()
 
     companion object {
@@ -138,9 +138,11 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
      *     b. `generic_backfill(stage="daily", start=max(), end=now())`
      */
     override suspend fun doWork(): Result {
-        val state = sharedPreferences.getJson<ResourceSyncState>(input.resource.syncStateKey)
-            ?: ResourceSyncState.Historical
         val timeZone = TimeZone.getDefault()
+        val state = sharedPreferences.getJson(input.resource.syncStateKey)
+            ?: initialState(timeZone)
+
+        vitalLogger.logI("ResourceSyncWorker: starting for ${input.resource}; state = $state")
 
         when (state) {
             is ResourceSyncState.Historical -> historicalBackfill(state, timeZone)
@@ -151,14 +153,17 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
         return Result.success()
     }
 
-    private suspend fun historicalBackfill(state: ResourceSyncState.Historical, timeZone: TimeZone) {
+    private fun initialState(timeZone: TimeZone): ResourceSyncState {
         val now = ZonedDateTime.now(timeZone.toZoneId())
         val start = now.minus(30, ChronoUnit.DAYS)
+        return ResourceSyncState.Historical(start = start.toInstant().toDate(), end = now.toInstant().toDate())
+    }
 
+    private suspend fun historicalBackfill(state: ResourceSyncState.Historical, timeZone: TimeZone) {
         genericBackfill(
             stage = DataStage.Historical,
-            start = start.toInstant(),
-            end = now.toInstant(),
+            start = state.start.toInstant(),
+            end = state.end.toInstant(),
             timeZone = timeZone,
         )
     }
@@ -172,7 +177,6 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
 
         do {
             changes = client.getChanges(token)
-            token = state.changesToken
 
             if (changes.changesTokenExpired) {
                 return genericBackfill(
@@ -200,9 +204,13 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
                 userId = userId,
             )
 
-        } while (changes.hasMore)
+            // Since we have successfully uploaded this batch of changes,
+            // save the next change token, in case we get rate limited on the
+            // next `getChanges(token)` call.
+            setIncremental(token = state.changesToken)
+            token = state.changesToken
 
-        setIncremental(token = token)
+        } while (changes.hasMore)
     }
 
     private suspend fun genericBackfill(stage: DataStage, start: Instant, end: Instant, timeZone: TimeZone) {
