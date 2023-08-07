@@ -29,36 +29,6 @@ import java.time.ZoneOffset
 import java.util.*
 import kotlin.reflect.KClass
 
-internal val readRecordTypes = setOf(
-    ExerciseSessionRecord::class,
-    DistanceRecord::class,
-    ActiveCaloriesBurnedRecord::class,
-    HeartRateRecord::class,
-    RespiratoryRateRecord::class,
-    HeightRecord::class,
-    BodyFatRecord::class,
-    WeightRecord::class,
-    SleepSessionRecord::class,
-    SleepStageRecord::class,
-    OxygenSaturationRecord::class,
-    HeartRateVariabilityRmssdRecord::class,
-    RestingHeartRateRecord::class,
-    BasalMetabolicRateRecord::class,
-    StepsRecord::class,
-    DistanceRecord::class,
-    FloorsClimbedRecord::class,
-    HydrationRecord::class,
-    BloodGlucoseRecord::class,
-    BloodPressureRecord::class,
-    HeartRateRecord::class,
-)
-
-internal fun vitalRecordTypes(healthPermission: Set<String>): Set<KClass<out Record>> {
-    return readRecordTypes.filterTo(mutableSetOf()) { recordType ->
-        healthPermission.contains(HealthPermission.getReadPermission(recordType))
-    }
-}
-
 @Suppress("MemberVisibilityCanBePrivate")
 class VitalHealthConnectManager private constructor(
     private val context: Context,
