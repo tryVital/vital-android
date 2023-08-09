@@ -26,7 +26,9 @@ class VitalApp : Application() {
     val vitalHealthConnectManager by lazy {
         check(this.client.isConfigured)
         VitalHealthConnectManager.getOrCreate(this).apply {
-            configureHealthConnectClient()
+            configureHealthConnectClient(
+                syncNotificationBuilder = VitalSyncNotificationBuilder
+            )
         }
     }
 

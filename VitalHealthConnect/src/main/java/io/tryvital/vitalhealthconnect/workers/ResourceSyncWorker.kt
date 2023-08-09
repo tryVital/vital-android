@@ -7,6 +7,7 @@ import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import androidx.work.CoroutineWorker
 import androidx.work.Data
+import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
@@ -18,6 +19,8 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
+import io.tryvital.vitalhealthconnect.SyncNotificationBuilder
+import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -35,6 +38,8 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.TimeZone
+
+const val VITAL_SYNC_NOTIFICATION_ID = 123
 
 internal val moshi by lazy {
     Moshi.Builder()
@@ -82,6 +87,9 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
 
     private val vitalClient: VitalClient by lazy {
         VitalClient.getOrCreate(applicationContext)
+    }
+    private val syncNotificationBuilder: SyncNotificationBuilder? by lazy {
+        VitalHealthConnectManager.getOrCreate(applicationContext).syncNotificationBuilder
     }
     private val sharedPreferences: SharedPreferences get() = vitalClient.sharedPreferences
     private val healthConnectClientProvider by lazy { HealthConnectClientProvider() }
@@ -143,6 +151,13 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
             ?: initialState(timeZone)
 
         vitalLogger.logI("ResourceSyncWorker: starting for ${input.resource}; state = $state")
+
+        syncNotificationBuilder?.run {
+            val notification = build(applicationContext, input.resource)
+            setForeground(
+                ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification)
+            )
+        }
 
         when (state) {
             is ResourceSyncState.Historical -> historicalBackfill(state, timeZone)

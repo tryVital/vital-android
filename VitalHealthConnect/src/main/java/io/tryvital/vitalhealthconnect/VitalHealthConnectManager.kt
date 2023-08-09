@@ -40,6 +40,7 @@ class VitalHealthConnectManager private constructor(
     val sharedPreferences get() = vitalClient.sharedPreferences
 
     private val vitalLogger = vitalClient.vitalLogger
+    internal var syncNotificationBuilder: SyncNotificationBuilder? = null
 
     // Unlimited buffering for slow subscribers.
     // https://github.com/Kotlin/kotlinx.coroutines/issues/2034#issuecomment-630381961
@@ -152,16 +153,24 @@ class VitalHealthConnectManager private constructor(
             .toSet()
     }
 
+    /**
+     * @param syncNotificationBuilder When you provide a builder, Vital SDK will start resource
+     * sync workers as foreground services, with the user-visible notification info returned by
+     * your [SyncNotificationBuilder]. This allows the sync process to continue even when the
+     * user has switched away from your app.
+     */
     @SuppressLint("ApplySharedPref")
     fun configureHealthConnectClient(
         logsEnabled: Boolean = false,
         syncOnAppStart: Boolean = true,
         numberOfDaysToBackFill: Int = 30,
+        syncNotificationBuilder: SyncNotificationBuilder? = null,
     ) {
         if (!vitalClient.isConfigured) {
             throw IllegalStateException("VitalClient has not been configured.")
         }
 
+        this.syncNotificationBuilder = syncNotificationBuilder
         vitalLogger.enabled = logsEnabled
 
         sharedPreferences.edit()
