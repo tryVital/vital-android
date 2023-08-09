@@ -29,36 +29,6 @@ import java.time.ZoneOffset
 import java.util.*
 import kotlin.reflect.KClass
 
-internal val readRecordTypes = setOf(
-    ExerciseSessionRecord::class,
-    DistanceRecord::class,
-    ActiveCaloriesBurnedRecord::class,
-    HeartRateRecord::class,
-    RespiratoryRateRecord::class,
-    HeightRecord::class,
-    BodyFatRecord::class,
-    WeightRecord::class,
-    SleepSessionRecord::class,
-    SleepStageRecord::class,
-    OxygenSaturationRecord::class,
-    HeartRateVariabilityRmssdRecord::class,
-    RestingHeartRateRecord::class,
-    BasalMetabolicRateRecord::class,
-    StepsRecord::class,
-    DistanceRecord::class,
-    FloorsClimbedRecord::class,
-    HydrationRecord::class,
-    BloodGlucoseRecord::class,
-    BloodPressureRecord::class,
-    HeartRateRecord::class,
-)
-
-internal fun vitalRecordTypes(healthPermission: Set<String>): Set<KClass<out Record>> {
-    return readRecordTypes.filterTo(mutableSetOf()) { recordType ->
-        healthPermission.contains(HealthPermission.getReadPermission(recordType))
-    }
-}
-
 @Suppress("MemberVisibilityCanBePrivate")
 class VitalHealthConnectManager private constructor(
     private val context: Context,
@@ -226,13 +196,14 @@ class VitalHealthConnectManager private constructor(
                 return
             }
 
-            coroutineScope {
-                val jobs = candidate.map { resource ->
-                    launch {
-                        startSyncWorker(resource)
-                    }
-                }
-                jobs.forEach { it.join() }
+            // Remap and deduplicate resources before spawning workers
+            // e.g. (Activity | ActiveEnergyBurned | BasalEnergyBurned) -> Activity
+            val remappedCandidates = candidate.mapTo(mutableSetOf()) { it.remapped() }
+
+            // Sync each resource one by one for now to lower the possibility of
+            // triggering rate limit
+            for (resource in remappedCandidates) {
+                startSyncWorker(resource)
             }
 
         } catch (e: Exception) {
@@ -305,9 +276,10 @@ class VitalHealthConnectManager private constructor(
      * Worker status change will be mirrored to SDK sync status via [updateStatusFromJob].
      */
     private suspend fun startSyncWorker(resource: VitalResource) {
-        val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>().setInputData(
-            ResourceSyncWorkerInput(resource = resource).toData()
-        ).build()
+        val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>()
+            .setInputData(ResourceSyncWorkerInput(resource = resource).toData())
+            .addTag(resource.name)
+            .build()
 
         val work = WorkManager.getInstance(context).beginUniqueWork(
             "ResourceSyncWorker.${resource}",
