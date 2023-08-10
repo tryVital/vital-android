@@ -10,11 +10,11 @@ import io.tryvital.vitalhealthconnect.SyncNotificationBuilder
 import io.tryvital.vitalhealthconnect.model.VitalResource
 
 object VitalSyncNotificationBuilder: SyncNotificationBuilder {
-    override fun build(context: Context, resource: VitalResource): Notification {
+    override fun build(context: Context, resources: Set<VitalResource>): Notification {
         return NotificationCompat.Builder(context, createChannel(context))
             .setContentTitle("Vital Sync")
             .setTicker("Vital Sync")
-            .setContentText("$resource is being synchronized")
+            .setContentText("Syncing ${resources.map { it.toString() }.joinToString(", ")}")
             .setOngoing(true)
             .setSmallIcon(android.R.drawable.ic_popup_sync)
             .build()

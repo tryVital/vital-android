@@ -211,9 +211,7 @@ class VitalHealthConnectManager private constructor(
 
             // Sync each resource one by one for now to lower the possibility of
             // triggering rate limit
-            for (resource in remappedCandidates) {
-                startSyncWorker(resource)
-            }
+            startSyncWorker(remappedCandidates)
 
         } catch (e: Exception) {
             vitalLogger.logE("Error syncing data", e)
@@ -284,17 +282,17 @@ class VitalHealthConnectManager private constructor(
      *
      * Worker status change will be mirrored to SDK sync status via [updateStatusFromJob].
      */
-    private suspend fun startSyncWorker(resource: VitalResource) {
-        val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>()
-            .setInputData(ResourceSyncWorkerInput(resource = resource).toData())
-            .addTag(resource.name)
+    private suspend fun startSyncWorker(resources: Set<VitalResource>) {
+        val workRequest = OneTimeWorkRequestBuilder<ResourceSyncStarter>()
+            .setInputData(ResourceSyncStarterInput(resources = resources).toData())
             .build()
 
         val work = WorkManager.getInstance(context).beginUniqueWork(
-            "ResourceSyncWorker.${resource}",
-            ExistingWorkPolicy.REPLACE,
+            "ResourceSyncStarter",
+            ExistingWorkPolicy.KEEP,
             workRequest
         )
+        work.enqueue()
 
         // Launch the work in `taskScope` so that it can be cancelled immediately when the whole
         // VitalHealthConnectManager is closed, independent of the caller of executeWork().
@@ -309,7 +307,12 @@ class VitalHealthConnectManager private constructor(
                     WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED, WorkInfo.State.FAILED -> false
                 }
             }
-            .onEach { updateStatusFromJob(listOf(it), resource) }
+            .onEach {
+                // TODO: Temporary
+                for (resource in resources) {
+                    updateStatusFromJob(listOf(it), resource)
+                }
+            }
             .onStart { work.enqueue() }
             .flowOn(Dispatchers.Main)
             .launchIn(taskScope)

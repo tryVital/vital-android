@@ -33,6 +33,7 @@ import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import io.tryvital.vitalhealthconnect.records.RecordUploader
 import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
+import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -87,9 +88,6 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
 
     private val vitalClient: VitalClient by lazy {
         VitalClient.getOrCreate(applicationContext)
-    }
-    private val syncNotificationBuilder: SyncNotificationBuilder? by lazy {
-        VitalHealthConnectManager.getOrCreate(applicationContext).syncNotificationBuilder
     }
     private val sharedPreferences: SharedPreferences get() = vitalClient.sharedPreferences
     private val healthConnectClientProvider by lazy { HealthConnectClientProvider() }
@@ -151,13 +149,6 @@ class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
             ?: initialState(timeZone)
 
         vitalLogger.logI("ResourceSyncWorker: starting for ${input.resource}; state = $state")
-
-        syncNotificationBuilder?.run {
-            val notification = build(applicationContext, input.resource)
-            setForeground(
-                ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification)
-            )
-        }
 
         when (state) {
             is ResourceSyncState.Historical -> historicalBackfill(state, timeZone)
