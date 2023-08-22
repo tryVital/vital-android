@@ -49,6 +49,19 @@ enum class SensorType {
     }
 }
 
+
+enum class SensorFamily(val rawValue: UByte) {
+    libre(0x0u), librePro(0x1u), libre2(0x3u), libreSense(0x7u);
+
+    companion object {
+        fun parseFromPatchInfo(patchInfo: UByteArray): SensorFamily {
+            val value = (patchInfo[2].toUInt() shr 4).toUByte()
+            return values().firstOrNull { it.rawValue == value } ?: libre
+        }
+    }
+}
+
+
 enum class SensorState(val rawValue: UByte) {
     unknown     (0x00u),
 
@@ -102,19 +115,29 @@ class Sensor(
     val factoryHistory: List<Glucose>
         get() = history.map { factoryGlucose(it, calibrationInfo) }
 
+    var state: SensorState = SensorState.unknown
     var initializations: UByte = 0u
     var calibrationInfo = CalibrationInfo()
     var region: SensorRegion = SensorRegion.Unknown
     var maxLife: Int = 0
+    var age: UInt = 0u
+
+    var serial: String = ""
+    var family: SensorFamily = SensorFamily.libre
+
+    init {
+        family = SensorFamily.parseFromPatchInfo(patchInfo)
+        serial = serialNumber(uid, family)
+    }
 
     fun setFRAM(fram: UByteArray) {
         this.fram = fram
 
-        val state = SensorState.valueOf(fram[4])
+        state = SensorState.valueOf(fram[4])
 
         if (fram.size < 320) { return }
 
-        val age = fram[316].toUInt() + fram[317].toUInt() shl 8    // body[-4]
+        age = fram[316].toUInt() + fram[317].toUInt() shl 8    // body[-4]
         val startDate = lastReadingDate.minusSeconds((age * 60u).toLong())
         initializations = fram[318]
 
@@ -195,7 +218,7 @@ class Sensor(
 
         // fram[322...323] (footer[2..3]) corresponds to patchInfo[2...3]
         region = runCatching { SensorRegion.valueOf(fram[323]) }.getOrNull() ?: SensorRegion.Unknown
-        maxLife = fram[326].toInt() or (fram[327].toInt() shl 8)
+        maxLife = fram[326].toInt() + (fram[327].toInt() shl 8)
 
         val i1 = readBits(fram, 2u, 0, 3)
         val i2 = readBits(fram, 2u, 3, 0xa)
@@ -224,4 +247,32 @@ fun readBits(buffer: UByteArray, byteOffset: UInt, bitOffset: Int, bitCount: Int
         }
     }
     return res.toUInt()
+}
+
+fun serialNumber(uid: UByteArray, family: SensorFamily): String {
+    val lookupTable = arrayOf("0","1","2","3","4","5","6","7","8","9","A","C","D","E","F","G","H","J","K","L","M","N","P","Q","R","T","U","V","W","X","Y","Z")
+    if (uid.size != 8) { return "" }
+    val bytes = uid.reversed().takeLast(6)
+    val fiveBitsArray = mutableListOf<UByte>()
+    fiveBitsArray.add( (bytes[0] shr 3) )
+    fiveBitsArray.add( ((bytes[0] shl 2) + (bytes[1] shr 6)).toUByte() )
+    fiveBitsArray.add( (bytes[1] shr 1) )
+    fiveBitsArray.add( ((bytes[1] shl 4) + (bytes[2] shr 4)).toUByte() )
+    fiveBitsArray.add( ((bytes[2] shl 1) + (bytes[3] shr 7)).toUByte() )
+    fiveBitsArray.add( (bytes[3] shr 2) )
+    fiveBitsArray.add( ((bytes[3] shl 3) + (bytes[4] shr 5)).toUByte() )
+    fiveBitsArray.add( (bytes[4] ))
+    fiveBitsArray.add( (bytes[5] shr 3) )
+    fiveBitsArray.add( bytes[5] shl 2 )
+    return fiveBitsArray.fold(family.rawValue.toString()) { cur, next ->
+        cur + lookupTable[ (0x1F and next.toInt()) ]
+    }
+}
+
+infix fun UByte.shr(other: Int): UByte {
+    return (toUInt() shr other).toUByte()
+}
+
+infix fun UByte.shl(other: Int): UByte {
+    return (toUInt() shl other).toUByte()
 }

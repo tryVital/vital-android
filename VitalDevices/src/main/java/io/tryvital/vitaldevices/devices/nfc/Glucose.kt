@@ -15,9 +15,10 @@ data class Glucose(
     val dataQuality: DataQuality,
     val dataQualityFlags: Int,
     val value: Int = 0,
-    val valueUnit: Double = 0.0,
     val temperature: Double = 0.0,
-)
+) {
+    val valueUnit: Double get() = value.toDouble() / 18.0182
+}
 
 @JvmInline
 value class DataQuality(private val rawValue: UShort) {
