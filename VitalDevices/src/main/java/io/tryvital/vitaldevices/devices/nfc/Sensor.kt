@@ -96,11 +96,16 @@ class Sensor(
     var trend: List<Glucose> = emptyList()
     var history: List<Glucose> = emptyList()
 
-    var factoryTrend: List<Glucose> = emptyList()
-    var factoryHistory: List<Glucose> = emptyList()
+    val factoryTrend: List<Glucose>
+        get() = trend.map { factoryGlucose(it, calibrationInfo) }
+
+    val factoryHistory: List<Glucose>
+        get() = history.map { factoryGlucose(it, calibrationInfo) }
 
     var initializations: UByte = 0u
     var calibrationInfo = CalibrationInfo()
+    var region: SensorRegion = SensorRegion.Unknown
+    var maxLife: Int = 0
 
     fun setFRAM(fram: UByteArray) {
         this.fram = fram
@@ -152,10 +157,10 @@ class Sensor(
         val preciseHistoryIndex = ((age - 3u) / 15u) % 32u
         val delay = (age - 3u) % 15u + 3u
         var readingDate = lastReadingDate
-        if (preciseHistoryIndex == historyIndex.toUInt()) {
-            readingDate = readingDate.minusSeconds((60u * delay).toLong())
+        readingDate = if (preciseHistoryIndex == historyIndex.toUInt()) {
+            readingDate.minusSeconds((60u * delay).toLong())
         } else {
-            readingDate = readingDate.plusSeconds((60u * (delay - 15u)).toLong())
+            readingDate.plusSeconds((60u * (delay - 15u)).toLong())
         }
 
         for (i in 0u until 32u) {
@@ -189,8 +194,8 @@ class Sensor(
         if (fram.size < 344) { return }
 
         // fram[322...323] (footer[2..3]) corresponds to patchInfo[2...3]
-        val region = runCatching { SensorRegion.valueOf(fram[323]) }.getOrNull() ?: SensorRegion.Unknown
-        val maxLife = fram[326].toInt() or (fram[327].toInt() shl 8)
+        region = runCatching { SensorRegion.valueOf(fram[323]) }.getOrNull() ?: SensorRegion.Unknown
+        maxLife = fram[326].toInt() or (fram[327].toInt() shl 8)
 
         val i1 = readBits(fram, 2u, 0, 3)
         val i2 = readBits(fram, 2u, 3, 0xa)
