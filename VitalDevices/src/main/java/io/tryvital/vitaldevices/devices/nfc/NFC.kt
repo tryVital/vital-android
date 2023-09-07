@@ -21,6 +21,13 @@ internal class NFC(
     @Suppress("unused")
     fun startSession(activity: Activity) {
         val adapter = NfcAdapter.getDefaultAdapter(activity.applicationContext)
+        if (adapter == null) {
+            if (continuation.isActive) {
+                continuation.resumeWithException(NfcUnsupportedError())
+            }
+            return
+        }
+
         adapter.enableReaderMode(
             activity,
             { tag -> onDiscoveredTag(tag) },
@@ -229,6 +236,7 @@ value class RequestFlag(val rawValue: UInt) {
 class NfcUnsupportedSensorError(val sensorType: SensorType): Throwable("Unsupported sensor: $sensorType")
 class NfcTransportError(message: String, cause: Throwable? = null): Throwable(message, cause)
 class NfcResponseError(status: UByte, status2: UByte): Throwable("NFC Response error: %x %x".format(status, status2))
+class NfcUnsupportedError: Throwable("NFC is not supported by this device")
 
 @Suppress("unused")
 class NfcResponseVAPDU(

@@ -56,11 +56,15 @@ data class Libre1Read(
 )
 
 interface Libre1Reader {
-    suspend fun read(activity: Activity): Libre1Read
+    suspend fun read(): Libre1Read
+
+    companion object {
+        fun create(activity: Activity): Libre1Reader = Libre1ReaderImpl(activity)
+    }
 }
 
-internal class Libre1ReaderImpl(): Libre1Reader {
-    override suspend fun read(activity: Activity): Libre1Read {
+internal class Libre1ReaderImpl(private val activity: Activity): Libre1Reader {
+    override suspend fun read(): Libre1Read {
         var nfc: NFC? = null
 
         val (sensor, glucose) = suspendCancellableCoroutine { continuation ->

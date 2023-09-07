@@ -20,7 +20,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import io.tryvital.sample.Screen
+import io.tryvital.vitaldevices.Brand
 import io.tryvital.vitaldevices.DeviceModel
+import io.tryvital.vitaldevices.Kind
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -47,6 +49,7 @@ fun DevicesScreen(navController: NavHostController) {
             modifier = Modifier
                 .padding(padding)
                 .verticalScroll(rememberScrollState()), content = {
+                Box(modifier = Modifier.height(32.dp))
                 Text(
                     text = "Glucose devices",
                     modifier = Modifier
