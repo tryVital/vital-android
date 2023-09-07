@@ -1,7 +1,9 @@
 package io.tryvital.vitaldevices.devices
 
 import android.app.Activity
+import android.content.pm.PackageManager.PERMISSION_GRANTED
 import io.tryvital.client.services.data.QuantitySamplePayload
+import io.tryvital.vitaldevices.PermissionMissing
 import io.tryvital.vitaldevices.devices.nfc.Glucose
 import io.tryvital.vitaldevices.devices.nfc.NFC
 import io.tryvital.vitaldevices.devices.nfc.Sensor
@@ -65,6 +67,10 @@ interface Libre1Reader {
 
 internal class Libre1ReaderImpl(private val activity: Activity): Libre1Reader {
     override suspend fun read(): Libre1Read {
+        if (activity.checkCallingOrSelfPermission(android.Manifest.permission.NFC) != PERMISSION_GRANTED) {
+            throw PermissionMissing(android.Manifest.permission.NFC)
+        }
+
         var nfc: NFC? = null
 
         val (sensor, glucose) = suspendCancellableCoroutine { continuation ->

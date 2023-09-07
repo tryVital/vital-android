@@ -31,6 +31,7 @@ class DeviceViewModel(
                 bloodPressureSamples = emptyList(),
                 isScanning = false,
                 canScan = true,
+                isReading = false,
             )
         )
     val uiState = viewModelState.asStateFlow()
@@ -45,9 +46,11 @@ class DeviceViewModel(
                     ScannedDevice(address = "", name = "Libre1", deviceModel = deviceModel)
                 )
                 else -> {
-                    // TODO: Check BLE permission & requests
-                    // val bondedDevices = vitalDeviceManager.connected(deviceModel)
-                    emptyList()
+                    try {
+                        vitalDeviceManager.connected(deviceModel)
+                    } catch (e: PermissionMissing) {
+                        emptyList()
+                    }
                 }
             }
 
@@ -87,8 +90,22 @@ class DeviceViewModel(
         viewModelState.update { it.copy(isScanning = false) }
     }
 
+    fun cancelRead() {
+        viewModelState.update { it.copy(isReading = false) }
+    }
+
     fun connect(context: Context, activity: Activity, scannedDevice: ScannedDevice) {
         viewModelScope.launch {
+            viewModelState.update { it.copy(isReading = true) }
+
+            // Cancel the scope if isReading transitions back to false before the reading ends.
+            viewModelState
+                .asStateFlow()
+                .filterNot { it.isReading }
+                .take(1)
+                .onEach { this.cancel() }
+                .launchIn(this)
+
             try {
                 when (uiState.value.device.kind) {
                     Kind.BloodPressure -> vitalDeviceManager.bloodPressure(context, scannedDevice)
@@ -111,6 +128,8 @@ class DeviceViewModel(
                 }
             } catch (e: Throwable) {
                 Toast.makeText(context, "${e::class.simpleName}: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                viewModelState.update { it.copy(isReading = false) }
             }
         }
     }
@@ -160,4 +179,5 @@ data class BluetoothViewModelState(
     val bloodPressureSamples: List<BloodPressureSample>,
     val canScan: Boolean,
     val isScanning: Boolean,
+    val isReading: Boolean,
 )
