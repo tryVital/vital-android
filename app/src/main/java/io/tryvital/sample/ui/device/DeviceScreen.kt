@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +21,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -186,7 +188,7 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                                 Text(text = scannedDevice.name)
                             },
                             trailingContent = {
-                                Row {
+                                Row(verticalAlignment = CenterVertically) {
                                     if (scannedDevice.canPair) {
                                         Button(onClick = {
                                             viewModel.pair(context, scannedDevice)
@@ -195,10 +197,35 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                                         }
                                         Box(modifier = Modifier.width(4.dp))
                                     }
-                                    Button(onClick = {
-                                        viewModel.connect(context, context as ComponentActivity, scannedDevice)
-                                    }) {
-                                        Text("Read")
+
+                                    if (state.isReading) {
+                                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                    }
+
+                                    Button(
+                                        onClick = {
+                                            if (state.isReading) {
+                                                viewModel.cancelRead()
+                                            } else {
+                                                viewModel.connect(
+                                                    context,
+                                                    context as ComponentActivity,
+                                                    scannedDevice
+                                                )
+                                            }
+                                        },
+                                        colors = if (state.isReading) {
+                                            ButtonDefaults.outlinedButtonColors()
+                                        } else {
+                                            ButtonDefaults.filledTonalButtonColors()
+                                        }
+                                    ) {
+                                        if (state.isReading) {
+                                            Text("Cancel")
+                                        } else {
+                                            Text("Read")
+                                        }
                                     }
                                 }
                             },

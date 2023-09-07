@@ -6,11 +6,15 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.*
 import android.content.Context.BLUETOOTH_SERVICE
+import android.content.pm.PackageManager.PERMISSION_GRANTED
+import android.os.Build
 import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.devices.*
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.*
+
+class PermissionMissing(permission: String): Throwable("Missing $permission permission")
 
 @Suppress("OPT_IN_USAGE")
 @SuppressLint("MissingPermission")
@@ -23,14 +27,14 @@ class VitalDeviceManager(
     private val vitalLogger = VitalLogger.getOrCreate()
 
     fun connected(deviceModel: DeviceModel): List<ScannedDevice> {
+        checkPermissions(scan = false, connect = true)
         return bluetoothAdapter.bondedDevices.mapNotNull { mapIfSuitable(it, deviceModel) }
     }
+
     fun search(deviceModel: DeviceModel) = callbackFlow {
         vitalLogger.logI("Searching for ${deviceModel.name}")
 
-        if (!bluetoothAdapter.isEnabled) {
-            throw IllegalStateException("Bluetooth is not enabled on this device")
-        }
+        checkPermissions(scan = true, connect = false)
 
         val expectedServiceUUID = arrayOf(serviceUUID(deviceModel.kind))
         vitalLogger.logI("Scanning for BLE service $expectedServiceUUID")
@@ -60,6 +64,8 @@ class VitalDeviceManager(
     }
 
     fun glucoseMeter(context: Context, scannedDevice: ScannedDevice): GlucoseMeter {
+        checkPermissions(scan = false, connect = true)
+
         when (scannedDevice.deviceModel.brand) {
             Brand.AccuChek,
             Brand.Contour -> {
@@ -77,6 +83,8 @@ class VitalDeviceManager(
         context: Context,
         scannedDevice: ScannedDevice
     ): BloodPressureReader {
+        checkPermissions(scan = false, connect = true)
+
         when (scannedDevice.deviceModel.brand) {
             Brand.Omron,
             Brand.Beurer -> {
@@ -102,6 +110,26 @@ class VitalDeviceManager(
         }
 
         return null
+    }
+
+    private fun checkPermissions(scan: Boolean, connect: Boolean) {
+        if (!bluetoothAdapter.isEnabled) {
+            throw IllegalStateException("Bluetooth is not enabled on this device")
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (connect && context.checkCallingOrSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT) != PERMISSION_GRANTED) {
+                throw PermissionMissing(android.Manifest.permission.BLUETOOTH_CONNECT)
+            }
+
+            if (scan && context.checkCallingOrSelfPermission(android.Manifest.permission.BLUETOOTH_SCAN) != PERMISSION_GRANTED) {
+                throw PermissionMissing(android.Manifest.permission.BLUETOOTH_SCAN)
+            }
+        } else {
+            if (context.checkCallingOrSelfPermission(android.Manifest.permission.BLUETOOTH) != PERMISSION_GRANTED) {
+                throw PermissionMissing(android.Manifest.permission.BLUETOOTH)
+            }
+        }
     }
 
     companion object {
