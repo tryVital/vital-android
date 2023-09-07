@@ -5,6 +5,7 @@ import android.content.pm.PackageManager.*
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -17,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +29,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import io.tryvital.sample.ui.devices.deviceImageUrl
+import io.tryvital.vitaldevices.Brand
 import io.tryvital.vitaldevices.VitalDeviceManager
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -89,7 +92,19 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
 
                 Row {
                     Button(onClick = {
-                        //Needed on older devices
+                        if (state.device.brand == Brand.Libre) {
+                            val nfcPermission = ContextCompat.checkSelfPermission(
+                                context, Manifest.permission.NFC
+                            )
+
+                            if (nfcPermission != PERMISSION_GRANTED) {
+                                launcher.launch(Manifest.permission.NFC)
+                            }
+
+                            return@Button
+                        }
+
+                        // Needed on older devices
                         val fineLocationPermission = ContextCompat.checkSelfPermission(
                             context, Manifest.permission.ACCESS_FINE_LOCATION
                         )
@@ -128,18 +143,21 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                     }) {
                         Text("Request Permission")
                     }
-                    Box(modifier = Modifier.width(16.dp))
-                    Button(onClick = {
-                        if (state.isScanning) {
-                            viewModel.stopScanning()
-                        } else {
-                            viewModel.scan()
-                        }
-                    }) {
-                        if (state.isScanning) {
-                            Text("Stop Scanning")
-                        } else {
-                            Text("Scan")
+
+                    if (state.canScan) {
+                        Box(modifier = Modifier.width(16.dp))
+                        Button(onClick = {
+                            if (state.isScanning) {
+                                viewModel.stopScanning()
+                            } else {
+                                viewModel.scan()
+                            }
+                        }) {
+                            if (state.isScanning) {
+                                Text("Stop Scanning")
+                            } else {
+                                Text("Scan")
+                            }
                         }
                     }
                 }
@@ -169,14 +187,16 @@ fun DeviceScreen(vitalDeviceManager: VitalDeviceManager, navController: NavHostC
                             },
                             trailingContent = {
                                 Row {
-                                    Button(onClick = {
-                                        viewModel.pair(context, scannedDevice)
-                                    }) {
-                                        Text("Pair")
+                                    if (scannedDevice.canPair) {
+                                        Button(onClick = {
+                                            viewModel.pair(context, scannedDevice)
+                                        }) {
+                                            Text("Pair")
+                                        }
+                                        Box(modifier = Modifier.width(4.dp))
                                     }
-                                    Box(modifier = Modifier.width(4.dp))
                                     Button(onClick = {
-                                        viewModel.connect(context, scannedDevice)
+                                        viewModel.connect(context, context as ComponentActivity, scannedDevice)
                                     }) {
                                         Text("Read")
                                     }
