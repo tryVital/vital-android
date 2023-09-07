@@ -7,10 +7,14 @@ import android.nfc.NfcAdapter
 import android.nfc.NfcAdapter.FLAG_READER_NFC_V
 import android.nfc.Tag
 import android.nfc.tech.NfcV
+import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.CancellableContinuation
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.time.Instant
 import kotlin.coroutines.resumeWithException
+
+private val logger = VitalLogger.getOrCreate()
 
 @Suppress("unused")
 internal class NFC(
@@ -48,9 +52,12 @@ internal class NFC(
     }
 
     private fun onDiscoveredTag(tag: Tag) {
+        logger.logI("discovered tag: ${tag.id.asUByteArray().toHex()}")
+
         val nfcV = NfcV.get(tag)
 
         nfcV.connect()
+
         nfcV.use { nfcV ->
             var patchInfo = UByteArray(0)
             val retries = 5
@@ -62,14 +69,22 @@ internal class NFC(
                 failedToScan = false
 
                 try {
+                    logger.logI("requesting patch info [0]")
                     patchInfo = nfcV.customCommand(RequestFlag.HighDataRate, 0xA1)
+                    logger.logI("received patch info [0]: ${patchInfo.toHex()}")
                 } catch (e: Throwable) {
+                    logger.logI("failed to get patch info [0]: $e")
+                    e.printStackTrace()
                     failedToScan = true
                 }
 
                 try {
+                    logger.logI("requesting system info [1]")
                     systemInfo = nfcV.systemInfo(RequestFlag.HighDataRate)
+                    logger.logI("received system info [1]: $systemInfo")
                 } catch (e: Throwable) {
+                    logger.logI("failed to get system info [1]: $e")
+                    e.printStackTrace()
                     if (requestedRetry > retries) {
                         return fail(NfcTransportError("failed reading SystemInfo", e))
                     }
@@ -78,8 +93,12 @@ internal class NFC(
                 }
 
                 try {
+                    logger.logI("requesting patch info [2]")
                     patchInfo = nfcV.customCommand(RequestFlag.HighDataRate, 0xA1)
+                    logger.logI("received patch info [2]: ${patchInfo.toHex()}")
                 } catch (e: Throwable) {
+                    logger.logI("failed to get patch info [2]: $e")
+                    e.printStackTrace()
                     if (requestedRetry > retries && systemInfo != null) {
                         requestedRetry = 0
                     } else {
@@ -113,7 +132,11 @@ internal class NFC(
             val blocks = 22u + 24u    // (32 * 6 / 8)
 
             try {
+                logger.logI("reading $blocks blocks of size ${systemInfo.blockSize} at offset 0")
+
                 val (_, data) = nfcV.read(start = 0, blocks = blocks, blockSize = systemInfo.blockSize)
+                logger.logI("received data (${data.size} bytes): ${data.toHex()}")
+
                 val lastReadingDate = Instant.now()
 
                 sensor.lastReadingDate = lastReadingDate
@@ -135,6 +158,8 @@ internal class NFC(
     }
 
     private fun fail(exception: Throwable) {
+        exception.printStackTrace()
+
         if (continuation.isActive) {
             continuation.resumeWithException(exception)
         }
@@ -152,11 +177,12 @@ internal fun NfcV.read(start: Int, blocks: UInt, blockSize: UByte, requesting: U
     while (remaining > 0u && retry <= retries) {
 
         val blockToRead = (start + buffer.position() / 8).toUInt()
+        logger.logI("bufpos: ${buffer.position()} read: $blockToRead <= x < ${blockToRead + requested}")
 
         try {
             val dataArray = readMultipleBlocks(
                 RequestFlag.HighDataRate,
-                blockToRead until blockToRead + requested
+                blockToRead until (blockToRead + requested)
             )
 
             buffer.put(dataArray.asByteArray())
@@ -181,44 +207,53 @@ internal fun NfcV.read(start: Int, blocks: UInt, blockSize: UByte, requesting: U
 internal fun NfcV.systemInfo(flags: RequestFlag): NfcVSystemInfo {
     val apdu = runCommand(flags, 0x2B)
     apdu.throwIfNotOk()
-    return NfcVSystemInfo.parse(apdu.data)
+    return NfcVSystemInfo.parse(apdu.original.sliceArray(2 until apdu.original.size), apdu.original[1])
 }
 
 internal fun NfcV.customCommand(flags: RequestFlag, code: Int, requestData: UByteArray = UByteArray(0)): UByteArray {
     check(code in 0xA0..0xDF)
     val apdu = runCommand(flags, code, requestData)
     apdu.throwIfNotOk()
-    return apdu.data
+    return apdu.original.sliceArray(2 until apdu.original.size)
 }
 
 internal fun NfcV.readMultipleBlocks(flags: RequestFlag, range: UIntRange): UByteArray {
     val apdu = runCommand(
-        flags,
+        flags.union(RequestFlag.Address),
         0x23,
-         ByteBuffer.allocate(4).run {
-             putShort(range.first.toShort())                // First block number
-             putShort((range.last - range.first).toShort()) // Number of blocks
-             toUByteArray()
-         }
+        ByteBuffer.allocate(4).run {
+            put(range.first.toByte())                     // First block number
+            put((range.last - range.first).toByte()) // Number of blocks
+            toUByteArray()
+        },
+        manufacturerCode = false,
     )
     apdu.throwIfNotOk()
-    return apdu.data
+    return apdu.original.sliceArray(1 until apdu.original.size)
 }
 
-internal fun NfcV.runCommand(flags: RequestFlag, code: Int, requestData: UByteArray = UByteArray(0)): NfcResponseVAPDU {
-    // NFC uses Big Endian, while ARM/x86 is Little Endian.
-    val tagUid = tag.id.reversedArray()
+internal fun NfcV.runCommand(flags: RequestFlag, code: Int, requestData: UByteArray = UByteArray(0), manufacturerCode: Boolean = true): NfcResponseVAPDU {
+    val tagUid = tag.id
     check(tagUid.size == 8) { "NfcV tags must have 8-byte UID" }
 
     val command = ByteBuffer.allocate(maxTransceiveLength).apply {
-        put(RequestFlag.Address.union(flags).rawValue.toByte())  // Flags byte
+        put(flags.rawValue.toByte())  // Flags byte
         put(code.toByte())  // Command code byte
-        put(tagUid[1])      // Manufacturer Code; 2nd byte of Tag UID
-        put(tagUid)         // Tag UID
+        if (manufacturerCode) {
+            put(tagUid[6])      // Manufacturer Code; 2nd last byte of 8-byte tag.id
+        }
+        if (flags.contains(RequestFlag.Address)) {
+            put(tagUid)         // Tag UID
+        }
         put(requestData.asByteArray())
     }
 
-    val rawResponse = transceive(command.toUByteArray().asByteArray()).asUByteArray()
+    val commandBytes = command.toUByteArray()
+    logger.logI("sending command: ${commandBytes.toHex()}")
+
+    val rawResponse = transceive(commandBytes.asByteArray()).asUByteArray()
+    logger.logI("received VAPDU: ${rawResponse.toHex()}")
+
     return NfcResponseVAPDU.parse(rawResponse)
 }
 
@@ -230,23 +265,24 @@ value class RequestFlag(val rawValue: UInt) {
     }
 
     fun union(other: RequestFlag) = RequestFlag(rawValue.or(other.rawValue))
+    fun contains(other: RequestFlag) = rawValue.and(other.rawValue) != 0u
 }
 
 @Suppress("MemberVisibilityCanBePrivate", "CanBeParameter")
 class NfcUnsupportedSensorError(val sensorType: SensorType): Throwable("Unsupported sensor: $sensorType")
 class NfcTransportError(message: String, cause: Throwable? = null): Throwable(message, cause)
-class NfcResponseError(status: UByte, status2: UByte): Throwable("NFC Response error: %x %x".format(status, status2))
+class NfcResponseError(status: UByte, payload: String): Throwable("NFC Response error: %x %s".format(status, payload))
 class NfcUnsupportedError: Throwable("NFC is not supported by this device")
 
 @Suppress("unused")
 class NfcResponseVAPDU(
     val status: UByte,
-    val status2: UByte,
-    val data: UByteArray,
+    val original: UByteArray,
 ) {
     fun throwIfNotOk() {
         if (status != 0.toUByte()) {
-            throw NfcResponseError(status, status2)
+            logger.logI("NFC Response error: status = $status; payload = ${original.toHex()}")
+            throw NfcResponseError(status, original.toHex())
         }
     }
 
@@ -255,8 +291,7 @@ class NfcResponseVAPDU(
             check(bytes.size >= 2) { "NfcV Response APDU must be at least 2 bytes large" }
             return NfcResponseVAPDU(
                 status = bytes[0],
-                status2 = bytes[0],
-                data = bytes.sliceArray(2 until bytes.size)
+                original = bytes,
             )
         }
     }
@@ -272,15 +307,15 @@ class NfcVSystemInfo(
     val icReference: UByte,
 ) {
     companion object {
-        fun parse(bytes: UByteArray): NfcVSystemInfo {
-            val buffer = ByteBuffer.wrap(bytes.asByteArray())
+        fun parse(bytes: UByteArray, infoFlag: UByte): NfcVSystemInfo {
+            check(infoFlag == 0x04u.toUByte()) { "support only information flag = 0x04 at this time" }
             return NfcVSystemInfo(
-                uid = ByteArray(8).apply { buffer.get(this, 0, 8) },
-                dsfId = buffer.get().toUByte(),
-                applicationFamilyId = buffer.get().toUByte(),
-                blockSize = buffer.get().toUByte(),
-                totalBlocks = buffer.get().toUByte(),
-                icReference = buffer.get().toUByte(),
+                uid = bytes.sliceArray(0 until 8).asByteArray(),
+                dsfId = 0u, // buffer.get().toUByte(),
+                applicationFamilyId = 0u, //buffer.get().toUByte(),
+                totalBlocks = bytes[8],
+                blockSize = (1 shl bytes[9].countOneBits()).toUByte(),
+                icReference = 0u, //buffer.get().toUByte(),
             )
         }
     }
@@ -292,3 +327,5 @@ internal fun ByteBuffer.toUByteArray(): UByteArray {
         get(array.asByteArray())
     }
 }
+
+fun UByteArray.toHex(): String = joinToString(separator = " ") { it.toString(16).padStart(2, '0') }
