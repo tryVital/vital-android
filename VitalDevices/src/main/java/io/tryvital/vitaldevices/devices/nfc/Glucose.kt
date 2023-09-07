@@ -15,7 +15,7 @@ data class Glucose(
 )
 
 @JvmInline
-value class DataQuality(private val rawValue: UInt) {
+value class DataQuality(private val rawValue: UShort) {
     companion object {
         val OK = DataQuality(0x0u)
 
@@ -45,7 +45,7 @@ value class DataQuality(private val rawValue: UInt) {
     }
 
     fun contains(other: DataQuality): Boolean {
-        return this.rawValue.and(other.rawValue) != 0u
+        return (this.rawValue and other.rawValue) != 0u.toUShort()
     }
 
     override fun toString(): String {

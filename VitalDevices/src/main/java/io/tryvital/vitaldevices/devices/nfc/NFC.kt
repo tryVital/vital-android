@@ -110,7 +110,7 @@ internal class NFC(
                 val lastReadingDate = Instant.now()
 
                 sensor.lastReadingDate = lastReadingDate
-                sensor.fram = data
+                sensor.setFRAM(data)
                 close()
 
             } catch (e: Throwable) {
