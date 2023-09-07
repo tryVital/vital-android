@@ -32,7 +32,7 @@ internal class NFC(
         this.session = Pair(activity, adapter)
     }
 
-    private fun close() {
+    fun close() {
         val session = session
         if (session != null) {
             session.second.disableReaderMode(session.first)
