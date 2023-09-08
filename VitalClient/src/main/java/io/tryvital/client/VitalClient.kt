@@ -58,10 +58,6 @@ class VitalClient internal constructor(context: Context) {
         SleepService.create(dependencies.retrofit)
     }
 
-    val testKitService by lazy {
-        TestkitService.create(dependencies.retrofit)
-    }
-
     val userService by lazy {
         UserService.create(dependencies.retrofit)
     }
