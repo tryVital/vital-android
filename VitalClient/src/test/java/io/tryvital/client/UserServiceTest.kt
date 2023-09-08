@@ -81,7 +81,7 @@ class UserServiceTest {
 
         val sut = UserService.create(retrofit)
         val response = sut.resolveUser(userName)
-        assertEquals("GET /user/key/User%20Name HTTP/1.1", server.takeRequest().requestLine)
+        assertEquals("GET /user/resolve/User%20Name HTTP/1.1", server.takeRequest().requestLine)
 
         validateFirstUser(response)
     }
