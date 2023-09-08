@@ -6,6 +6,18 @@ private const val VITAL_LOGGER = "vital-logger"
 
 class VitalLogger private constructor(var enabled: Boolean = false) {
 
+    fun info(message: () -> String) {
+        if (enabled) {
+            Log.i(VITAL_LOGGER, message())
+        }
+    }
+
+    fun exception(throwable: Throwable, message: () -> String) {
+        if (enabled) {
+            Log.e(VITAL_LOGGER, message(), throwable)
+        }
+    }
+
     fun logI(message: String) {
         if (enabled) {
             Log.i(VITAL_LOGGER, message)
