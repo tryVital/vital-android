@@ -52,7 +52,7 @@ internal class NFC(
     }
 
     private fun onDiscoveredTag(tag: Tag) {
-        logger.logI("discovered tag: ${tag.id.asUByteArray().toHex()}")
+        logger.info { "discovered NfcV tag: ${tag.id.asUByteArray().toHex()}" }
 
         val nfcV = NfcV.get(tag)
 
@@ -69,22 +69,21 @@ internal class NFC(
                 failedToScan = false
 
                 try {
-                    logger.logI("requesting patch info [0]")
+                    logger.info { "requesting patch info [0]" }
                     patchInfo = nfcV.customCommand(RequestFlag.HighDataRate, 0xA1)
-                    logger.logI("received patch info [0]: ${patchInfo.toHex()}")
+                    logger.info { "received patch info [0]: ${patchInfo.toHex()}" }
                 } catch (e: Throwable) {
-                    logger.logI("failed to get patch info [0]: $e")
-                    e.printStackTrace()
+                    logger.exception(e) { "failed to get patch info [0]" }
                     failedToScan = true
                 }
 
                 try {
-                    logger.logI("requesting system info [1]")
+                    logger.info { "requesting system info [1]" }
                     systemInfo = nfcV.systemInfo(RequestFlag.HighDataRate)
-                    logger.logI("received system info [1]: $systemInfo")
+                    logger.info { "received system info [1]: $systemInfo" }
                 } catch (e: Throwable) {
-                    logger.logI("failed to get system info [1]: $e")
-                    e.printStackTrace()
+                    logger.exception(e) { "failed to get system info [1]" }
+
                     if (requestedRetry > retries) {
                         return fail(NfcTransportError("failed reading SystemInfo", e))
                     }
@@ -93,12 +92,12 @@ internal class NFC(
                 }
 
                 try {
-                    logger.logI("requesting patch info [2]")
+                    logger.info { "requesting patch info [2]" }
                     patchInfo = nfcV.customCommand(RequestFlag.HighDataRate, 0xA1)
-                    logger.logI("received patch info [2]: ${patchInfo.toHex()}")
+                    logger.info { "received patch info [2]: ${patchInfo.toHex()}" }
                 } catch (e: Throwable) {
-                    logger.logI("failed to get patch info [2]: $e")
-                    e.printStackTrace()
+                    logger.exception(e) { "failed to get patch info [2]" }
+
                     if (requestedRetry > retries && systemInfo != null) {
                         requestedRetry = 0
                     } else {
@@ -132,10 +131,10 @@ internal class NFC(
             val blocks = 22u + 24u    // (32 * 6 / 8)
 
             try {
-                logger.logI("reading $blocks blocks of size ${systemInfo.blockSize} at offset 0")
+                logger.info { "reading $blocks blocks of size ${systemInfo.blockSize} at offset 0" }
 
                 val (_, data) = nfcV.read(start = 0, blocks = blocks, blockSize = systemInfo.blockSize)
-                logger.logI("received data (${data.size} bytes): ${data.toHex()}")
+                logger.info { "received data (${data.size} bytes): ${data.toHex()}" }
 
                 val lastReadingDate = Instant.now()
 
@@ -177,7 +176,7 @@ internal fun NfcV.read(start: Int, blocks: UInt, blockSize: UByte, requesting: U
     while (remaining > 0u && retry <= retries) {
 
         val blockToRead = (start + buffer.position() / 8).toUInt()
-        logger.logI("bufpos: ${buffer.position()} read: $blockToRead <= x < ${blockToRead + requested}")
+        logger.info { "bufpos: ${buffer.position()} read: $blockToRead <= x < ${blockToRead + requested}" }
 
         try {
             val dataArray = readMultipleBlocks(
@@ -249,10 +248,10 @@ internal fun NfcV.runCommand(flags: RequestFlag, code: Int, requestData: UByteAr
     }
 
     val commandBytes = command.toUByteArray()
-    logger.logI("sending command: ${commandBytes.toHex()}")
+    logger.info { "sending command: ${commandBytes.toHex()}" }
 
     val rawResponse = transceive(commandBytes.asByteArray()).asUByteArray()
-    logger.logI("received VAPDU: ${rawResponse.toHex()}")
+    logger.info { "received VAPDU: ${rawResponse.toHex()}" }
 
     return NfcResponseVAPDU.parse(rawResponse)
 }
@@ -281,7 +280,7 @@ class NfcResponseVAPDU(
 ) {
     fun throwIfNotOk() {
         if (status != 0.toUByte()) {
-            logger.logI("NFC Response error: status = $status; payload = ${original.toHex()}")
+            logger.info { "NFC Response error: status = $status; payload = ${original.toHex()}" }
             throw NfcResponseError(status, original.toHex())
         }
     }
