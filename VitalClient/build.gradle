@@ -45,6 +45,8 @@ dependencies {
     implementation "androidx.browser:browser:$browser"
     implementation "androidx.security:security-crypto:$security_crypto"
 
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines"
+
     implementation "com.squareup.retrofit2:retrofit:$retrofit"
     implementation "com.squareup.retrofit2:converter-moshi:$retrofit"
     implementation "com.squareup.moshi:moshi:$moshi"
