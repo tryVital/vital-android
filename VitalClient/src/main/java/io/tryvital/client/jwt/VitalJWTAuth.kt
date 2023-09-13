@@ -9,11 +9,32 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.createEncryptedSharedPreferences
 import io.tryvital.client.utils.VitalLogger
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.suspendCancellableCoroutine
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.FormBody
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import okio.ByteString.Companion.decodeBase64
+import java.io.IOException
 import java.lang.IllegalArgumentException
+import java.net.URLEncoder
+import java.nio.charset.Charset
 import java.time.Instant
 import java.util.Date
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 const val VITAL_JWT_AUTH_PREFERENCES: String = "vital_jwt_auth_prefs"
 const val AUTH_RECORD_KEY = "auth_record"
@@ -46,6 +67,8 @@ class VitalJWTAuthError(val code: Code): Throwable("VitalJWTAuthError: $code") {
 
             /// The refresh token is invalid, and the user must be signed in again with a new Vital Sign-In Token.
             val NeedsReauthentication = Code("needsReauthentication")
+
+            val NetworkError = Code("networkError")
         }
     }
 }
@@ -85,8 +108,9 @@ internal class VitalJWTAuth(
 
     val currentUserId: String? get() = getRecord()?.userId
 
-    private val isRefreshing = MutableStateFlow(true)
+    private val isRefreshing = MutableStateFlow(false)
     private var cachedRecord: VitalJWTAuthRecord? = null
+    private val httpClient = OkHttpClient()
 
 
     suspend fun signIn(signInToken: VitalSignInToken): Unit = TODO()
@@ -105,11 +129,108 @@ internal class VitalJWTAuth(
         /// until the flow completes.
         /// Otherwise, the call will return immediately when the ParkingLot is disabled.
 
-        TODO()
+        waitForRefresh()
+        val record = getRecord() ?: throw VitalJWTAuthError(VitalJWTAuthError.Code.NotSignedIn)
+
+        return try {
+            if (record.isExpired()) {
+                throw VitalJWTAuthNeedsRefresh()
+            }
+
+            action(record.accessToken)
+        } catch (e: VitalJWTAuthNeedsRefresh) {
+            // Try to start refresh
+            refreshToken()
+            // Retry
+            withAccessToken(action)
+        }
     }
 
     /// Start a token refresh flow, or wait for the started flow to complete.
-    suspend fun refreshToken(): Unit = TODO()
+    suspend fun refreshToken() = coroutineScope {
+        ensureActive()
+
+        if (!isRefreshing.compareAndSet(expect = false, update = true)) {
+            // Another task has started the refresh flow.
+            // Wait on isRefreshing to turn false for the token refresh completion.
+            waitForRefresh()
+            return@coroutineScope
+        }
+
+        try {
+            val record = getRecord() ?: throw VitalJWTAuthError(VitalJWTAuthError.Code.NotSignedIn)
+
+            if (record.pendingReauthentication) {
+                throw VitalJWTAuthError(VitalJWTAuthError.Code.NeedsReauthentication)
+            }
+
+            val request = Request.Builder()
+                .url(
+                    "https://securetoken.googleapis.com/v1/token".toHttpUrlOrNull()!!
+                        .newBuilder()
+                        .addQueryParameter("key", record.publicApiKey)
+                        .build()
+                )
+                .post(
+                    FormBody.Builder()
+                        .add("grant_type", "refresh_token")
+                        .add("refresh_token", record.refreshToken)
+                        .build()
+                )
+                .build()
+
+            httpClient.startRequest(request).use {
+                when (it.code) {
+                    in 200 until 300 -> {
+                        val adapter = moshi.adapter(FirebaseTokenRefreshResponse::class.java)
+                        val refreshResponse = adapter.fromJson(it.body?.string() ?: "")!!
+
+                        val newRecord = record.copy(
+                            refreshToken = refreshResponse.refreshToken,
+                            accessToken = refreshResponse.idToken,
+                            expiry = Date.from(
+                                Instant.now().plusSeconds(refreshResponse.expiresIn.toLong())
+                            ),
+                        )
+
+                        setRecord(newRecord)
+                        VitalLogger.getOrCreate()
+                            .logI("refresh success; expiresIn = ${refreshResponse.expiresIn}")
+                    }
+
+                    else -> {
+                        if (it.code in 400 until 500) {
+                            val adapter = moshi.adapter(FirebaseTokenRefreshError::class.java)
+                            val response = adapter.fromJson(it.body?.string() ?: "")!!
+
+                            if (response.isInvalidUser) {
+                                setRecord(null)
+                                throw VitalJWTAuthError(VitalJWTAuthError.Code.InvalidUser)
+                            }
+
+                            if (response.needsReauthentication) {
+                                setRecord(record.copy(pendingReauthentication = true))
+                                throw VitalJWTAuthError(VitalJWTAuthError.Code.NeedsReauthentication)
+                            }
+                        }
+
+                        VitalLogger.getOrCreate()
+                            .logE("refresh failed ${it.code}; data = ${it.body?.string()}")
+                        throw VitalJWTAuthError(VitalJWTAuthError.Code.NetworkError)
+                    }
+                }
+            }
+        } finally {
+            val isUpdated = isRefreshing.compareAndSet(expect = true, update = false)
+            check(isUpdated) { "concurrency error: isRefreshing should have been true at this point" }
+        }
+    }
+
+    private suspend fun waitForRefresh() {
+        // If a refresh is ongoing (` = true`), this suspends until it transitions back to `false`.
+        // If no refresh is happening, this will simply breeze through.
+        isRefreshing.first { !it }
+    }
 
     private fun getRecord(): VitalJWTAuthRecord? = synchronized(this) {
         val cachedRecord = this.cachedRecord
@@ -287,4 +408,23 @@ internal data class VitalSignInTokenClaims(
         @Json(name = "vital_team_id")
         val teamId: String
     )
+}
+
+private suspend fun OkHttpClient.startRequest(request: Request): Response {
+    val call = newCall(request)
+    return suspendCancellableCoroutine { continuation ->
+        continuation.invokeOnCancellation { call.cancel() }
+
+        call.enqueue(
+            object: Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    continuation.resumeWithException(e)
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    continuation.resume(response)
+                }
+            }
+        )
+    }
 }
