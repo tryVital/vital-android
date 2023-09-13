@@ -1,17 +1,22 @@
 package io.tryvital.client.jwt
 
 import android.content.Context
-import androidx.security.crypto.EncryptedSharedPreferences
+import android.content.SharedPreferences
 import com.squareup.moshi.Json
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
+import io.tryvital.client.createEncryptedSharedPreferences
+import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.flow.MutableStateFlow
 import okio.ByteString.Companion.decodeBase64
 import java.lang.IllegalArgumentException
 import java.time.Instant
 import java.util.Date
+
+const val VITAL_JWT_AUTH_PREFERENCES: String = "vital_jwt_auth_prefs"
+const val AUTH_RECORD_KEY = "auth_record"
 
 private val moshi by lazy {
     Moshi.Builder()
@@ -34,7 +39,7 @@ class VitalJWTAuthError(val code: Code): Throwable("VitalJWTAuthError: $code") {
     @JvmInline value class Code(val rawValue: String) {
         companion object {
             /// There is no active SDK sign-in.
-            val AlreadySignedIn = Code("notSignedIn")
+            val NotSignedIn = Code("notSignedIn")
 
             /// The user is no longer valid, and the SDK has been reset automatically.
             val InvalidUser = Code("invalidUser")
@@ -50,7 +55,7 @@ data class VitalJWTAuthUserContext(val userId: String, val teamId: String)
 internal class VitalJWTAuthNeedsRefresh: Throwable()
 
 internal class VitalJWTAuth(
-    val preferences: EncryptedSharedPreferences
+    val preferences: SharedPreferences
 ) {
     companion object {
         private var shared: VitalJWTAuth? = null
@@ -60,15 +65,25 @@ internal class VitalJWTAuth(
             if (shared != null) {
                 return shared
             }
+
+            val sharedPreferences = try {
+                createEncryptedSharedPreferences(context)
+            } catch (e: Exception) {
+                VitalLogger.getOrCreate().logE(
+                    "Failed to decrypt VitalJWTAuth preferences, re-creating it", e
+                )
+                context.deleteSharedPreferences(VITAL_JWT_AUTH_PREFERENCES)
+                createEncryptedSharedPreferences(context)
+            }
+
             this.shared = VitalJWTAuth(
-                preferences = TODO()
+                preferences = sharedPreferences
             )
             return this.shared!!
         }
-        private const val preferenceKey = "vital_jwt_auth"
     }
 
-    val currentUserId: String? get() = TODO()
+    val currentUserId: String? get() = getRecord()?.userId
 
     private val isRefreshing = MutableStateFlow(true)
     private var cachedRecord: VitalJWTAuthRecord? = null
@@ -78,7 +93,10 @@ internal class VitalJWTAuth(
 
     suspend fun signOut(): Unit = TODO()
 
-    suspend fun userContext(): VitalJWTAuthUserContext = TODO()
+    fun userContext(): VitalJWTAuthUserContext {
+        val record = getRecord() ?: throw VitalJWTAuthError(code = VitalJWTAuthError.Code.NotSignedIn)
+        return VitalJWTAuthUserContext(userId = record.userId, teamId = record.teamId)
+    }
 
     /// If the action encounters 401 Unauthorized, throw `VitalJWTAuthNeedsRefresh` to initiate
     /// the token refresh flow.
@@ -93,9 +111,41 @@ internal class VitalJWTAuth(
     /// Start a token refresh flow, or wait for the started flow to complete.
     suspend fun refreshToken(): Unit = TODO()
 
-    private fun getRecord(): VitalJWTAuthRecord? = TODO()
+    private fun getRecord(): VitalJWTAuthRecord? = synchronized(this) {
+        val cachedRecord = this.cachedRecord
+        if (cachedRecord != null) {
+            return cachedRecord
+        }
 
-    private fun setRecord(record: VitalJWTAuthRecord?): Unit = TODO()
+        // Backfill from SharedPreferences
+        val recordJson = preferences.getString(AUTH_RECORD_KEY, null) ?: return null
+
+        try {
+            val adapter = moshi.adapter(VitalJWTAuthRecord::class.java)
+            val record = adapter.fromJson(recordJson)!!
+            this.cachedRecord = record
+            return record
+        } catch (e: Throwable) {
+            VitalLogger.getOrCreate().logE("auto signout: failed to decode keychain auth record", e)
+            setRecord(null)
+            return null
+        }
+    }
+
+    private fun setRecord(record: VitalJWTAuthRecord?): Unit = synchronized(this) {
+        preferences
+            .edit()
+            .apply {
+                if (record != null) {
+                    val adapter = moshi.adapter(VitalJWTAuthRecord::class.java)
+                    putString(AUTH_RECORD_KEY, adapter.toJson(record))
+                } else {
+                    remove(AUTH_RECORD_KEY)
+                }
+            }
+            .apply()
+        this.cachedRecord = record
+    }
 }
 
 private data class VitalJWTAuthRecord(
