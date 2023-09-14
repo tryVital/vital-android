@@ -12,25 +12,20 @@ import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.FormBody
-import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.ByteString.Companion.decodeBase64
 import java.io.IOException
 import java.lang.IllegalArgumentException
-import java.net.URLEncoder
-import java.nio.charset.Charset
 import java.time.Instant
 import java.util.Date
 import kotlin.coroutines.resume
@@ -113,9 +108,76 @@ internal class VitalJWTAuth(
     private val httpClient = OkHttpClient()
 
 
-    suspend fun signIn(signInToken: VitalSignInToken): Unit = TODO()
+    suspend fun signIn(signInToken: VitalSignInToken) {
+        val record = getRecord()
+        val claims = signInToken.unverifiedClaims()
 
-    suspend fun signOut(): Unit = TODO()
+        if (record != null) {
+            if (record.pendingReauthentication) {
+                // Check that we are reauthenticating the current user.
+                if (claims.teamId != record.teamId || claims.userId != record.userId || claims.environment != record.environment) {
+                    throw VitalJWTSignInError(VitalJWTSignInError.Code.InvalidSignInToken)
+                }
+            } else {
+                // No reauthentication request and already signed-in - Abort.
+                throw VitalJWTSignInError(VitalJWTSignInError.Code.AlreadySignedIn)
+            }
+        }
+
+        val exchangeRequest = FirebaseTokenExchangeRequest(token = signInToken. userToken, tenantId = claims.gcipTenantId)
+        val adapter = moshi.adapter(FirebaseTokenExchangeRequest::class.java)
+        val request = Request.Builder()
+            .url(
+                "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken".toHttpUrlOrNull()!!
+                    .newBuilder()
+                    .addQueryParameter("key", signInToken.publicKey)
+                    .build()
+            )
+            .post(
+                adapter.toJson(exchangeRequest).toRequestBody("application/json".toMediaType())
+            )
+            .build()
+
+        httpClient.startRequest(request).use {
+            when (it.code) {
+                in 200 until 300 -> {
+                    val exchangeResponse = moshi.adapter(FirebaseTokenExchangeResponse::class.java)
+                        .fromJson(it.body?.string() ?: "")!!
+
+                    val newRecord = VitalJWTAuthRecord(
+                        environment = claims.environment,
+                        userId = claims.userId,
+                        teamId = claims.teamId,
+                        gcipTenantId = claims.gcipTenantId,
+                        publicApiKey = signInToken.publicKey,
+                        accessToken = exchangeResponse.idToken,
+                        refreshToken = exchangeResponse.refreshToken,
+                        expiry = Date.from(Instant.now().plusSeconds(exchangeResponse.expiresIn.toLong()))
+                    )
+
+                    setRecord(newRecord)
+                    VitalLogger.getOrCreate()
+                        .logI("sign-in success; expiresIn = ${exchangeResponse.expiresIn}")
+                }
+
+                401 -> {
+                    VitalLogger.getOrCreate().logE("sign-in failed (401)")
+                    throw VitalJWTSignInError(VitalJWTSignInError.Code.InvalidSignInToken)
+                }
+
+                else -> {
+                    VitalLogger.getOrCreate()
+                        .logE("sign-in failed ${it.code}; data = ${it.body?.string()}")
+                    throw VitalJWTAuthError(VitalJWTAuthError.Code.NetworkError)
+                }
+            }
+
+        }
+    }
+
+    fun signOut() {
+        setRecord(null)
+    }
 
     fun userContext(): VitalJWTAuthUserContext {
         val record = getRecord() ?: throw VitalJWTAuthError(code = VitalJWTAuthError.Code.NotSignedIn)
