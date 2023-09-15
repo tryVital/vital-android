@@ -12,6 +12,8 @@ import io.tryvital.client.ConfigurationReader
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClientUnconfigured
+import io.tryvital.client.jwt.AbstractVitalJWTAuth
+import io.tryvital.client.jwt.VitalJWTAuth
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.ProviderSlug
 import io.tryvital.client.utils.ApiKeyInterceptor
@@ -37,7 +39,7 @@ internal class Dependencies(
 ) {
 
     private val httpClient: OkHttpClient by lazy {
-        createHttpClient(context, configurationReader)
+        createHttpClient(context, configurationReader, jwtAuth)
     }
     private val moshi: Moshi by lazy {
         createMoshi()
@@ -51,9 +53,10 @@ internal class Dependencies(
         createRetrofit(resolveUrl(configurationReader), httpClient, moshi)
     }
 
+    val jwtAuth: VitalJWTAuth = VitalJWTAuth.getInstance(context)
 
     companion object {
-        internal fun createHttpClient(context: Context? = null, configurationReader: ConfigurationReader): OkHttpClient {
+        internal fun createHttpClient(context: Context? = null, configurationReader: ConfigurationReader, jwtAuth: AbstractVitalJWTAuth): OkHttpClient {
             val cacheSizeInMB: Long = 2 * 1024 * 1024
 
             val loggingInterceptor = HttpLoggingInterceptor()
@@ -77,7 +80,7 @@ internal class Dependencies(
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .readTimeout(60, TimeUnit.SECONDS)
                 .addInterceptor(VitalRequestInterceptor())
-                .addNetworkInterceptor(ApiKeyInterceptor(configurationReader))
+                .addInterceptor(ApiKeyInterceptor(configurationReader, jwtAuth))
                 .addInterceptor(loggingInterceptor)
                 .build()
         }
@@ -104,8 +107,7 @@ internal class Dependencies(
             .build()
 
         internal fun resolveUrl(configurationReader: ConfigurationReader): String {
-            val region = configurationReader.region ?: throw VitalClientUnconfigured()
-            val environment = configurationReader.environment ?: throw VitalClientUnconfigured()
+            val authStrategy = configurationReader.authStrategy ?: throw VitalClientUnconfigured()
 
             val urls = mapOf(
                 Region.EU to mapOf(
@@ -119,7 +121,7 @@ internal class Dependencies(
                     Environment.Sandbox to "https://api.sandbox.tryvital.io"
                 )
             )
-            return "${urls[region]!![environment]!!}/v2/"
+            return "${urls[authStrategy.region]!![authStrategy.environment]!!}/v2/"
         }
     }
 

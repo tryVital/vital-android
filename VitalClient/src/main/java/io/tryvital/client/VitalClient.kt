@@ -5,7 +5,12 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.dependencies.Dependencies
+import io.tryvital.client.jwt.VitalJWTAuth
+import io.tryvital.client.jwt.VitalSignInToken
 import io.tryvital.client.services.*
 import java.util.concurrent.atomic.AtomicReference
 
@@ -70,29 +75,20 @@ class VitalClient internal constructor(context: Context) {
         VitalsService.create(dependencies.retrofit)
     }
 
-    val vitalLogger by lazy {
-        dependencies.vitalLogger
-    }
-
-    val isConfigured: Boolean
-        get() = configurationReader.region != null &&
-                configurationReader.environment != null &&
-                configurationReader.apiKey != null
-
-    val currentUserId: String?
-        get() = encryptedSharedPreferences.getString(VITAL_ENCRYPTED_USER_ID_KEY, null)
+    val vitalLogger get() = dependencies.vitalLogger
+    private val jwtAuth get() = dependencies.jwtAuth
 
     fun cleanUp() {
         sharedPreferences.edit().clear().apply()
         encryptedSharedPreferences.edit().clear().apply()
     }
 
-    // TODO: Shift config injection from initializer, and support config change.
-    fun configure(region: Region, environment: Environment, apiKey: String) {
+    private fun configure(strategy: VitalClientAuthStrategy) {
         encryptedSharedPreferences.edit()
-            .putString(VITAL_ENCRYPTED_API_KEY_KEY, apiKey)
-            .putString(VITAL_ENCRYPTED_REGION_KEY, region.name)
-            .putString(VITAL_ENCRYPTED_ENVIRONMENT_KEY, environment.name)
+            .putString(
+                VITAL_ENCRYPTED_AUTH_STRATEGY_KEY,
+                configurationMoshi.adapter(VitalClientAuthStrategy::class.java).toJson(strategy)
+            )
             .apply()
     }
 
@@ -110,12 +106,40 @@ class VitalClient internal constructor(context: Context) {
         )
     }
 
-    fun hasUserId(): Boolean {
-        return encryptedSharedPreferences.getString(VITAL_ENCRYPTED_USER_ID_KEY, null) != null
-    }
-
     companion object {
         private var sharedInstance: VitalClient? = null
+
+        val status: Set<Status>
+            get() {
+                val shared = synchronized(VitalClient) { sharedInstance } ?: return setOf()
+                val authStrategy = shared.configurationReader.authStrategy ?: return setOf()
+                val status = mutableSetOf(Status.Configured)
+
+                when (authStrategy) {
+                    is VitalClientAuthStrategy.APIKey -> {
+                        if (shared.configurationReader.userId != null) {
+                            status.add(Status.SignedIn)
+                        }
+                    }
+                    is VitalClientAuthStrategy.JWT -> {
+                        if (shared.jwtAuth.currentUserId != null) {
+                            status.add(Status.SignedIn)
+                        }
+                    }
+                }
+
+                return status
+            }
+
+        val currentUserId: String?
+            get() {
+                val shared = synchronized(VitalClient) { sharedInstance } ?: return null
+                val authStrategy = shared.configurationReader.authStrategy ?: return null
+                return when (authStrategy) {
+                    is VitalClientAuthStrategy.APIKey -> shared.configurationReader.userId
+                    is VitalClientAuthStrategy.JWT -> shared.jwtAuth.currentUserId
+                }
+            }
 
         fun getOrCreate(context: Context): VitalClient = synchronized(VitalClient) {
             var instance = sharedInstance
@@ -126,6 +150,43 @@ class VitalClient internal constructor(context: Context) {
             instance = VitalClient(context)
             return instance
         }
+
+        /**
+         * Sign-in the SDK with a User JWT — no API Key is needed.
+         *
+         * In this mode, your app requests a Vital Sign-In Token **through your backend service**, typically at the same time when
+         * your user sign-ins with your backend service. This allows your backend service to keep the API Key as a private secret.
+         *
+         * The environment and region is inferred from the User JWT. You need not specify them explicitly
+         */
+        suspend fun signIn(context: Context, token: String) {
+            val signInToken = VitalSignInToken.parse(token)
+            val claims = signInToken.unverifiedClaims()
+            val jwtAuth = VitalJWTAuth.getInstance(context)
+
+            jwtAuth.signIn(signInToken)
+
+            // Configure the SDK only if we have signed in successfully.
+            val shared = getOrCreate(context)
+            shared.configure(
+                strategy = VitalClientAuthStrategy.JWT(claims.environment, claims.region),
+            )
+        }
+
+        /**
+         * Configure the SDK in the legacy API Key mode.
+         *
+         * API Key mode will continue to be supported. But users should plan to migrate to the User JWT mode.
+         */
+        fun configure(context: Context, region: Region, environment: Environment, apiKey: String) {
+            getOrCreate(context).configure(
+                VitalClientAuthStrategy.APIKey(apiKey, environment, region)
+            )
+        }
+    }
+
+    enum class Status {
+        Configured, SignedIn;
     }
 }
 

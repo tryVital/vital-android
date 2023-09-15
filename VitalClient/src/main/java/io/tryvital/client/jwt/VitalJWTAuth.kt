@@ -72,9 +72,14 @@ data class VitalJWTAuthUserContext(val userId: String, val teamId: String)
 
 internal class VitalJWTAuthNeedsRefresh: Throwable()
 
+internal interface AbstractVitalJWTAuth {
+    suspend fun <Result> withAccessToken(action: suspend (String) -> Result): Result
+    suspend fun refreshToken()
+}
+
 internal class VitalJWTAuth(
     val preferences: SharedPreferences
-) {
+): AbstractVitalJWTAuth {
     companion object {
         private var shared: VitalJWTAuth? = null
 
@@ -186,7 +191,7 @@ internal class VitalJWTAuth(
 
     /// If the action encounters 401 Unauthorized, throw `VitalJWTAuthNeedsRefresh` to initiate
     /// the token refresh flow.
-    suspend fun <Result> withAccessToken(action: suspend (String) -> Result): Result {
+    override suspend fun <Result> withAccessToken(action: suspend (String) -> Result): Result {
         /// When token refresh flow is ongoing, the ParkingLot is enabled and the call will suspend
         /// until the flow completes.
         /// Otherwise, the call will return immediately when the ParkingLot is disabled.
@@ -209,7 +214,7 @@ internal class VitalJWTAuth(
     }
 
     /// Start a token refresh flow, or wait for the started flow to complete.
-    suspend fun refreshToken() = coroutineScope {
+    override suspend fun refreshToken() = coroutineScope {
         ensureActive()
 
         if (!isRefreshing.compareAndSet(expect = false, update = true)) {

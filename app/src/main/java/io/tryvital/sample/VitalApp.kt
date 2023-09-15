@@ -15,7 +15,7 @@ val environment = Environment.Dev
 class VitalApp : Application() {
     val client by lazy {
         VitalClient.getOrCreate(applicationContext).apply {
-            configure(region, environment, apiKey)
+            VitalClient.configure(applicationContext, region, environment, apiKey)
         }
     }
 
@@ -24,7 +24,7 @@ class VitalApp : Application() {
     }
 
     val vitalHealthConnectManager by lazy {
-        check(this.client.isConfigured)
+        check(VitalClient.Status.Configured in VitalClient.status)
         VitalHealthConnectManager.getOrCreate(this).apply {
             configureHealthConnectClient(
                 syncNotificationBuilder = VitalSyncNotificationBuilder
