@@ -7,14 +7,17 @@ import androidx.lifecycle.viewModelScope
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
+import io.tryvital.client.services.data.CreateUserRequest
 import io.tryvital.sample.AppSettings
 import io.tryvital.sample.AppSettingsStore
+import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.util.UUID
 
 class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
@@ -22,7 +25,6 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     val uiState = viewModelState.asStateFlow()
 
     init {
-        updateSDKStatus()
         store.uiState
             .onEach { appSettings ->
                 viewModelState.update { it.copy(appSettings = appSettings) }
@@ -44,53 +46,100 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
         Pair(Pair(Environment.Dev, Region.EU), "dev - eu"),
     )
 
+    fun didLaunch(context: Context) {
+        updateSDKStatus(context)
+    }
+
     fun setEnvironment(environment: Environment, region: Region) {
+        // viewModelState will be indirectly updated as an observer
         store.update { it.copy(environment = environment, region = region) }
     }
 
     fun setAuthMode(mode: SettingsAuthMode) {
+        // viewModelState will be indirectly updated as an observer
         store.update { it.copy(authMode = mode) }
     }
 
     fun setApiKey(value: String) {
+        // viewModelState will be indirectly updated as an observer
         store.update { it.copy(apiKey = value) }
     }
 
     fun setUserId(value: String) {
+        // viewModelState will be indirectly updated as an observer
         store.update { it.copy(userId = value) }
     }
 
+    fun clearError() {
+        viewModelState.update { it.copy(currentError = null) }
+    }
+
     fun generateUserID(context: Context) {
-        // TODO: Generate User ID
+        val settings = uiState.value.appSettings
+        val service = VitalClient.controlPlane(context, settings.environment, settings.region, settings.apiKey)
+        viewModelScope.launch {
+            try {
+                val request = CreateUserRequest("android-demo-${Instant.now()}")
+                val response = service.createUser(request)
+                setUserId(response.userId)
+            } catch (e: Throwable) {
+                viewModelState.update { it.copy(currentError = e) }
+            }
+        }
     }
 
     fun configureSDK(context: Context) {
         val state = uiState.value
         VitalClient.configure(context, state.appSettings.region, state.appSettings.environment, state.appSettings.apiKey)
+        VitalClient.setUserId(context, state.appSettings.userId)
+
+        VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient()
+
+        updateSDKStatus(context)
     }
 
     fun signInWithToken(context: Context) {
-        val state = uiState.value
+        val settings = uiState.value.appSettings
+        val service = VitalClient.controlPlane(context, settings.environment, settings.region, settings.apiKey)
+
         viewModelScope.launch {
-            // TODO: Create sign-in token
-            // TODO: VitalClient.signIn
+            try {
+                // Emulate a backend-created Vital Sign-In Token.
+                val response = service.createSignInToken(settings.userId)
+                check(response.userId == settings.userId)
+
+                // Sign-in with the SDK using the created token.
+                VitalClient.signIn(context, response.signInToken)
+
+                VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient()
+
+                updateSDKStatus(context)
+
+            } catch (e: Throwable) {
+                viewModelState.update { it.copy(currentError = e) }
+            }
         }
     }
 
     fun resetSDK(context: Context) {
         VitalClient.getOrCreate(context).cleanUp()
-        updateSDKStatus()
+        updateSDKStatus(context)
     }
 
-    fun updateSDKStatus() {
+    fun updateSDKStatus(context: Context) {
+        // Ensure that the VitalClient has been initialized.
+        VitalClient.getOrCreate(context)
+
         val status = VitalClient.status
 
         viewModelState.update {
             it.copy(
                 sdkUserId = if (VitalClient.Status.SignedIn in status) VitalClient.currentUserId ?: "error" else "null",
-                sdkIsConfigured = VitalClient.Status.Configured in status,
             )
         }
+
+        val isConfigured = VitalClient.Status.Configured in status
+        store.update { it.copy(isSDKConfigured = isConfigured) }
     }
 
     companion object {
@@ -112,8 +161,15 @@ enum class SettingsAuthMode {
 data class SettingsState(
     val appSettings: AppSettings = AppSettings(),
 
+    /**
+     * The current SDK user ID.
+     *
+     * Does not have to match [AppSettings.userId] if new app settings have not yet applied to the
+     * SDK.
+     * */
     val sdkUserId: String = "",
-    val sdkIsConfigured: Boolean = false,
+
+    val currentError: Throwable? = null,
 ) {
     val isApiKeyValid: Boolean
         get() = appSettings.apiKey != ""
@@ -122,11 +178,11 @@ data class SettingsState(
         get() = runCatching { UUID.fromString(appSettings.userId) }.isSuccess
 
     val canConfigureSDK: Boolean
-        get() = !sdkIsConfigured && isApiKeyValid && isUserIdValid
+        get() = !appSettings.isSDKConfigured && isApiKeyValid && isUserIdValid
 
     val canGenerateUserId: Boolean
-        get() = !sdkIsConfigured && isApiKeyValid
+        get() = !appSettings.isSDKConfigured && isApiKeyValid && !isUserIdValid
 
     val canResetSDK: Boolean
-        get() = sdkIsConfigured
+        get() = appSettings.isSDKConfigured
 }
