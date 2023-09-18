@@ -22,18 +22,19 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import io.tryvital.client.VitalClient
+import io.tryvital.sample.AppSettingsStore
 import io.tryvital.sample.Screen
 import io.tryvital.sample.UserRepository
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun UsersScreen(
-    client: VitalClient,
     @Suppress("UNUSED_PARAMETER") navController: NavHostController,
+    settingsStore: AppSettingsStore,
     userRepository: UserRepository
 ) {
     val viewModel: UsersViewModel = viewModel(
-        factory = UsersViewModel.provideFactory(client, userRepository)
+        factory = UsersViewModel.provideFactory(LocalContext.current, settingsStore, userRepository)
     )
     val openDialog = remember { mutableStateOf(false) }
 
@@ -92,7 +93,20 @@ fun UsersScreen(
                 .padding(padding)
                 .fillMaxSize()
         ) {
-            if (state.loading) {
+            if (!state.isSDKConfigured) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text("SDK has not been configured")
+
+                        OutlinedButton(onClick = { navController.navigate(Screen.Settings.route) }) {
+                            Text("Settings")
+                        }
+                    }
+                }
+            } else if (state.loading) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center

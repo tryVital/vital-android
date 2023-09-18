@@ -64,6 +64,10 @@ dependencies {
     implementation project(':VitalDevices')
     implementation project(':VitalHealthConnect')
 
+    implementation "com.squareup.moshi:moshi:$moshi"
+    implementation "com.squareup.moshi:moshi-kotlin:$moshi"
+    implementation "com.squareup.moshi:moshi-adapters:$moshi"
+
     implementation "androidx.core:core-ktx:$core"
     implementation "androidx.navigation:navigation-compose:$nav"
     implementation "androidx.compose.ui:ui:$compose"

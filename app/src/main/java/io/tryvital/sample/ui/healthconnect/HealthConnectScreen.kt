@@ -17,19 +17,20 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import io.tryvital.client.VitalClient
+import io.tryvital.sample.AppSettings
+import io.tryvital.sample.AppSettingsStore
 import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun HealthConnectScreen(
-    vitalClient: VitalClient,
-    vitalHealthConnectManager: VitalHealthConnectManager,
+    settingsStore: AppSettingsStore,
     userRepository: UserRepository,
     navController: NavHostController
 ) {
     val viewModel: HealthConnectViewModel = viewModel(
-        factory = HealthConnectViewModel.provideFactory(vitalClient, vitalHealthConnectManager, userRepository)
+        factory = HealthConnectViewModel.provideFactory(LocalContext.current, settingsStore, userRepository)
     )
 
     val context = LocalContext.current

@@ -30,7 +30,7 @@ fun UserDetailsCard(
             Text("Selected User Details", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(12.dp))
             Row {
-                val userId = state.user.userId ?: ""
+                val userId = state.user.userId
 
                 Column {
                     Text("User id")
@@ -61,7 +61,7 @@ fun UserDetailsCard(
                 }
             }
             Row {
-                val clientUserId = state.user.clientUserId ?: ""
+                val clientUserId = state.user.clientUserId
 
                 Column {
                     Text("User Client Id")
