@@ -37,13 +37,7 @@ fun DevicesScreen(navController: NavHostController) {
     Scaffold(topBar = {
         TopAppBar(title = { Text("Supported devices") },
             colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0)),
-            navigationIcon = {
-                IconButton(onClick = {
-                    navController.popBackStack()
-                }) {
-                    Icon(Icons.Filled.ArrowBack, "backIcon")
-                }
-            })
+        )
     }, content = { padding ->
         Column(
             modifier = Modifier

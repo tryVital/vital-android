@@ -69,13 +69,6 @@ fun UsersScreen(
                 title = { Text("Vital sample") },
                 actions = {
                     IconAction(
-                        painter = rememberVectorPainter(image = Icons.Default.Bluetooth),
-                        description = "Add user",
-                        onClick = {
-                            navController.navigate(Screen.Devices.route)
-                        }
-                    )
-                    IconAction(
                         painter = rememberVectorPainter(image = Icons.Default.Person),
                         description = "Add user",
                         onClick = {
