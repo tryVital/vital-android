@@ -18,11 +18,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import io.tryvital.sample.AppSettingsStore
+
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun SettingsScreen(navController: NavHostController) {
+fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
     val viewModel: SettingsViewModel = viewModel(
-        factory = SettingsViewModel.provideFactory()
+        factory = SettingsViewModel.provideFactory(store)
     )
 
     Scaffold(
@@ -63,7 +65,7 @@ fun SettingsScreen(navController: NavHostController) {
             Text("Configuration")
 
             TextField(
-                state.value.apiKey,
+                state.value.appSettings.apiKey,
                 onValueChange = viewModel::setApiKey,
                 label = { Text("API Key") },
                 maxLines = 1,
@@ -72,7 +74,7 @@ fun SettingsScreen(navController: NavHostController) {
             )
 
             TextField(
-                state.value.userId,
+                state.value.appSettings.userId,
                 onValueChange = viewModel::setUserId,
                 label = { Text("User ID") },
                 maxLines = 1,
@@ -83,14 +85,14 @@ fun SettingsScreen(navController: NavHostController) {
             SettingsDropdownMenu(
                 title = "Environment",
                 items = viewModel.environments,
-                selectedId = Pair(state.value.environment, state.value.region),
+                selectedId = Pair(state.value.appSettings.environment, state.value.appSettings.region),
                 onSelectionChange = { (e, r) -> viewModel.setEnvironment(e, r) }
             )
 
             SettingsDropdownMenu(
                 title = "Auth Mode",
                 items = viewModel.authModes,
-                selectedId = state.value.authMode,
+                selectedId = state.value.appSettings.authMode,
                 onSelectionChange = viewModel::setAuthMode,
             )
 
@@ -101,14 +103,14 @@ fun SettingsScreen(navController: NavHostController) {
             }
             OutlinedButton(
                 onClick = {
-                    when (state.value.authMode) {
+                    when (state.value.appSettings.authMode) {
                         SettingsAuthMode.ApiKey -> viewModel.configureSDK(context)
                         SettingsAuthMode.SignInTokenDemo -> viewModel.signInWithToken(context)
                     }
                 },
                 enabled = state.value.canConfigureSDK
             ) {
-                when (state.value.authMode) {
+                when (state.value.appSettings.authMode) {
                     SettingsAuthMode.ApiKey -> Text("Configure SDK")
                     SettingsAuthMode.SignInTokenDemo -> Text("Sign-In with Token")
                 }

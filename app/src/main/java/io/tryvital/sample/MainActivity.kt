@@ -40,10 +40,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val vitalApp = application as VitalApp
-        val client = vitalApp.client
         val vitalDeviceManager = vitalApp.vitalDeviceManager
-        val vitalHealthConnectManager = vitalApp.vitalHealthConnectManager
         val userRepository = vitalApp.userRepository
+        val settingsStore = AppSettingsStore.getOrCreate(this.applicationContext)
         VitalLogger.getOrCreate().enabled = true
 
         setContent {
@@ -84,15 +83,14 @@ class MainActivity : ComponentActivity() {
                     ) {
                         composable(Screen.Users.route) {
                             UsersScreen(
-                                client,
                                 navController,
+                                settingsStore,
                                 userRepository
                             )
                         }
                         composable(Screen.HealthConnect.route) {
                             HealthConnectScreen(
-                                client,
-                                vitalHealthConnectManager,
+                                settingsStore,
                                 userRepository,
                                 navController,
                             )
@@ -110,6 +108,7 @@ class MainActivity : ComponentActivity() {
                         }
                         composable(Screen.Settings.route) {
                             SettingsScreen(
+                                settingsStore,
                                 navController,
                             )
                         }

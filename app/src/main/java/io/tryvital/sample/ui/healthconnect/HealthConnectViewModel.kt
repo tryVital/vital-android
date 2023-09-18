@@ -6,7 +6,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.tryvital.client.VitalClient
+import io.tryvital.client.VitalClientPrefKeys
 import io.tryvital.client.services.data.User
+import io.tryvital.sample.AppSettingsStore
 import io.tryvital.sample.UserRepository
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
@@ -21,10 +23,13 @@ import java.time.temporal.ChronoUnit
 import kotlin.system.exitProcess
 
 class HealthConnectViewModel(
-    private val vitalClient: VitalClient,
-    private val vitalHealthConnectManager: VitalHealthConnectManager,
+    private val context: Context,
+    private val settingsStore: AppSettingsStore,
     private val userRepository: UserRepository
 ) : ViewModel() {
+    private val vitalClient = VitalClient.getOrCreate(context)
+    private val vitalHealthConnectManager = VitalHealthConnectManager.getOrCreate(context)
+
     private val isCurrentSDKUser
         get() = userRepository.selectedUser!!.userId == VitalClient.currentUserId
 
@@ -54,7 +59,8 @@ class HealthConnectViewModel(
             vitalClient.cleanUp()
         } else {
             vitalHealthConnectManager.configureHealthConnectClient()
-            vitalClient.setUserId(
+            VitalClient.setUserId(
+                context,
                 userRepository.selectedUser!!.userId
             )
         }
@@ -137,13 +143,13 @@ class HealthConnectViewModel(
 
     companion object {
         fun provideFactory(
-            vitalClient: VitalClient,
-            vitalHealthConnectManager: VitalHealthConnectManager,
+            context: Context,
+            settingsStore: AppSettingsStore,
             userRepository: UserRepository,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return HealthConnectViewModel(vitalClient, vitalHealthConnectManager, userRepository) as T
+                return HealthConnectViewModel(context.applicationContext, settingsStore, userRepository) as T
             }
         }
     }

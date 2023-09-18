@@ -15,6 +15,9 @@ interface ControlPlaneService {
     @POST("user/{user_id}/sign_in_token")
     suspend fun createSignInToken(@Path("user_id") userId: String): CreateSignInTokenResponse
 
+    @DELETE("user/{user_id}")
+    suspend fun deleteUser(@Path("user_id") userId: String): DeleteUserResponse
+
     companion object {
         fun create(retrofit: Retrofit): ControlPlaneService {
             return retrofit.create(ControlPlaneService::class.java)

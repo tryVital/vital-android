@@ -7,18 +7,27 @@ import androidx.lifecycle.viewModelScope
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
+import io.tryvital.sample.AppSettings
+import io.tryvital.sample.AppSettingsStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
-class SettingsViewModel: ViewModel() {
+class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     private val viewModelState = MutableStateFlow(SettingsState())
     val uiState = viewModelState.asStateFlow()
 
     init {
         updateSDKStatus()
+        store.uiState
+            .onEach { appSettings ->
+                viewModelState.update { it.copy(appSettings = appSettings) }
+            }
+            .launchIn(viewModelScope)
     }
 
     val authModes = listOf(
@@ -36,19 +45,19 @@ class SettingsViewModel: ViewModel() {
     )
 
     fun setEnvironment(environment: Environment, region: Region) {
-        viewModelState.update { it.copy(environment = environment, region = region) }
+        store.update { it.copy(environment = environment, region = region) }
     }
 
     fun setAuthMode(mode: SettingsAuthMode) {
-        viewModelState.update { it.copy(authMode = mode) }
+        store.update { it.copy(authMode = mode) }
     }
 
     fun setApiKey(value: String) {
-        viewModelState.update { it.copy(apiKey = value) }
+        store.update { it.copy(apiKey = value) }
     }
 
     fun setUserId(value: String) {
-        viewModelState.update { it.copy(userId = value) }
+        store.update { it.copy(userId = value) }
     }
 
     fun generateUserID(context: Context) {
@@ -57,7 +66,7 @@ class SettingsViewModel: ViewModel() {
 
     fun configureSDK(context: Context) {
         val state = uiState.value
-        VitalClient.configure(context, state.region, state.environment, state.apiKey)
+        VitalClient.configure(context, state.appSettings.region, state.appSettings.environment, state.appSettings.apiKey)
     }
 
     fun signInWithToken(context: Context) {
@@ -85,10 +94,12 @@ class SettingsViewModel: ViewModel() {
     }
 
     companion object {
-        fun provideFactory(): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+        fun provideFactory(
+            store: AppSettingsStore
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return SettingsViewModel() as T
+                return SettingsViewModel(store) as T
             }
         }
     }
@@ -99,20 +110,16 @@ enum class SettingsAuthMode {
 }
 
 data class SettingsState(
-    val authMode: SettingsAuthMode = SettingsAuthMode.ApiKey,
-    val userId: String = "",
-    val apiKey: String = "",
-    val environment: Environment = Environment.Sandbox,
-    val region: Region = Region.US,
+    val appSettings: AppSettings = AppSettings(),
 
     val sdkUserId: String = "",
     val sdkIsConfigured: Boolean = false,
 ) {
     val isApiKeyValid: Boolean
-        get() = apiKey != ""
+        get() = appSettings.apiKey != ""
 
     val isUserIdValid: Boolean
-        get() = runCatching { UUID.fromString(userId) }.isSuccess
+        get() = runCatching { UUID.fromString(appSettings.userId) }.isSuccess
 
     val canConfigureSDK: Boolean
         get() = !sdkIsConfigured && isApiKeyValid && isUserIdValid
