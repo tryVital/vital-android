@@ -1,38 +1,29 @@
 package io.tryvital.sample.ui.settings
 
-import android.content.pm.PackageManager.*
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
-import coil.compose.rememberAsyncImagePainter
-import io.tryvital.client.Environment
-import io.tryvital.client.Region
-import io.tryvital.sample.Screen
-import io.tryvital.vitaldevices.Brand
-import io.tryvital.vitaldevices.DeviceModel
-import io.tryvital.vitaldevices.Kind
-
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun SettingsScreen(navController: NavHostController) {
+    val viewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModel.provideFactory()
+    )
 
     Scaffold(
         topBar = {
@@ -41,6 +32,10 @@ fun SettingsScreen(navController: NavHostController) {
             )
         }
     ) { padding ->
+        val context = LocalContext.current
+        val state = viewModel.uiState.collectAsState()
+        val focusManager = LocalFocusManager.current
+
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
@@ -52,15 +47,15 @@ fun SettingsScreen(navController: NavHostController) {
             Text("SDK State")
 
             TextField(
-                "Configured",
-                onValueChange = { },
+                if (state.value.sdkIsConfigured) "Configured" else "null",
+                onValueChange = {},
                 label = { Text("Status") },
                 readOnly = true,
             )
 
             TextField(
-                "user_id",
-                onValueChange = { },
+                state.value.sdkUserId,
+                onValueChange = {},
                 label = { Text("User ID") },
                 readOnly = true,
             )
@@ -68,46 +63,57 @@ fun SettingsScreen(navController: NavHostController) {
             Text("Configuration")
 
             TextField(
-                "key",
-                onValueChange = { },
+                state.value.apiKey,
+                onValueChange = viewModel::setApiKey,
                 label = { Text("API Key") },
+                maxLines = 1,
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
             )
 
             TextField(
-                "user_id",
-                onValueChange = { },
+                state.value.userId,
+                onValueChange = viewModel::setUserId,
                 label = { Text("User ID") },
+                maxLines = 1,
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
             )
 
             SettingsDropdownMenu(
                 title = "Environment",
-                items = listOf(
-                    Pair(Pair(Environment.Dev, Region.US), "dev - us"),
-                    Pair(Pair(Environment.Dev, Region.EU), "dev - eu"),
-                ),
-                selectedId = Pair(Environment.Dev, Region.US),
-                onSelectionChange = { }
+                items = viewModel.environments,
+                selectedId = Pair(state.value.environment, state.value.region),
+                onSelectionChange = { (e, r) -> viewModel.setEnvironment(e, r) }
             )
 
             SettingsDropdownMenu(
                 title = "Auth Mode",
-                items = listOf(
-                    Pair("apiKey", "API Key"),
-                    Pair("userJwtDemo", "Vital Sign-In Token Demo"),
-                ),
-                selectedId = Pair(Environment.Dev, Region.US),
-                onSelectionChange = { }
+                items = viewModel.authModes,
+                selectedId = state.value.authMode,
+                onSelectionChange = viewModel::setAuthMode,
             )
 
             Text("Actions")
 
-            OutlinedButton(onClick = { /*TODO*/ }) {
+            OutlinedButton(onClick = { viewModel.generateUserID(context) }, enabled = state.value.canGenerateUserId) {
                 Text("Generate User ID")
             }
-            OutlinedButton(onClick = { /*TODO*/ }) {
-                Text("Configure SDK")
+            OutlinedButton(
+                onClick = {
+                    when (state.value.authMode) {
+                        SettingsAuthMode.ApiKey -> viewModel.configureSDK(context)
+                        SettingsAuthMode.SignInTokenDemo -> viewModel.signInWithToken(context)
+                    }
+                },
+                enabled = state.value.canConfigureSDK
+            ) {
+                when (state.value.authMode) {
+                    SettingsAuthMode.ApiKey -> Text("Configure SDK")
+                    SettingsAuthMode.SignInTokenDemo -> Text("Sign-In with Token")
+                }
             }
-            OutlinedButton(onClick = { /*TODO*/ }) {
+            OutlinedButton(onClick = { viewModel.resetSDK(context) }, enabled = state.value.canResetSDK) {
                 Text("Reset SDK")
             }
         }
@@ -115,11 +121,11 @@ fun SettingsScreen(navController: NavHostController) {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun SettingsDropdownMenu(
+@Composable fun <T> SettingsDropdownMenu(
     title: String,
-    items: List<Pair<Any, String>>,
-    selectedId: Any?,
-    onSelectionChange: (Any) -> Unit
+    items: List<Pair<T, String>>,
+    selectedId: T?,
+    onSelectionChange: (T) -> Unit
 ) {
     val (expanded, setExpanded) = remember { mutableStateOf(false) }
 
