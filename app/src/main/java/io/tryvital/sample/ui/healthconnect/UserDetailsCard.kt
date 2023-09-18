@@ -8,6 +8,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.ClipboardManager
@@ -29,7 +30,7 @@ fun UserDetailsCard(
         Column(Modifier.padding(16.dp)) {
             Text("Selected User Details", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(12.dp))
-            Row {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 val userId = state.user.userId
 
                 Column {
@@ -48,19 +49,19 @@ fun UserDetailsCard(
                     clipboardManager.setText(AnnotatedString(userId))
                 }
             }
+            Spacer(modifier = Modifier.height(8.dp))
             Row {
                 Column {
-                    Text(if (state.isCurrentSDKUser) "Is Current SDK User" else "Not Current SDK User")
-                }
-                Spacer(Modifier.weight(1f))
-                Button(
-                    onClick = { viewModel.toggleSDKCurrentUserState() },
-                    contentPadding = ButtonDefaults.TextButtonContentPadding
-                ) {
-                    Text(if (state.isCurrentSDKUser) "Reset SDK" else "Set as SDK user")
+                    Text("Current SDK User")
+                    Text(
+                        if (state.isCurrentSDKUser) "Yes" else "No",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
-            Row {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 val clientUserId = state.user.clientUserId
 
                 Column {

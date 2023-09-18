@@ -27,7 +27,6 @@ class HealthConnectViewModel(
     private val settingsStore: AppSettingsStore,
     private val userRepository: UserRepository
 ) : ViewModel() {
-    private val vitalClient = VitalClient.getOrCreate(context)
     private val vitalHealthConnectManager = VitalHealthConnectManager.getOrCreate(context)
 
     private val isCurrentSDKUser
@@ -53,27 +52,14 @@ class HealthConnectViewModel(
         checkPermissions()
     }
 
-    fun toggleSDKCurrentUserState() {
-        if (isCurrentSDKUser) {
-            vitalHealthConnectManager.cleanUp()
-            vitalClient.cleanUp()
-        } else {
-            vitalHealthConnectManager.configureHealthConnectClient()
-            VitalClient.setUserId(
-                context,
-                userRepository.selectedUser!!.userId
-            )
-        }
-
-        viewModelState.update { it.copy(isCurrentSDKUser = this.isCurrentSDKUser) }
-    }
-
     fun createPermissionRequestContract() = vitalHealthConnectManager.createPermissionRequestContract(
         readResources = VitalResource.values().toSet(),
         writeResources = WritableVitalResource.values().toSet(),
     )
 
     fun checkAvailability(context: Context) {
+        viewModelState.update { it.copy(isCurrentSDKUser = this.isCurrentSDKUser) }
+
         viewModelState.update {
             it.copy(available = VitalHealthConnectManager.isAvailable(context))
         }

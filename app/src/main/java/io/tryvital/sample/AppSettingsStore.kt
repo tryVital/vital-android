@@ -10,7 +10,6 @@ import io.tryvital.client.Region
 import io.tryvital.sample.ui.settings.SettingsAuthMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 
 class AppSettingsStore(

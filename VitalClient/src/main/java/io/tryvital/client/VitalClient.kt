@@ -132,6 +132,11 @@ class VitalClient internal constructor(context: Context) {
     companion object {
         private var sharedInstance: VitalClient? = null
 
+        /**
+         * The current status of the Vital SDK.
+         * Note that this returns an empty status if [VitalClient.getOrCreate] has never been called
+         * to initialize the [VitalClient].
+         */
         val status: Set<Status>
             get() {
                 val shared = synchronized(VitalClient) { sharedInstance } ?: return setOf()
@@ -154,6 +159,11 @@ class VitalClient internal constructor(context: Context) {
                 return status
             }
 
+        /**
+         * The current user ID of the Vital SDK.
+         * Note that this returns null if [VitalClient.getOrCreate] has never been called
+         * to initialize the [VitalClient].
+         */
         val currentUserId: String?
             get() {
                 val shared = synchronized(VitalClient) { sharedInstance } ?: return null

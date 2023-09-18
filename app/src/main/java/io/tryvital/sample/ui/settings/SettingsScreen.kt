@@ -7,6 +7,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,6 +39,24 @@ fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
         val state = viewModel.uiState.collectAsState()
         val focusManager = LocalFocusManager.current
 
+        LaunchedEffect("onLaunch") {
+            viewModel.didLaunch(context)
+        }
+
+        val error = state.value.currentError
+        if (error != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.clearError() },
+                title = { Text(text = error::class.simpleName ?: "") },
+                text = { Text(text = error.message ?: "") },
+                confirmButton = {
+                    Button(onClick = { viewModel.clearError() }) {
+                        Text("OK")
+                    }
+                }
+            )
+        }
+
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier
@@ -49,7 +68,7 @@ fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
             Text("SDK State")
 
             TextField(
-                if (state.value.sdkIsConfigured) "Configured" else "null",
+                if (state.value.appSettings.isSDKConfigured) "Configured" else "null",
                 onValueChange = {},
                 label = { Text("Status") },
                 readOnly = true,
