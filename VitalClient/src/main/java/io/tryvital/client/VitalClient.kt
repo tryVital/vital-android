@@ -220,6 +220,24 @@ class VitalClient internal constructor(context: Context) {
             @Suppress("DEPRECATION")
             getOrCreate(context).setUserId(userId)
         }
+
+        /**
+         * Control plane API calls which can be made via the API Key without having to configure the SDK.
+         *
+         * ### Warning
+         * If you use Vital Sign-In Token, the API Key should be a server-side secret, and these calls generally
+         * should be done by your backend services after authenticating the app user.
+         * These control plane methods are only intended for early prototyping in Vital Sandbox, and customers sticking to the
+         * API Key mode.
+         */
+        fun controlPlane(context: Context, environment: Environment, region: Region, apiKey: String): ControlPlaneService {
+            val dependencies = Dependencies(
+                context,
+                StaticConfiguration(VitalClientAuthStrategy.APIKey(apiKey, environment, region))
+            )
+
+            return ControlPlaneService.create(dependencies.retrofit)
+        }
     }
 
     enum class Status {
