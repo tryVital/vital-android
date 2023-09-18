@@ -5,14 +5,10 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.jwt.VitalJWTAuth
 import io.tryvital.client.jwt.VitalSignInToken
 import io.tryvital.client.services.*
-import java.util.concurrent.atomic.AtomicReference
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
@@ -81,9 +77,20 @@ class VitalClient internal constructor(context: Context) {
     fun cleanUp() {
         sharedPreferences.edit().clear().apply()
         encryptedSharedPreferences.edit().clear().apply()
+        jwtAuth.signOut()
     }
 
-    private fun configure(strategy: VitalClientAuthStrategy) {
+    @Deprecated(
+        message = "Use VitalClient.configure (API Key) or VitalClient.signIn (Vital Sign-In Token) instead.",
+        replaceWith = ReplaceWith("VitalClient.configure(context, region, environment, apiKey)"),
+    )
+    fun configure(region: Region, environment: Environment, apiKey: String) {
+        setConfiguration(
+            VitalClientAuthStrategy.APIKey(apiKey, environment, region)
+        )
+    }
+
+    private fun setConfiguration(strategy: VitalClientAuthStrategy) {
         encryptedSharedPreferences.edit()
             .putString(
                 VITAL_ENCRYPTED_AUTH_STRATEGY_KEY,
@@ -92,12 +99,28 @@ class VitalClient internal constructor(context: Context) {
             .apply()
     }
 
-    @SuppressLint("ApplySharedPref")
+    @Deprecated(
+        message = "Use VitalClient.setUserId instead.",
+        replaceWith = ReplaceWith("VitalClient.setUserId(context, userId)"),
+    )
     fun setUserId(userId: String) {
+        // No-op if the SDK has been configured into JWT mode.
+        if (configurationReader.authStrategy is VitalClientAuthStrategy.JWT) {
+            return
+        }
+
         encryptedSharedPreferences.edit().apply {
             putString(VITAL_ENCRYPTED_USER_ID_KEY, userId)
             apply()
         }
+    }
+
+    @Deprecated(
+        message = "Use VitalClient.status instead.",
+        replaceWith = ReplaceWith("VitalClient.Status.SignedIn in VitalClient.status"),
+    )
+    fun hasUserId(): Boolean {
+        return encryptedSharedPreferences.getString(VITAL_ENCRYPTED_USER_ID_KEY, null) != null
     }
 
     fun checkUserId(): String {
@@ -168,20 +191,34 @@ class VitalClient internal constructor(context: Context) {
 
             // Configure the SDK only if we have signed in successfully.
             val shared = getOrCreate(context)
-            shared.configure(
+            shared.setConfiguration(
                 strategy = VitalClientAuthStrategy.JWT(claims.environment, claims.region),
             )
         }
 
         /**
-         * Configure the SDK in the legacy API Key mode.
+         * Configure the SDK in the API Key mode.
          *
-         * API Key mode will continue to be supported. But users should plan to migrate to the User JWT mode.
+         * API Key mode will continue to be supported, but discouraged for production usage.
+         * Prefer to use Vital Sign-In Token in your production apps, which allows your API Keys
+         * to be kept fully as server-side secrets.
          */
         fun configure(context: Context, region: Region, environment: Environment, apiKey: String) {
-            getOrCreate(context).configure(
+            getOrCreate(context).setConfiguration(
                 VitalClientAuthStrategy.APIKey(apiKey, environment, region)
             )
+        }
+
+        /**
+         * Set the current User ID (only for SDK using the API Key mode).
+         *
+         * API Key mode will continue to be supported, but discouraged for production usage.
+         * Prefer to use Vital Sign-In Token in your production apps, which allows your API Keys
+         * to be kept fully as server-side secrets.
+         */
+        fun setUserId(context: Context, userId: String) {
+            @Suppress("DEPRECATION")
+            getOrCreate(context).setUserId(userId)
         }
     }
 
