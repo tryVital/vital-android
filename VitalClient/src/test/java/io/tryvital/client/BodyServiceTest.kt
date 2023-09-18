@@ -20,12 +20,7 @@ class BodyServiceTest {
     @Before
     fun setUp() {
         server = MockWebServer()
-
-        retrofit = Dependencies.createRetrofit(
-            server.url("").toString(),
-            Dependencies.createHttpClient(null, StaticConfiguration(apiKey = apiKey)),
-            Dependencies.createMoshi()
-        )
+        retrofit = server.createTestRetrofit()
     }
 
     @After

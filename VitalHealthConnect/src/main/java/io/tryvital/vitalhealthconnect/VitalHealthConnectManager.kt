@@ -166,7 +166,7 @@ class VitalHealthConnectManager private constructor(
         numberOfDaysToBackFill: Int = 30,
         syncNotificationBuilder: SyncNotificationBuilder? = null,
     ) {
-        if (!vitalClient.isConfigured) {
+        if (VitalClient.Status.Configured !in VitalClient.status) {
             throw IllegalStateException("VitalClient has not been configured.")
         }
 
@@ -179,7 +179,7 @@ class VitalHealthConnectManager private constructor(
             .putInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, numberOfDaysToBackFill)
             .commit()
 
-        if (vitalClient.hasUserId() && isAvailable(context) == HealthConnectAvailability.Installed) {
+        if (VitalClient.Status.SignedIn in VitalClient.status && isAvailable(context) == HealthConnectAvailability.Installed) {
             vitalLogger.logI("Configuration set, starting sync")
             taskScope.launch {
                 syncData(healthResources)

@@ -26,7 +26,7 @@ class HealthConnectViewModel(
     private val userRepository: UserRepository
 ) : ViewModel() {
     private val isCurrentSDKUser
-        get() = userRepository.selectedUser!!.userId == vitalClient.currentUserId
+        get() = userRepository.selectedUser!!.userId == VitalClient.currentUserId
 
     private val viewModelState =
         MutableStateFlow(HealthConnectViewModelState(
