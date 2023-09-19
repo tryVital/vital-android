@@ -8,6 +8,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.CreateUserRequest
 import io.tryvital.client.services.data.User
 import io.tryvital.client.services.linkUserWithOauthProvider
+import io.tryvital.client.utils.VitalLogger
 import io.tryvital.sample.AppSettings
 import io.tryvital.sample.AppSettingsStore
 import io.tryvital.sample.UserRepository
@@ -45,6 +46,12 @@ class UsersViewModel(
     init {
         controlPlane
             .onEach { update() }
+            .launchIn(viewModelScope)
+
+        settingsStore.uiState
+            .map { it.userId }
+            .distinctUntilChanged()
+            .onEach { sdkUserId -> viewModelState.update { it.copy(sdkUserId = sdkUserId) } }
             .launchIn(viewModelScope)
     }
 
@@ -97,6 +104,10 @@ class UsersViewModel(
 
     fun linkUserWithProvider(context: Context, user: User) {
         viewModelScope.launch {
+            if (user.userId != viewModelState.value.sdkUserId) {
+                return@launch
+            }
+
             VitalClient.getOrCreate(context).linkUserWithOauthProvider(
                 context,
                 user,
@@ -107,6 +118,9 @@ class UsersViewModel(
     }
 
     fun setError(error: Throwable?) {
+        if (error != null) {
+            VitalLogger.getOrCreate().logE("UsersScreen error", error)
+        }
         viewModelState.update { it.copy(currentError = error) }
     }
 
@@ -126,6 +140,7 @@ class UsersViewModel(
 
 data class UsersViewModelState(
     val loading: Boolean = false,
+    val sdkUserId: String? = null,
     val users: List<User>? = listOf(),
     val selectedUser: User? = null,
     var currentError: Throwable? = null,

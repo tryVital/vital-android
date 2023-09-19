@@ -31,7 +31,7 @@ fun UserDetailsCard(
             Text("Selected User Details", fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Spacer(modifier = Modifier.height(12.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                val userId = state.user.userId
+                val userId = viewModel.userId
 
                 Column {
                     Text("User id")
@@ -47,38 +47,6 @@ fun UserDetailsCard(
                     description = "Copy User id",
                 ) {
                     clipboardManager.setText(AnnotatedString(userId))
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                Column {
-                    Text("Current SDK User")
-                    Text(
-                        if (state.isCurrentSDKUser) "Yes" else "No",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val clientUserId = state.user.clientUserId
-
-                Column {
-                    Text("User Client Id")
-                    Text(
-                        clientUserId,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-                IconAction(
-                    painter = rememberVectorPainter(image = Icons.Default.ContentCopy),
-                    description = "Copy Client User id",
-                ) {
-                    clipboardManager.setText(AnnotatedString(clientUserId))
-
                 }
             }
         }

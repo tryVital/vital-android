@@ -22,22 +22,13 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.system.exitProcess
 
-class HealthConnectViewModel(
-    private val context: Context,
-    private val settingsStore: AppSettingsStore,
-    private val userRepository: UserRepository
-) : ViewModel() {
+class HealthConnectViewModel(context: Context) : ViewModel() {
     private val vitalHealthConnectManager = VitalHealthConnectManager.getOrCreate(context)
 
-    private val isCurrentSDKUser
-        get() = userRepository.selectedUser!!.userId == VitalClient.currentUserId
-
-    private val viewModelState =
-        MutableStateFlow(HealthConnectViewModelState(
-            user = userRepository.selectedUser!!,
-            isCurrentSDKUser = isCurrentSDKUser,
-        ))
+    private val viewModelState = MutableStateFlow(HealthConnectViewModelState())
     val uiState = viewModelState.asStateFlow()
+
+    val userId: String get() = VitalClient.currentUserId ?: "<null>"
 
     fun init(context: Context) {
         viewModelScope.launch {
@@ -58,8 +49,6 @@ class HealthConnectViewModel(
     )
 
     fun checkAvailability(context: Context) {
-        viewModelState.update { it.copy(isCurrentSDKUser = this.isCurrentSDKUser) }
-
         viewModelState.update {
             it.copy(available = VitalHealthConnectManager.isAvailable(context))
         }
@@ -129,13 +118,11 @@ class HealthConnectViewModel(
 
     companion object {
         fun provideFactory(
-            context: Context,
-            settingsStore: AppSettingsStore,
-            userRepository: UserRepository,
+            context: Context
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return HealthConnectViewModel(context.applicationContext, settingsStore, userRepository) as T
+                return HealthConnectViewModel(context.applicationContext) as T
             }
         }
     }
@@ -145,7 +132,5 @@ data class HealthConnectViewModelState(
     val available: HealthConnectAvailability? = null,
     val permissionsGranted: List<VitalResource> = listOf(),
     val permissionsMissing: List<VitalResource> = listOf(),
-    val user: User,
-    val isCurrentSDKUser: Boolean,
     val syncStatus: String = "",
 )
