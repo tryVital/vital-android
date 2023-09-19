@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.squareup.moshi.Json
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
@@ -36,6 +37,7 @@ const val AUTH_RECORD_KEY = "auth_record"
 
 private val moshi by lazy {
     Moshi.Builder()
+        .add(Date::class.java, Rfc3339DateJsonAdapter())
         .addLast(KotlinJsonAdapterFactory())
         .build()
 }
@@ -419,7 +421,7 @@ internal data class VitalSignInToken(
             throw IllegalArgumentException("malformed JWT [2]")
         }
 
-        return moshi.adapter(VitalSignInTokenClaims::class.java).fromJson(rawClaims.utf8())!!
+        return VitalSignInTokenClaims.parse(rawClaims.utf8())
     }
 }
 
@@ -440,6 +442,13 @@ internal data class VitalSignInTokenClaims(
     val region: Region,
 ) {
     companion object {
+        fun parseEnvironmentShorthand(environment: String) = when (environment) {
+            "dev" -> Environment.Dev
+            "stg" -> Environment.Sandbox
+            "prd" -> Environment.Production
+            else -> throw IllegalArgumentException("Unknown environment: $environment")
+        }
+
         fun parse(rawToken: String): VitalSignInTokenClaims {
             val rawClaims = moshi.adapter(RawClaims::class.java).fromJson(rawToken)!!
 
@@ -447,8 +456,8 @@ internal data class VitalSignInTokenClaims(
             val pattern = Regex("^id-signer-([a-z]+)-([a-z]+)@vital-id-[a-z]+-[a-z]+.iam.gserviceaccount.com$")
             val match = pattern.matchEntire(rawClaims.issuer) ?: throw IllegalArgumentException("invalid issuer")
 
-            val environment = Environment.valueOf(match.groupValues[1])
-            val region = Region.valueOf(match.groupValues[2])
+            val environment = parseEnvironmentShorthand(match.groupValues[1])
+            val region = Region.valueOf(match.groupValues[2].uppercase())
 
             return VitalSignInTokenClaims(
                 userId = rawClaims.userId,

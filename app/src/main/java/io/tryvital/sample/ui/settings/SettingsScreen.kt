@@ -137,6 +137,15 @@ fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
             OutlinedButton(onClick = { viewModel.resetSDK(context) }, enabled = state.value.canResetSDK) {
                 Text("Reset SDK")
             }
+
+            if (state.value.appSettings.authMode == SettingsAuthMode.SignInTokenDemo) {
+                OutlinedButton(
+                    onClick = { viewModel.forceTokenRefresh(context) },
+                    enabled = state.value.canForceTokenRefresh
+                ) {
+                    Text("Force Token Refresh")
+                }
+            }
         }
     }
 }

@@ -248,6 +248,10 @@ class VitalClient internal constructor(context: Context) {
 
             return ControlPlaneService.create(dependencies.retrofit)
         }
+
+        suspend fun debugForceTokenRefresh(context: Context) {
+            VitalJWTAuth.getInstance(context).refreshToken()
+        }
     }
 
     enum class Status {

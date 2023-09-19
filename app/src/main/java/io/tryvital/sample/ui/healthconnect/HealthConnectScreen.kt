@@ -25,12 +25,10 @@ import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun HealthConnectScreen(
-    settingsStore: AppSettingsStore,
-    userRepository: UserRepository,
     navController: NavHostController
 ) {
     val viewModel: HealthConnectViewModel = viewModel(
-        factory = HealthConnectViewModel.provideFactory(LocalContext.current, settingsStore, userRepository)
+        factory = HealthConnectViewModel.provideFactory(LocalContext.current)
     )
 
     val context = LocalContext.current

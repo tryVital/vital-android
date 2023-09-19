@@ -8,6 +8,7 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.CreateUserRequest
+import io.tryvital.client.utils.VitalLogger
 import io.tryvital.sample.AppSettings
 import io.tryvital.sample.AppSettingsStore
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
@@ -83,8 +84,15 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
                 val response = service.createUser(request)
                 setUserId(response.userId)
             } catch (e: Throwable) {
+                VitalLogger.getOrCreate().logE("Demo: Generate User ID failed", e)
                 viewModelState.update { it.copy(currentError = e) }
             }
+        }
+    }
+
+    fun forceTokenRefresh(context: Context) {
+        viewModelScope.launch {
+            VitalClient.debugForceTokenRefresh(context)
         }
     }
 
@@ -116,6 +124,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
                 updateSDKStatus(context)
 
             } catch (e: Throwable) {
+                VitalLogger.getOrCreate().logE("Demo: Sign-in failed", e)
                 viewModelState.update { it.copy(currentError = e) }
             }
         }
@@ -185,4 +194,7 @@ data class SettingsState(
 
     val canResetSDK: Boolean
         get() = appSettings.isSDKConfigured
+
+    val canForceTokenRefresh: Boolean
+        get() = appSettings.authMode == SettingsAuthMode.SignInTokenDemo && sdkUserId != ""
 }

@@ -82,35 +82,19 @@ class MainActivity : ComponentActivity() {
                         startDestination = Screen.Users.route,
                     ) {
                         composable(Screen.Users.route) {
-                            UsersScreen(
-                                navController,
-                                settingsStore,
-                                userRepository
-                            )
+                            UsersScreen(navController, settingsStore, userRepository)
                         }
                         composable(Screen.HealthConnect.route) {
-                            HealthConnectScreen(
-                                settingsStore,
-                                userRepository,
-                                navController,
-                            )
+                            HealthConnectScreen(navController)
                         }
                         composable(Screen.Device.route + "{deviceId}") {
-                            DeviceScreen(
-                                vitalDeviceManager,
-                                navController,
-                            )
+                            DeviceScreen(vitalDeviceManager, navController)
                         }
                         composable(Screen.Devices.route) {
-                            DevicesScreen(
-                                navController,
-                            )
+                            DevicesScreen(navController)
                         }
                         composable(Screen.Settings.route) {
-                            SettingsScreen(
-                                settingsStore,
-                                navController,
-                            )
+                            SettingsScreen(settingsStore, navController)
                         }
                     }
                 }
