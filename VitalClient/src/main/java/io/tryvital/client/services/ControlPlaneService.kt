@@ -18,6 +18,9 @@ interface ControlPlaneService {
     @DELETE("user/{user_id}")
     suspend fun deleteUser(@Path("user_id") userId: String): DeleteUserResponse
 
+    @GET("user/resolve/{client_user_id}")
+    suspend fun resolveUser(@Path("client_user_id") clientUserId: String): User
+
     companion object {
         fun create(retrofit: Retrofit): ControlPlaneService {
             return retrofit.create(ControlPlaneService::class.java)
