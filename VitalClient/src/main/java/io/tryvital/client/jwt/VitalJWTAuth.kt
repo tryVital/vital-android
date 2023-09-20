@@ -119,7 +119,7 @@ internal class VitalJWTAuth(
     private val httpClient = OkHttpClient()
 
     val reauthenticationRequest: SharedFlow<Unit> get() = _reauthenticationRequest
-    private val _reauthenticationRequest = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_LATEST)
+    private val _reauthenticationRequest = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
 
 
     suspend fun signIn(signInToken: VitalSignInToken) {

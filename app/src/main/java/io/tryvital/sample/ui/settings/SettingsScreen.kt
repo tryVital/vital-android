@@ -146,6 +146,25 @@ fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
                     Text("Force Token Refresh")
                 }
             }
+
+            Text("Reauth (Migration) Simulation")
+
+            if (state.value.hasSetupReauthObserver) {
+                Text("Reauth handler is active...")
+            } else {
+                OutlinedButton(
+                    onClick = { viewModel.simulateReauth(context, simulateSuccess = true) },
+                    enabled = state.value.canResetSDK
+                ) {
+                    Text("Simulate Success")
+                }
+                OutlinedButton(
+                    onClick = { viewModel.simulateReauth(context, simulateSuccess = false) },
+                    enabled = state.value.canResetSDK
+                ) {
+                    Text("Simulate Failure")
+                }
+            }
         }
     }
 }

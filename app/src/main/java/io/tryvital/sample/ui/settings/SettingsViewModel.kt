@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.lang.IllegalStateException
 import java.time.Instant
 import java.util.UUID
 
@@ -48,7 +49,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     )
 
     fun didLaunch(context: Context) {
-        updateSDKStatus(context)
+        syncDemoStateWithSDKState(context)
     }
 
     fun setEnvironment(environment: Environment, region: Region) {
@@ -96,6 +97,66 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
         }
     }
 
+    fun simulateReauth(context: Context, simulateSuccess: Boolean) {
+        viewModelScope.launch {
+            val controlPlane = viewModelState.value.appSettings.let {
+                VitalClient.controlPlane(context, it.environment, it.region, it.apiKey)
+            }
+
+            VitalClient.observeReauthenticationRequest(
+                context,
+                object: VitalClient.ReauthenticationHandler {
+                    override suspend fun getSignInToken(vitalUserId: String): String {
+                        if (simulateSuccess) {
+                            /**
+                             * Customer app should call their own backend service to retrieve Vital Sign-In Token.
+                             *
+                             * The Example app emulates this flow by calling Vital Server API directly using
+                             * the API Key.
+                             */
+                            val response = controlPlane.createSignInToken(vitalUserId)
+                            return response.signInToken
+                        } else {
+                            throw IllegalStateException("simulated error")
+                        }
+                    }
+
+                    override fun onReauthenticationSuccess() {
+                        viewModelState.update {
+                            it.copy(
+                                hasSetupReauthObserver = false,
+                                currentError = Throwable("Reauthentication is successful.")
+                            )
+                        }
+
+                        // Reset after simulation
+                        // In production apps, an observer is expected to be set once, and lasts
+                        // the whole process lifetime.
+                        VitalClient.observeReauthenticationRequest(context, null)
+
+                        syncDemoStateWithSDKState(context)
+                    }
+
+                    override fun onReauthenticationFailure(error: Throwable) {
+                        viewModelState.update {
+                            it.copy(
+                                hasSetupReauthObserver = false,
+                                currentError = error,
+                            )
+                        }
+
+                        // Reset after simulation
+                        // In production apps, an observer is expected to be set once, and lasts
+                        // the whole process lifetime.
+                        VitalClient.observeReauthenticationRequest(context, null)
+
+                        syncDemoStateWithSDKState(context)
+                    }
+                }
+            )
+        }
+    }
+
     fun configureSDK(context: Context) {
         val state = uiState.value
         VitalClient.configure(context, state.appSettings.region, state.appSettings.environment, state.appSettings.apiKey)
@@ -103,7 +164,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
 
         VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient()
 
-        updateSDKStatus(context)
+        syncDemoStateWithSDKState(context)
     }
 
     fun signInWithToken(context: Context) {
@@ -121,7 +182,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
 
                 VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient()
 
-                updateSDKStatus(context)
+                syncDemoStateWithSDKState(context)
 
             } catch (e: Throwable) {
                 VitalLogger.getOrCreate().logE("Demo: Sign-in failed", e)
@@ -132,10 +193,10 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
 
     fun resetSDK(context: Context) {
         VitalClient.getOrCreate(context).cleanUp()
-        updateSDKStatus(context)
+        syncDemoStateWithSDKState(context)
     }
 
-    fun updateSDKStatus(context: Context) {
+    fun syncDemoStateWithSDKState(context: Context) {
         // Ensure that the VitalClient has been initialized.
         VitalClient.getOrCreate(context)
 
@@ -147,8 +208,15 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
             )
         }
 
-        val isConfigured = VitalClient.Status.Configured in status
-        store.update { it.copy(isSDKConfigured = isConfigured) }
+        store.update {
+            it.copy(
+                isSDKConfigured = VitalClient.Status.Configured in status,
+                authMode = when (VitalClient.Status.UseSignInToken) {
+                    in status -> SettingsAuthMode.SignInTokenDemo
+                    else -> SettingsAuthMode.ApiKey
+                },
+            )
+        }
     }
 
     companion object {
@@ -169,6 +237,7 @@ enum class SettingsAuthMode {
 
 data class SettingsState(
     val appSettings: AppSettings = AppSettings(),
+    val hasSetupReauthObserver: Boolean = false,
 
     /**
      * The current SDK user ID.
