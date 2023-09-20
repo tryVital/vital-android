@@ -9,6 +9,15 @@ import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.jwt.VitalJWTAuth
 import io.tryvital.client.jwt.VitalSignInToken
 import io.tryvital.client.services.*
+import io.tryvital.client.utils.VitalLogger
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
@@ -131,6 +140,8 @@ class VitalClient internal constructor(context: Context) {
 
     companion object {
         private var sharedInstance: VitalClient? = null
+        private var reauthHandler: ReauthenticationHandler? = null
+        private var reauthenticationMonitor: Job? = null
 
         /**
          * The current status of the Vital SDK.
@@ -146,11 +157,13 @@ class VitalClient internal constructor(context: Context) {
                 when (authStrategy) {
                     is VitalClientAuthStrategy.APIKey -> {
                         if (shared.configurationReader.userId != null) {
+                            status.add(Status.UseApiKey)
                             status.add(Status.SignedIn)
                         }
                     }
                     is VitalClientAuthStrategy.JWT -> {
                         if (shared.jwtAuth.currentUserId != null) {
+                            status.add(Status.UseSignInToken)
                             status.add(Status.SignedIn)
                         }
                     }
@@ -249,13 +262,126 @@ class VitalClient internal constructor(context: Context) {
             return ControlPlaneService.create(dependencies.retrofit)
         }
 
+
+        /**
+         * Observe reauthentication requests, and respond to these requests by asynchronously fetching
+         * a new Vital Sign-In Token through your backend service.
+         *
+         * There are two scenarios where a reauthentication request may arise:
+         *
+         * **Migration from API Key mode**:
+         *
+         * An existing user in API Key mode has launched your app for the first time, after the app was upgraded to a new release that
+         * has adopted Vital Sign-In Token.
+         *
+         * After you setup `observeReauthenticationRequest`, the Vital SDK would automatically trigger it once to migrate the
+         * said user from API Key mode to Vital Sign-In Token mode.
+         *
+         * **Refresh Token invalidation**:
+         *
+         * Typically, reauthentication request would not arise due to refresh token invalidation.
+         *
+         * Vital's identity broker guarantees that the underlying refresh token is not invalidated, unless the user is disabled or deleted, or
+         * Vital explicitly revokes the refresh tokens (which we typically would not do so).
+         *
+         * However, Vital still recommends setting up `observeReauthenticationRequest`, so that
+         * the SDK can recover in event of a necessitated token revocation (announced by Vital, or requested by you).
+         *
+         * ### Warning
+         * The supplied `reauthHandler` is retained until the process is terminated, or until you explicitly clear it.
+         *
+         * ### Precondition
+         * The SDK has been configured.
+         */
+        fun observeReauthenticationRequest(
+            context: Context,
+            handler: ReauthenticationHandler?
+        ) {
+            if (Status.Configured !in status) {
+                throw VitalClientUnconfigured()
+            }
+
+            val appContext = context.applicationContext
+            synchronized(VitalClient) {
+                this.reauthHandler = handler
+
+                when {
+                    this.reauthenticationMonitor == null && handler != null -> {
+                        // Start a reauth monitor
+                        this.reauthenticationMonitor = CoroutineScope(Dispatchers.Default)
+                            .launch { reauthenticationMonitor(appContext) }
+                    }
+
+                    this.reauthenticationMonitor != null && handler == null -> {
+                        // Stop the reauth monitor.
+                        this.reauthenticationMonitor!!.cancel()
+                        this.reauthenticationMonitor = null
+                    }
+
+                    else -> {}
+                }
+            }
+        }
+
         suspend fun debugForceTokenRefresh(context: Context) {
             VitalJWTAuth.getInstance(context).refreshToken()
+        }
+
+        private suspend fun reauthenticationMonitor(appContext: Context) {
+            // Check if we are in API Key mode
+            // Perform a one-off migration to Vital Sign-In Token if needed.
+            val shared = getOrCreate(appContext)
+            val jwtAuth = VitalJWTAuth.getInstance(appContext)
+
+            suspend fun tryToReauthenticate(logContext: String) {
+                val handler = synchronized(VitalClient) { reauthHandler }
+                val userId = currentUserId
+
+                if (handler != null && userId != null) {
+                    try {
+                        VitalLogger.getOrCreate().logI("reauth[$logContext] started")
+
+                        val signInToken = handler.getSignInToken(userId)
+                        this.signIn(appContext, signInToken)
+
+                        withContext(Dispatchers.Main) {
+                            handler.onReauthenticationSuccess()
+                            VitalLogger.getOrCreate().logI("reauth[$logContext] completed")
+                        }
+                    } catch (e: Throwable) {
+                        withContext(Dispatchers.Main) {
+                            handler.onReauthenticationFailure(e)
+                            VitalLogger.getOrCreate().logE("reauth[$logContext] failed", e)
+                        }
+                    }
+                }
+            }
+
+            if (shared.configurationReader.authStrategy is VitalClientAuthStrategy.APIKey) {
+                tryToReauthenticate(logContext = "api-key-migration")
+            }
+
+            if (jwtAuth.needsReauthentication) {
+                tryToReauthenticate(logContext = "app-launch")
+            }
+
+            // Observe reauthentication requests from VitalJWTAuth.
+            jwtAuth.reauthenticationRequest
+                .filter { jwtAuth.needsReauthentication }
+                .onEach { tryToReauthenticate(logContext = "on-demand") }
+                .collect()
         }
     }
 
     enum class Status {
-        Configured, SignedIn;
+        Configured, SignedIn, UseApiKey, UseSignInToken;
+    }
+
+    interface ReauthenticationHandler {
+        suspend fun getSignInToken(vitalUserId: String): String
+
+        fun onReauthenticationSuccess()
+        fun onReauthenticationFailure(error: Throwable)
     }
 }
 

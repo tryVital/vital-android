@@ -10,9 +10,12 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.createEncryptedSharedPreferences
 import io.tryvital.client.utils.VitalLogger
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
@@ -109,10 +112,14 @@ internal class VitalJWTAuth(
     }
 
     val currentUserId: String? get() = getRecord()?.userId
+    val needsReauthentication: Boolean get() = getRecord()?.pendingReauthentication ?: false
 
     private val isRefreshing = MutableStateFlow(false)
     private var cachedRecord: VitalJWTAuthRecord? = null
     private val httpClient = OkHttpClient()
+
+    val reauthenticationRequest: SharedFlow<Unit> get() = _reauthenticationRequest
+    private val _reauthenticationRequest = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 0, onBufferOverflow = BufferOverflow.DROP_LATEST)
 
 
     suspend fun signIn(signInToken: VitalSignInToken) {
@@ -279,6 +286,7 @@ internal class VitalJWTAuth(
 
                             if (response.needsReauthentication) {
                                 setRecord(record.copy(pendingReauthentication = true))
+                                _reauthenticationRequest.tryEmit(Unit)
                                 throw VitalJWTAuthError(VitalJWTAuthError.Code.NeedsReauthentication)
                             }
                         }
