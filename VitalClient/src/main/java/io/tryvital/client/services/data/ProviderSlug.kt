@@ -32,6 +32,33 @@ enum class ManualProviderSlug {
 }
 
 @JsonClass(generateAdapter = false)
+enum class OAuthProviderSlug {
+    // Enum names here should match ProviderSlug.
+    @Json(name = "fitbit") Fitbit,
+    @Json(name = "oura") Oura,
+    @Json(name = "garmin") Garmin,
+    @Json(name = "google_fit") GoogleFit,
+    @Json(name = "strava") Strava,
+    @Json(name = "wahoo") Wahoo,
+    @Json(name = "withings") Withings,
+    @Json(name = "ihealth") IHealth,
+    @Json(name = "dexcom_v3") DexcomV3,
+    @Json(name = "polar") Polar,
+    @Json(name = "cronometer") Cronometer;
+
+    // Use the Json name also when converting to string.
+    // This is intended for Retrofit request parameter serialization.
+    override fun toString() = getJsonName(this)
+
+    fun toProviderSlug() = ProviderSlug.valueOf(name)
+
+    companion object {
+        val jsonAdapter: EnumJsonAdapter<OAuthProviderSlug>
+            get() = EnumJsonAdapter.create(OAuthProviderSlug::class.java)
+    }
+}
+
+@JsonClass(generateAdapter = false)
 enum class ProviderSlug {
     Unrecognized,
 
@@ -54,6 +81,9 @@ enum class ProviderSlug {
     @Json(name = "hammerhead") Hammerhead,
     @Json(name = "dexcom") Dexcom,
     @Json(name = "my_fitness_pal") MyFitnessPal,
+    @Json(name = "dexcom_v3") DexcomV3,
+    @Json(name = "polar") Polar,
+    @Json(name = "cronometer") Cronometer,
 
     // Manual
     @Json(name = "beurer_ble") BeurerBLE,
