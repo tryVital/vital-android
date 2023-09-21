@@ -9,6 +9,13 @@ import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.jwt.VitalJWTAuth
 import io.tryvital.client.jwt.VitalSignInToken
 import io.tryvital.client.services.*
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
@@ -74,10 +81,15 @@ class VitalClient internal constructor(context: Context) {
     val vitalLogger get() = dependencies.vitalLogger
     private val jwtAuth get() = dependencies.jwtAuth
 
+    /** Moments which can materially change VitalClient.Companion.status */
+    private val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
+
+
     fun cleanUp() {
         sharedPreferences.edit().clear().apply()
         encryptedSharedPreferences.edit().clear().apply()
         jwtAuth.signOut()
+        statusChanged.tryEmit(Unit)
     }
 
     @Deprecated(
@@ -97,6 +109,7 @@ class VitalClient internal constructor(context: Context) {
                 configurationMoshi.adapter(VitalClientAuthStrategy::class.java).toJson(strategy)
             )
             .apply()
+        statusChanged.tryEmit(Unit)
     }
 
     @Deprecated(
@@ -113,6 +126,8 @@ class VitalClient internal constructor(context: Context) {
             putString(VITAL_ENCRYPTED_USER_ID_KEY, userId)
             apply()
         }
+
+        statusChanged.tryEmit(Unit)
     }
 
     @Deprecated(
@@ -147,17 +162,32 @@ class VitalClient internal constructor(context: Context) {
                     is VitalClientAuthStrategy.APIKey -> {
                         if (shared.configurationReader.userId != null) {
                             status.add(Status.SignedIn)
+                            status.add(Status.UseApiKey)
                         }
                     }
                     is VitalClientAuthStrategy.JWT -> {
                         if (shared.jwtAuth.currentUserId != null) {
                             status.add(Status.SignedIn)
+                            status.add(Status.UseSignInToken)
+
+                            if (shared.jwtAuth.pendingReauthentication) {
+                                status.add(Status.PendingReauthentication)
+                            }
                         }
                     }
                 }
 
                 return status
             }
+
+        fun statusChanged(context: Context): Flow<Unit> {
+            val client = getOrCreate(context)
+            return merge(client.statusChanged, client.jwtAuth.statusChanged).conflate()
+        }
+
+        fun statuses(context: Context): Flow<Set<Status>> {
+            return statusChanged(context).map { this.status }.conflate()
+        }
 
         /**
          * The current user ID of the Vital SDK.
@@ -180,7 +210,6 @@ class VitalClient internal constructor(context: Context) {
                 instance = VitalClient(context)
                 sharedInstance = instance
             }
-            instance = VitalClient(context)
             return instance
         }
 
@@ -255,7 +284,34 @@ class VitalClient internal constructor(context: Context) {
     }
 
     enum class Status {
-        Configured, SignedIn;
+        /**
+         * The SDK has been configured, either through [VitalClient.Companion.configure] for the first time,
+         * or `VitalClient` has restored the last auto-saved configuration upon creation through
+         * [VitalClient.Companion.getOrCreate].
+         */
+        Configured,
+        /**
+         * The SDK has an active sign-in.
+         */
+        SignedIn,
+        /**
+         * The active sign-in was done through an explicitly set target User ID, paired with a Vital API Key.
+         * (through [VitalClient.Companion.setUserId])
+         */
+        UseApiKey,
+        /**
+         * The active sign-in is done through a Vital Sign-In Token via [VitalClient.Companion.signIn].
+         */
+        UseSignInToken,
+        /**
+         * A Vital Sign-In Token sign-in session that is currently on hold, requiring re-authentication using
+         * a new Vital Sign-In Token issued for the same user.
+         *
+         * This generally should not happen, as Vital's identity broker guarantees only to revoke auth
+         * refresh tokens when a user is explicitly deleted, disabled or have their tokens explicitly
+         * revoked.
+         */
+        PendingReauthentication;
     }
 }
 

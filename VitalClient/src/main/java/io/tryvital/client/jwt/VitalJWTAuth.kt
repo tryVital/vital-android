@@ -10,8 +10,10 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.createEncryptedSharedPreferences
 import io.tryvital.client.utils.VitalLogger
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -109,11 +111,14 @@ internal class VitalJWTAuth(
     }
 
     val currentUserId: String? get() = getRecord()?.userId
+    val pendingReauthentication: Boolean get() = getRecord()?.pendingReauthentication ?: false
 
     private val isRefreshing = MutableStateFlow(false)
     private var cachedRecord: VitalJWTAuthRecord? = null
     private val httpClient = OkHttpClient()
 
+    /** Moments which can materially change VitalClient.Companion.status */
+    internal val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
 
     suspend fun signIn(signInToken: VitalSignInToken) {
         val record = getRecord()
@@ -335,6 +340,7 @@ internal class VitalJWTAuth(
             }
             .apply()
         this.cachedRecord = record
+        statusChanged.tryEmit(Unit)
     }
 }
 
