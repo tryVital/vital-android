@@ -6,7 +6,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.CreateUserRequest
+import io.tryvital.client.services.data.OAuthProviderSlug
 import io.tryvital.client.services.data.User
+import io.tryvital.client.services.linkOAuthProvider
 import io.tryvital.client.services.linkUserWithOauthProvider
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.sample.AppSettings
@@ -108,12 +110,16 @@ class UsersViewModel(
                 return@launch
             }
 
-            VitalClient.getOrCreate(context).linkUserWithOauthProvider(
-                context,
-                user,
-                "strava",
-                "vitalexample://callback"
-            )
+            try {
+                VitalClient.getOrCreate(context).linkOAuthProvider(
+                    context,
+                    user.userId,
+                    OAuthProviderSlug.Fitbit,
+                    "vitalexample://callback"
+                )
+            } catch (e: Throwable) {
+                setError(e)
+            }
         }
     }
 
