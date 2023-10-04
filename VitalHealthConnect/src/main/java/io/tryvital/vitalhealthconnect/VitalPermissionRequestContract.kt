@@ -10,6 +10,7 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 
 class VitalPermissionRequestContract(
     private val readResources: Set<VitalResource>,
@@ -74,6 +75,12 @@ class VitalPermissionRequestContract(
             // Since we have VitalResources that are an aggregate of multiple record types, we need
             // to recompute based on the full set of permissions.
             manager.checkAndUpdatePermissions()
+
+            // Asynchronously start syncing the newly granted read resources
+            taskScope.launch {
+                manager.syncData(readGrants)
+            }
+
             PermissionOutcome.Success
         }
     }
