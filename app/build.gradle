@@ -74,6 +74,7 @@ dependencies {
     implementation "androidx.compose.material3:material3:$material3"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose"
     implementation "androidx.compose.material:material-icons-extended:$compose"
+    implementation "androidx.activity:activity:$activity_compose"
     implementation "androidx.activity:activity-compose:$activity_compose"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_runtime"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_viewmodel_compose"
