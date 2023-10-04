@@ -4,14 +4,16 @@ import io.tryvital.client.services.data.*
 import retrofit2.HttpException
 
 fun VitalClient.hasUserConnectedTo(provider: ProviderSlug): Boolean {
+    resetCachedUserConnectedSourceRecordIfNeeded()
+
     return this.sharedPreferences.getBoolean(
         VitalClientPrefKeys.userHasConnectedTo(provider),
         false
     )
 }
 
-// TODO: VIT-2924 Move userId management to VitalClient
-suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProviderSlug, userId: String) {
+suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProviderSlug) {
+    val userId = VitalClient.currentUserId ?: return
     val slug = provider.toProviderSlug()
     if (hasUserConnectedTo(slug)) {
         // Local Hit: The client has witnessed a valid connected source for this provider before.
@@ -19,7 +21,7 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
     }
 
     // Local Miss: First try to query the user's current set of connected sources.
-    val sources = userConnectedSources(userId = userId)
+    val sources = userConnectedSources()
     if (sources.any { it.slug == slug }) {
         // Remote Hit: The client has connected to this provider.
         return
@@ -50,8 +52,10 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
     }
 }
 
-// TODO: VIT-2924 Move userId management to VitalClient
-suspend fun VitalClient.userConnectedSources(userId: String): List<Source> {
+suspend fun VitalClient.userConnectedSources(): List<Source> {
+    val userId = VitalClient.currentUserId ?: return emptyList()
+    resetCachedUserConnectedSourceRecordIfNeeded()
+
     val response = userService.getProviders(userId = userId)
 
     val remote = response.providers.mapTo(mutableSetOf()) { it.slug }
@@ -65,4 +69,29 @@ suspend fun VitalClient.userConnectedSources(userId: String): List<Source> {
         .apply()
 
     return response.providers
+}
+
+/**
+ * Sometimes SharedPreferences can survive app deletion / OS reinstall due to automatic backup.
+ * This method is used to detect such cases — where the user ID no longer matches — and proactively
+ * clear the SharedPreferences.
+ */
+private fun VitalClient.resetCachedUserConnectedSourceRecordIfNeeded() {
+    val userId = VitalClient.currentUserId ?: return
+    val perfUserId = this.sharedPreferences.getString(VitalClientPrefKeys.connectedSourcePerfUserId, null)
+
+    if (userId != perfUserId) {
+        sharedPreferences.edit()
+            .apply {
+                // Delete all existing records, since the user ID has changed
+                ProviderSlug.values()
+                    .map { VitalClientPrefKeys.userHasConnectedTo(it) }
+                    .forEach { key -> remove(key) }
+            }
+            .apply {
+                // Write the new user ID
+                putString(VitalClientPrefKeys.connectedSourcePerfUserId, userId)
+            }
+            .apply()
+    }
 }

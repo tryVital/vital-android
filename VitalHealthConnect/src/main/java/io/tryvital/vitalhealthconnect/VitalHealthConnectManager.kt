@@ -193,8 +193,7 @@ class VitalHealthConnectManager private constructor(
         try {
             currentSyncCall.acquire()
 
-            // TODO: VIT-2924 Move userId management to VitalClient
-            vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect, userId = userId)
+            vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
 
             checkAndUpdatePermissions()
 
