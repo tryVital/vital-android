@@ -8,6 +8,7 @@ import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
+import io.tryvital.client.VITAL_ENCRYPTED_PERFS_FILE_NAME
 import io.tryvital.client.createEncryptedSharedPreferences
 import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.channels.BufferOverflow
@@ -34,7 +35,6 @@ import java.util.Date
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-const val VITAL_JWT_AUTH_PREFERENCES: String = "vital_jwt_auth_prefs"
 const val AUTH_RECORD_KEY = "auth_record"
 
 private val moshi by lazy {
@@ -99,7 +99,7 @@ internal class VitalJWTAuth(
                 VitalLogger.getOrCreate().logE(
                     "Failed to decrypt VitalJWTAuth preferences, re-creating it", e
                 )
-                context.deleteSharedPreferences(VITAL_JWT_AUTH_PREFERENCES)
+                context.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
                 createEncryptedSharedPreferences(context)
             }
 
