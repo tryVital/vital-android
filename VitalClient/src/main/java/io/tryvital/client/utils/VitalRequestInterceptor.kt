@@ -6,7 +6,7 @@ import okio.BufferedSink
 import okio.GzipSink
 import okio.buffer
 
-const val VITAL_SDK_VERSION = "1.0.0-beta.19"
+const val VITAL_SDK_VERSION = "1.0.0-beta.22"
 
 internal class VitalRequestInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
