@@ -92,14 +92,12 @@
             </intent-filter>
         </activity>
 
-        <!--suppress MissingClass, AndroidDomInspection, EnsureInitializerMetadata -->
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
             android:exported="false"
             tools:node="merge">
-            <meta-data
-                android:name="io.tryvital.vitalhealthconnect.VitalHealthInitializer"
+            <meta-data  android:name="io.tryvital.sample.VitalSDKInitializer"
                 android:value="androidx.startup" />
         </provider>
 
