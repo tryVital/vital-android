@@ -56,12 +56,6 @@ internal suspend fun processChangesResponse(
             processor.processSleepFromRecords(
                 fallbackDeviceModel = currentDevice,
                 sleepSessionRecords = sessions,
-                readSleepStages = sessions.associateWith { session ->
-                    reader.readSleepStages(
-                        startTime = session.startTime,
-                        endTime = session.endTime
-                    )
-                }
             ).let(ProcessedResourceData::Summary)
         }
 
