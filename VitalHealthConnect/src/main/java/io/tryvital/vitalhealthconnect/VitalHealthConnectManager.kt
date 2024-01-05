@@ -342,7 +342,7 @@ class VitalHealthConnectManager private constructor(
 
         @Suppress("unused")
         fun isAvailable(context: Context): HealthConnectAvailability {
-            return when (HealthConnectClient.sdkStatus(context, packageName)) {
+            return when (HealthConnectClient.getSdkStatus(context, packageName)) {
                 HealthConnectClient.SDK_UNAVAILABLE -> HealthConnectAvailability.NotSupportedSDK
                 HealthConnectClient.SDK_AVAILABLE -> HealthConnectAvailability.Installed
                 HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> HealthConnectAvailability.NotInstalled

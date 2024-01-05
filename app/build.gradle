@@ -4,14 +4,14 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
 
     namespace 'io.tryvital.sample'
 
     defaultConfig {
         applicationId "io.tryvital.sample"
         minSdk 26
-        targetSdk 33
+        targetSdk 34
         versionCode 1
         versionName "1.0"
 
@@ -29,6 +29,7 @@ android {
     }
 
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
@@ -63,6 +64,8 @@ dependencies {
     implementation project(':VitalClient')
     implementation project(':VitalDevices')
     implementation project(':VitalHealthConnect')
+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
 
     implementation "com.squareup.moshi:moshi:$moshi"
     implementation "com.squareup.moshi:moshi-kotlin:$moshi"
