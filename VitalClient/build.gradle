@@ -4,16 +4,20 @@ plugins {
 }
 
 android {
-    compileSdk 33
+    compileSdk 34
 
     namespace 'io.tryvital.client'
 
     defaultConfig {
         minSdk 24
-        targetSdk 33
+        targetSdk 34
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {
