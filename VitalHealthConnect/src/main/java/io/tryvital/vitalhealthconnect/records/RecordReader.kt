@@ -18,7 +18,6 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
-import androidx.health.connect.client.records.SleepStageRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
@@ -73,11 +72,6 @@ interface RecordReader {
         startTime: Instant,
         endTime: Instant
     ): List<SleepSessionRecord>
-
-    suspend fun readSleepStages(
-        startTime: Instant,
-        endTime: Instant
-    ): List<SleepStageRecord>
 
     suspend fun readOxygenSaturation(
         startTime: Instant,
@@ -174,11 +168,6 @@ internal class HealthConnectRecordReader(
     override suspend fun readSleepSession(
         startTime: Instant, endTime: Instant
     ): List<SleepSessionRecord> = readRecords(startTime, endTime)
-
-    override suspend fun readSleepStages(
-        startTime: Instant,
-        endTime: Instant
-    ): List<SleepStageRecord> = readRecords(startTime, endTime)
 
     override suspend fun readOxygenSaturation(
         startTime: Instant, endTime: Instant

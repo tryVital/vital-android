@@ -81,6 +81,7 @@ dependencies {
     implementation "androidx.activity:activity-compose:$activity_compose"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_runtime"
     implementation "androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycle_viewmodel_compose"
+    implementation "androidx.work:work-runtime:2.3.1"
     implementation "androidx.health.connect:connect-client:$health_connect"
     implementation "io.coil-kt:coil-compose:${coil_compose}"
     implementation "androidx.startup:startup-runtime:1.1.1"
