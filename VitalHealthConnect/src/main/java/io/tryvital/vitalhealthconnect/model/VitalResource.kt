@@ -121,7 +121,6 @@ fun VitalResource.recordTypeDependencies(): List<KClass<out Record>> = when (thi
     VitalResource.Profile -> listOf(HeightRecord::class)
     VitalResource.Sleep -> listOf(
         SleepSessionRecord::class,
-        SleepStageRecord::class,
         HeartRateRecord::class,
         HeartRateVariabilityRmssdRecord::class,
         RespiratoryRateRecord::class,
@@ -141,7 +140,7 @@ fun VitalResource.recordTypeDependencies(): List<KClass<out Record>> = when (thi
  * This is a subset of [recordTypeDependencies]. Some VitalResources do not need to observe all the
  * record type they read.
  *
- * For example, Sleep only needs to observe SleepSessionRecord and SleepStageRecord changes, while
+ * For example, Sleep only needs to observe SleepSessionRecord changes, while
  * heart rate and other related data during the session can be read on demand as we compute the API
  * payload, on the assumption that these data should have been readily available in the Health
  * Connect data store.
@@ -161,7 +160,7 @@ fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Record>> = w
     VitalResource.HeartRate -> listOf(HeartRateRecord::class)
     VitalResource.HeartRateVariability -> listOf(HeartRateVariabilityRmssdRecord::class)
     VitalResource.Profile -> listOf(HeightRecord::class)
-    VitalResource.Sleep -> listOf(SleepSessionRecord::class, SleepStageRecord::class)
+    VitalResource.Sleep -> listOf(SleepSessionRecord::class)
     VitalResource.Workout -> listOf(ExerciseSessionRecord::class)
 
     VitalResource.ActiveEnergyBurned, VitalResource.BasalEnergyBurned, VitalResource.Steps ->

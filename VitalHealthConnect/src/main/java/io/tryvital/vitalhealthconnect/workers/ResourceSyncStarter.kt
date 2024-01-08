@@ -1,6 +1,7 @@
 package io.tryvital.vitalhealthconnect.workers
 
 import android.content.Context
+import android.os.Build
 import androidx.lifecycle.asFlow
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -63,9 +64,20 @@ class ResourceSyncStarter(appContext: Context, workerParams: WorkerParameters) :
 
         syncNotificationBuilder?.run {
             val notification = build(applicationContext, input.resources)
-            setForeground(
-                ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification)
-            )
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                setForeground(
+                    ForegroundInfo(
+                        VITAL_SYNC_NOTIFICATION_ID,
+                        notification,
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE,
+                    )
+                )
+            } else {
+                setForeground(
+                    ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification)
+                )
+            }
         }
 
         for (resource in input.resources) {
