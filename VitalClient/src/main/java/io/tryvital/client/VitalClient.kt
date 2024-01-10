@@ -1,6 +1,5 @@
 package io.tryvital.client
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -9,10 +8,10 @@ import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.jwt.VitalJWTAuth
 import io.tryvital.client.jwt.VitalSignInToken
 import io.tryvital.client.services.*
+import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -32,7 +31,7 @@ class VitalClient internal constructor(context: Context) {
         try {
             createEncryptedSharedPreferences(context)
         } catch (e: Exception) {
-            vitalLogger.logE(
+            VitalLogger.getOrCreate().logE(
                 "Failed to decrypt shared preferences, creating new encrypted shared preferences", e
             )
             context.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
@@ -40,7 +39,9 @@ class VitalClient internal constructor(context: Context) {
         }
     }
 
-    private val configurationReader = SharedPreferencesConfigurationReader(encryptedSharedPreferences)
+    private val configurationReader by lazy {
+        SharedPreferencesConfigurationReader(encryptedSharedPreferences)
+    }
 
     private val dependencies: Dependencies by lazy {
         Dependencies(context, configurationReader)
@@ -83,7 +84,6 @@ class VitalClient internal constructor(context: Context) {
 
     /** Moments which can materially change VitalClient.Companion.status */
     private val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
-
 
     fun cleanUp() {
         sharedPreferences.edit().clear().apply()
@@ -145,6 +145,8 @@ class VitalClient internal constructor(context: Context) {
     }
 
     companion object {
+        const val sdkVersion = "1.0.0-beta.25"
+
         private var sharedInstance: VitalClient? = null
 
         /**

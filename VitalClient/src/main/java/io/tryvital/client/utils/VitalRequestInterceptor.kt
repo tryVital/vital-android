@@ -1,18 +1,17 @@
 package io.tryvital.client.utils
 
+import io.tryvital.client.VitalClient
 import okhttp3.*
 import okio.Buffer
 import okio.BufferedSink
 import okio.GzipSink
 import okio.buffer
 
-const val VITAL_SDK_VERSION = "1.0.0-beta.25"
-
 internal class VitalRequestInterceptor : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
         var builder = request.newBuilder()
-            .header("x-vital-android-sdk-version", VITAL_SDK_VERSION)
+            .header("x-vital-android-sdk-version", VitalClient.sdkVersion)
 
         // Only these requests under these specific paths should be gzipped:
         // 1. POST https://example.com/v2/summary/:resource/:user_id
