@@ -2,6 +2,7 @@ buildscript {
     ext {
         core = '1.9.0'
         compose = '1.4.1'
+        compose_compiler = '1.4.8'
         desugar_jdk_libs = '1.2.2'
         nav = '2.5.3'
         material3 = '1.0.1'
@@ -28,6 +29,7 @@ buildscript {
         annotation = "1.5.0"
         startup_runtime = "1.1.1"
         security_crypto = "1.0.0"
+        kotlin = '1.8.22'
         kotlinx_coroutines = "1.6.4"
         work_runtime = "2.7.1"
     }
@@ -36,7 +38,7 @@ buildscript {
 plugins {
     id 'com.android.application' version '8.2.0' apply false
     id 'com.android.library' version '8.2.0' apply false
-    id 'org.jetbrains.kotlin.android' version '1.8.10' apply false
+    id 'org.jetbrains.kotlin.android' version '1.8.22' apply false
 }
 
 task clean(type: Delete) {

@@ -43,7 +43,7 @@ suspend fun VitalClient.linkUserWithOauthProvider(
 ): Result<Boolean> {
     try {
         val token = linkService
-            .createLink(CreateLinkRequest(user.userId!!, provider, callback))
+            .createLink(CreateLinkRequest(user.userId, provider, callback))
 
         val oauth = linkService.oauthProvider(
             provider = provider,

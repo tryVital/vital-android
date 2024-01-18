@@ -1,0 +1,2 @@
+-keep class io.tryvital.vitalhealthconnect.workers.ResourceSyncState
+-keep class io.tryvital.vitalhealthconnect.workers.ResourceSyncState { *; }
