@@ -49,6 +49,7 @@ dependencies {
     implementation "androidx.browser:browser:$browser"
     implementation "androidx.security:security-crypto:$security_crypto"
 
+    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines"
 
     implementation "com.squareup.retrofit2:retrofit:$retrofit"
@@ -62,8 +63,8 @@ dependencies {
     implementation "com.jakewharton.retrofit:retrofit2-kotlin-coroutines-adapter:$retrofit2_kotlin_coroutines_adapter"
 
     testImplementation "junit:junit:$junit"
-    androidTestImplementation "androidx.test.ext:junit:$test_ext"
-    androidTestImplementation "androidx.test.espresso:espresso-core:$test_espresso"
+    androidTestImplementation "androidx.test:runner:1.5.2"
+    androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_coroutines_test"
 
     testImplementation "org.mockito:mockito-core:$mockito"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin"

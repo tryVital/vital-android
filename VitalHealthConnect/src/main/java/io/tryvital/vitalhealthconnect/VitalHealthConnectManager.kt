@@ -313,6 +313,9 @@ class VitalHealthConnectManager private constructor(
                 }
             }
             .onStart { work.enqueue() }
+            .onCompletion {
+                _status.tryEmit(SyncStatus.SyncingCompleted)
+            }
             .flowOn(Dispatchers.Main)
             .launchIn(taskScope)
 
@@ -324,7 +327,7 @@ class VitalHealthConnectManager private constructor(
         workInfos.forEach {
             when (it.state) {
                 WorkInfo.State.RUNNING -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
-                WorkInfo.State.SUCCEEDED -> _status.tryEmit(SyncStatus.SyncingCompleted)
+                WorkInfo.State.SUCCEEDED -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
                 WorkInfo.State.FAILED -> _status.tryEmit(SyncStatus.Unknown)
                 WorkInfo.State.ENQUEUED,
                 WorkInfo.State.BLOCKED,
