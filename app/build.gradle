@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.devtools.ksp' version "$ksp"
 }
 
 android {
@@ -59,21 +60,23 @@ android {
             freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
             freeCompilerArgs += "-P"
             freeCompilerArgs += "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=true"
+            jvmTarget = JavaVersion.VERSION_1_8.toString()
         }
     }
 }
 
 dependencies {
+    ksp "com.squareup.moshi:moshi-kotlin-codegen:$moshi"
+
     implementation project(':VitalClient')
     implementation project(':VitalDevices')
     implementation project(':VitalHealthConnect')
 
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.3")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:$desugar_jdk_libs")
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin"
 
     implementation "com.squareup.moshi:moshi:$moshi"
-    implementation "com.squareup.moshi:moshi-kotlin:$moshi"
     implementation "com.squareup.moshi:moshi-adapters:$moshi"
 
     implementation "androidx.core:core-ktx:$core"

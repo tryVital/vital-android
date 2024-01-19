@@ -1,6 +1,3 @@
-# VitalCore SDK reflective models
--keep class io.tryvital.client.** { *; }
-
 # OkHttp 4.x workaround
 -dontwarn org.bouncycastle.jsse.BCSSLParameters
 -dontwarn org.bouncycastle.jsse.BCSSLSocket

@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
+    id 'com.google.devtools.ksp' version "$ksp"
 }
 
 android {
@@ -41,21 +42,22 @@ android {
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+            jvmTarget = JavaVersion.VERSION_1_8.toString()
         }
     }
 }
 
 dependencies {
+    ksp "com.squareup.moshi:moshi-kotlin-codegen:$moshi"
+
     implementation "androidx.browser:browser:$browser"
     implementation "androidx.security:security-crypto:$security_crypto"
 
-    implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines"
 
     implementation "com.squareup.retrofit2:retrofit:$retrofit"
     implementation "com.squareup.retrofit2:converter-moshi:$retrofit"
     implementation "com.squareup.moshi:moshi:$moshi"
-    implementation "com.squareup.moshi:moshi-kotlin:$moshi"
     implementation "com.squareup.moshi:moshi-adapters:$moshi"
     implementation "com.squareup.okhttp3:okhttp:$okhttp"
     implementation "com.squareup.okhttp3:logging-interceptor:$okhttp"

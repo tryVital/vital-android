@@ -1,9 +1,9 @@
 package io.tryvital.client
 
 import android.content.SharedPreferences
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
 const val VITAL_ENCRYPTED_USER_ID_KEY: String = "userId"
 const val VITAL_ENCRYPTED_REGION_KEY = "region"
@@ -16,11 +16,14 @@ internal interface ConfigurationReader {
     val authStrategy: VitalClientAuthStrategy?
 }
 
+@JsonClass(generateAdapter = false)
 internal sealed class VitalClientAuthStrategy {
     abstract val environment: Environment
     abstract val region: Region
 
+    @JsonClass(generateAdapter = true)
     data class JWT(override val environment: Environment, override val region: Region): VitalClientAuthStrategy()
+    @JsonClass(generateAdapter = true)
     data class APIKey(val apiKey: String, override val environment: Environment, override val region: Region): VitalClientAuthStrategy()
 }
 
@@ -69,6 +72,5 @@ internal val configurationMoshi by lazy {
                 .withSubtype(VitalClientAuthStrategy.JWT::class.java, "jwt")
                 .withSubtype(VitalClientAuthStrategy.APIKey::class.java, "apiKey")
         )
-        .addLast(KotlinJsonAdapterFactory())
         .build()
 }

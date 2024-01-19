@@ -1,12 +1,15 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import java.util.*
 
+@JsonClass(generateAdapter = true)
 data class WorkoutsResponse(
     val workouts: List<Workout>
 )
 
+@JsonClass(generateAdapter = true)
 data class Workout(
     @Json(name = "user_id")
     val userId: String,
@@ -55,11 +58,13 @@ data class Workout(
     val source: Source,
 )
 
+@JsonClass(generateAdapter = true)
 data class Sport(
     val id: Int,
     val name: String,
 )
 
+@JsonClass(generateAdapter = true)
 data class MapData(
     val id: String,
     val polyline: String?,
@@ -67,6 +72,7 @@ data class MapData(
     val summaryPolyline: String?,
 )
 
+@JsonClass(generateAdapter = true)
 data class WorkoutStreamResponse(
     val time: List<Int> = listOf(),
     val cadence: List<Double> = listOf(),

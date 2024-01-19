@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.squareup.moshi.JsonClass
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
@@ -163,6 +164,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     }
 }
 
+@JsonClass(generateAdapter = false)
 enum class SettingsAuthMode {
     ApiKey, SignInTokenDemo;
 }

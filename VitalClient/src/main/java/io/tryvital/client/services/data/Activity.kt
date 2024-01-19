@@ -1,13 +1,16 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import java.time.LocalDate
 import java.util.*
 
+@JsonClass(generateAdapter = true)
 data class ActivitiesResponse(
     val activity: List<Activity>
 )
 
+@JsonClass(generateAdapter = true)
 data class Activity(
     @Json(name = "user_id")
     val userId: String?,
@@ -28,6 +31,7 @@ data class Activity(
     val source: Source,
 )
 
+@JsonClass(generateAdapter = true)
 data class ActivityDaySummary(
     @Json(name = "calendar_date")
     val date: LocalDate,

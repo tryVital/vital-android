@@ -2,11 +2,8 @@ package io.tryvital.client.dependencies
 
 import android.content.Context
 import com.jakewharton.retrofit2.adapter.kotlin.coroutines.CoroutineCallAdapterFactory
-import com.squareup.moshi.Json
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import com.squareup.moshi.rawType
 import io.tryvital.client.BuildConfig
 import io.tryvital.client.ConfigurationReader
 import io.tryvital.client.Environment
@@ -99,7 +96,6 @@ internal class Dependencies(
                 .build()
 
         internal fun createMoshi(): Moshi = Moshi.Builder()
-            .add(KotlinJsonAdapterFactory())
             .add(Date::class.java, Rfc3339DateJsonAdapter())
             .add(LocalDate::class.java, LocalDateJsonAdapter)
             .add(ProviderSlug::class.java, ProviderSlug.jsonAdapter)

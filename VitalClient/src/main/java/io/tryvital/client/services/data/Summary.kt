@@ -1,8 +1,10 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import java.util.*
 
+@JsonClass(generateAdapter = true)
 data class SummaryPayload<T>(
     @Json(name = "stage")
     val stage: DataStage,
@@ -18,6 +20,7 @@ data class SummaryPayload<T>(
     val data: T
 )
 
+@JsonClass(generateAdapter = true)
 data class WorkoutPayload(
     @Json(name = "id")
     val id: String,
@@ -41,6 +44,7 @@ data class WorkoutPayload(
     val respiratoryRate: List<QuantitySamplePayload>
 )
 
+@JsonClass(generateAdapter = true)
 data class ActivityPayload(
     @Json(name = "day_summary")
     val daySummary: ActivityDaySummary?,
@@ -58,6 +62,7 @@ data class ActivityPayload(
     val floorsClimbed: List<QuantitySamplePayload>,
 )
 
+@JsonClass(generateAdapter = true)
 data class ProfilePayload(
     @Json(name = "biological_sex")
     val biologicalSex: String,
@@ -67,6 +72,7 @@ data class ProfilePayload(
     val heightInCm: Int,
 )
 
+@JsonClass(generateAdapter = true)
 data class BodyPayload(
     @Json(name = "body_mass")
     val bodyMass: List<QuantitySamplePayload>,
@@ -74,6 +80,7 @@ data class BodyPayload(
     val bodyFatPercentage: List<QuantitySamplePayload>,
 )
 
+@JsonClass(generateAdapter = true)
 data class SleepPayload(
     @Json(name = "id")
     val id: String,
@@ -97,6 +104,7 @@ data class SleepPayload(
     val respiratoryRate: List<QuantitySamplePayload>,
 )
 
+@JsonClass(generateAdapter = true)
 data class QuantitySamplePayload(
     @Json(name = "id")
     val id: String? = null,
@@ -118,6 +126,7 @@ data class QuantitySamplePayload(
     val metadata: String? = null,
 )
 
+@JsonClass(generateAdapter = true)
 data class BloodPressureSamplePayload(
     @Json(name = "systolic")
     val systolic: QuantitySamplePayload,

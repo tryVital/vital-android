@@ -3,9 +3,9 @@ package io.tryvital.client.jwt
 import android.content.Context
 import android.content.SharedPreferences
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VITAL_ENCRYPTED_PERFS_FILE_NAME
@@ -40,7 +40,6 @@ const val AUTH_RECORD_KEY = "auth_record"
 private val moshi by lazy {
     Moshi.Builder()
         .add(Date::class.java, Rfc3339DateJsonAdapter())
-        .addLast(KotlinJsonAdapterFactory())
         .build()
 }
 
@@ -344,7 +343,8 @@ internal class VitalJWTAuth(
     }
 }
 
-private data class VitalJWTAuthRecord(
+@JsonClass(generateAdapter = true)
+internal data class VitalJWTAuthRecord(
     val environment: Environment,
     val userId: String,
     val teamId: String,
@@ -358,7 +358,8 @@ private data class VitalJWTAuthRecord(
     fun isExpired(now: Date = Date.from(Instant.now())) = expiry.before(now)
 }
 
-private data class FirebaseTokenRefreshResponse(
+@JsonClass(generateAdapter = true)
+internal data class FirebaseTokenRefreshResponse(
     @Json(name = "expires_in")
     val expiresIn: String,
     @Json(name = "refresh_token")
@@ -367,11 +368,13 @@ private data class FirebaseTokenRefreshResponse(
     val idToken: String,
 )
 
-private data class FirebaseTokenRefreshErrorResponse(
+@JsonClass(generateAdapter = true)
+internal data class FirebaseTokenRefreshErrorResponse(
     val error: FirebaseTokenRefreshError
 )
 
-private data class FirebaseTokenRefreshError(
+@JsonClass(generateAdapter = true)
+internal data class FirebaseTokenRefreshError(
     val message: String,
     val status: String,
 ) {
@@ -382,18 +385,21 @@ private data class FirebaseTokenRefreshError(
         get() = arrayOf("TOKEN_EXPIRED", "INVALID_REFRESH_TOKEN").contains(message)
 }
 
-private data class FirebaseTokenExchangeRequest(
+@JsonClass(generateAdapter = true)
+internal data class FirebaseTokenExchangeRequest(
     val returnSecureToken: Boolean = true,
     val token: String,
     val tenantId: String,
 )
 
-private data class FirebaseTokenExchangeResponse(
+@JsonClass(generateAdapter = true)
+internal data class FirebaseTokenExchangeResponse(
     val expiresIn: String,
     val refreshToken: String,
     val idToken: String,
 )
 
+@JsonClass(generateAdapter = true)
 internal data class VitalSignInToken(
     @Json(name = "public_key")
     val publicKey: String,
@@ -475,7 +481,8 @@ internal data class VitalSignInTokenClaims(
         }
     }
 
-    private data class RawClaims(
+    @JsonClass(generateAdapter = true)
+    internal data class RawClaims(
         @Json(name = "iss")
         val issuer: String,
         @Json(name = "uid")
@@ -486,7 +493,8 @@ internal data class VitalSignInTokenClaims(
         val gcipTenantId: String,
     )
 
-    private data class RawInnerClaims(
+    @JsonClass(generateAdapter = true)
+    internal data class RawInnerClaims(
         @Json(name = "vital_team_id")
         val teamId: String
     )
