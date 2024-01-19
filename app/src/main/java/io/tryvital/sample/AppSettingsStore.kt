@@ -3,8 +3,8 @@ package io.tryvital.sample
 import android.content.Context
 import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.sample.ui.settings.SettingsAuthMode
@@ -52,6 +52,7 @@ class AppSettingsStore(
     }
 }
 
+@JsonClass(generateAdapter = true)
 data class AppSettings(
     val authMode: SettingsAuthMode = SettingsAuthMode.ApiKey,
     val apiKey: String = "",
@@ -63,6 +64,5 @@ data class AppSettings(
 
 private val moshi by lazy {
     Moshi.Builder()
-        .addLast(KotlinJsonAdapterFactory())
         .build()
 }

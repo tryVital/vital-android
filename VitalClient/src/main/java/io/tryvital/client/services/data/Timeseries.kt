@@ -5,6 +5,7 @@ import com.squareup.moshi.JsonClass
 import io.tryvital.client.utils.getJsonName
 import java.util.*
 
+@JsonClass(generateAdapter = true)
 data class TimeseriesPayload<T> (
     @Json(name = "stage")
     val stage: DataStage,

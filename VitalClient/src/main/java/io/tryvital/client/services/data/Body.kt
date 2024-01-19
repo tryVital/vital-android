@@ -1,13 +1,16 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import java.util.*
 
+@JsonClass(generateAdapter = true)
 data class BodyDataResponse(
     val body: List<BodyData>
 )
 
-class BodyData(
+@JsonClass(generateAdapter = true)
+data class BodyData(
     @Json(name = "user_id")
     val userId: String?,
     @Json(name = "user_key")

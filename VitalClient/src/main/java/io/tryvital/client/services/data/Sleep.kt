@@ -1,12 +1,15 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import java.util.*
 
+@JsonClass(generateAdapter = true)
 data class SleepResponse(
     val sleep: List<SleepData>
 )
 
+@JsonClass(generateAdapter = true)
 data class SleepData(
     @Json(name = "user_id")
     val userId: String?,
@@ -44,6 +47,7 @@ data class SleepData(
     val sleepStream: SleepStreamResponse?,
 )
 
+@JsonClass(generateAdapter = true)
 data class SleepStreamResponse(
     val hrv: List<Measurement> = emptyList(),
     val heartrate: List<Measurement> = emptyList(),

@@ -1,8 +1,10 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import java.util.*
 
+@JsonClass(generateAdapter = true)
 data class User(
     @Json(name = "user_id")
     val userId: String,
@@ -18,18 +20,21 @@ data class User(
     val connectedSources: List<ConnectedSource>
 )
 
+@JsonClass(generateAdapter = true)
 data class ConnectedSource(
     val source: Source,
     @Json(name = "created_on")
     val createdOn: Date
 )
 
+@JsonClass(generateAdapter = true)
 data class Source(
     val name: String,
     val slug: ProviderSlug,
     val logo: String?
 )
 
+@JsonClass(generateAdapter = true)
 data class RefreshResponse(
     val success: Boolean,
     @Json(name = "user_id")
@@ -41,10 +46,12 @@ data class RefreshResponse(
     val failedSources: List<String> = emptyList()
 )
 
+@JsonClass(generateAdapter = true)
 data class ProvidersResponse(
     val providers: List<Source> = emptyList()
 )
 
+@JsonClass(generateAdapter = true)
 data class CreateUserRequest(
     @Json(name = "client_user_id")
     val clientUserId: String,
@@ -52,6 +59,7 @@ data class CreateUserRequest(
     val fallbackTimeZone: String? = null
 )
 
+@JsonClass(generateAdapter = true)
 data class CreateUserResponse(
     @Json(name = "user_id")
     val userId: String,
@@ -61,15 +69,18 @@ data class CreateUserResponse(
     val clientUserId: String
 )
 
+@JsonClass(generateAdapter = true)
 data class DeleteUserResponse(
     val success: Boolean,
     val error: String?
 )
 
+@JsonClass(generateAdapter = true)
 data class DeregisterProviderResponse(
     val success: Boolean
 )
 
+@JsonClass(generateAdapter = true)
 data class GetAllUsersResponse(
     @Json(name = "users")
     val users: List<User>?

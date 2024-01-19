@@ -7,20 +7,15 @@ import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import androidx.work.CoroutineWorker
 import androidx.work.Data
-import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
+import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
-import io.tryvital.client.Environment
-import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
-import io.tryvital.vitalhealthconnect.SyncNotificationBuilder
-import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -33,7 +28,6 @@ import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import io.tryvital.vitalhealthconnect.records.RecordUploader
 import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
-import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -46,7 +40,6 @@ internal val moshi by lazy {
     Moshi.Builder()
         .add(Date::class.java, Rfc3339DateJsonAdapter())
         .add(ResourceSyncState.adapterFactory)
-        .addLast(KotlinJsonAdapterFactory())
         .build()
 }
 
@@ -67,8 +60,11 @@ data class ResourceSyncWorkerInput(
     }
 }
 
+@JsonClass(generateAdapter = false)
 sealed class ResourceSyncState {
+    @JsonClass(generateAdapter = true)
     data class Historical(val start: Date, val end: Date) : ResourceSyncState()
+    @JsonClass(generateAdapter = true)
     data class Incremental(val changesToken: String, val lastSync: Date) : ResourceSyncState()
 
     companion object {

@@ -1,8 +1,10 @@
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonClass
 import io.tryvital.client.Region
 
+@JsonClass(generateAdapter = true)
 data class CreateLinkRequest(
     @Json(name = "user_id")
     val userId: String,
@@ -11,7 +13,7 @@ data class CreateLinkRequest(
     val redirectUrl: String,
 )
 
-
+@JsonClass(generateAdapter = true)
 data class PasswordProviderRequest(
     val username: String,
     val password: String,
@@ -19,11 +21,13 @@ data class PasswordProviderRequest(
     val redirectUrl: String,
 )
 
+@JsonClass(generateAdapter = true)
 data class EmailProviderRequest(
     val email: String,
     val region: Region,
 )
 
+@JsonClass(generateAdapter = true)
 data class ManualProviderRequest(
     @Json(name = "user_id")
     val userId: String,
@@ -31,11 +35,13 @@ data class ManualProviderRequest(
     val providerId: String? = null,
 )
 
+@JsonClass(generateAdapter = true)
 data class CreateLinkResponse(
     @Json(name = "link_token")
     val linkToken: String?,
 )
 
+@JsonClass(generateAdapter = true)
 data class OauthLinkResponse(
     val name: String?,
     val slug: String?,
@@ -51,12 +57,14 @@ data class OauthLinkResponse(
     val id: Int,
 )
 
+@JsonClass(generateAdapter = true)
 data class EmailProviderResponse(
     val success: Boolean,
     @Json(name = "redirect_url")
     val redirectUrl: String?,
 )
 
+@JsonClass(generateAdapter = true)
 data class ManualProviderResponse(
     @Json(name = "success")
     val success: Boolean,
