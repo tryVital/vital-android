@@ -39,6 +39,25 @@ class VitalHealthConnectManager private constructor(
 ) {
     val sharedPreferences get() = vitalClient.sharedPreferences
 
+    /**
+     * Pause all synchronization, both automatic syncs and any manual [syncData] calls.
+     *
+     * When unpausing, a sync is automatically triggered on all previously asked-for resources.
+     */
+    var pauseSynchronization: Boolean
+        get() = sharedPreferences.getBoolean(UnSecurePrefKeys.pauseSyncKey, false)
+        set(newValue) {
+            val oldValue = sharedPreferences.getBoolean(UnSecurePrefKeys.pauseSyncKey, false)
+            sharedPreferences.edit()
+                .putBoolean(UnSecurePrefKeys.pauseSyncKey, newValue)
+                .apply()
+
+            // Auto-trigger a sync on unpausing, but only if there is no outstanding sync job
+            if (oldValue && !newValue && currentSyncCall.availablePermits > 0) {
+                taskScope.launch { syncData() }
+            }
+        }
+
     private val vitalLogger = vitalClient.vitalLogger
     internal var syncNotificationBuilder: SyncNotificationBuilder? = null
 
@@ -188,7 +207,9 @@ class VitalHealthConnectManager private constructor(
     }
 
     suspend fun syncData(resources: Set<VitalResource>? = null) {
-        val userId = vitalClient.checkUserId()
+        if (pauseSynchronization) {
+            return
+        }
 
         try {
             currentSyncCall.acquire()
