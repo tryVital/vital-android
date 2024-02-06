@@ -26,6 +26,11 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
     private val vitalHealthConnectManager = VitalHealthConnectManager.getOrCreate(context)
 
     private val viewModelState = MutableStateFlow(HealthConnectViewModelState())
+
+    var pauseSync: Boolean
+        get() = vitalHealthConnectManager.pauseSynchronization
+        set(newValue) { vitalHealthConnectManager.pauseSynchronization = newValue }
+
     val uiState = viewModelState.asStateFlow()
 
     val userId: String get() = VitalClient.currentUserId ?: "<null>"

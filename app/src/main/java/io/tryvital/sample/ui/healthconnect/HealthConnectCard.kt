@@ -3,6 +3,7 @@ package io.tryvital.sample.ui.healthconnect
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.widget.ToggleButton
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -11,7 +12,10 @@ import androidx.compose.material.icons.outlined.InstallMobile
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -69,6 +73,8 @@ fun PermissionInfo(
                 viewModel.checkPermissions()
             }
         }
+
+    val pauseSync = remember { mutableStateOf(viewModel.pauseSync) }
 
     Column(
         modifier = Modifier
@@ -135,6 +141,20 @@ fun PermissionInfo(
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                 Text("Open Health Connect")
             }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(
+                checked = pauseSync.value,
+                onCheckedChange = {
+                    viewModel.pauseSync = it
+                    pauseSync.value = it
+                }
+            )
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text("Pause Synchronization")
         }
     }
 }

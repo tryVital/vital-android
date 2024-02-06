@@ -140,7 +140,7 @@ class VitalClient internal constructor(context: Context) {
 
     fun checkUserId(): String {
         return currentUserId ?: throw IllegalStateException(
-            "You need to call setUserId before you can read the health data"
+            "The SDK does not have a signed-in user, or is not configured with an API Key for evaluation."
         )
     }
 
