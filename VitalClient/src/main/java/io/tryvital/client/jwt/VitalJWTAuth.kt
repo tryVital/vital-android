@@ -75,6 +75,10 @@ data class VitalJWTAuthUserContext(val userId: String, val teamId: String)
 
 internal class VitalJWTAuthNeedsRefresh: Throwable()
 
+internal enum class VitalJWTAuthChangeReason {
+    SignedIn, SignedOut, Update, UserNoLongerValid;
+}
+
 internal interface AbstractVitalJWTAuth {
     suspend fun <Result> withAccessToken(action: suspend (String) -> Result): Result
     suspend fun refreshToken()
@@ -87,19 +91,20 @@ internal class VitalJWTAuth(
         private var shared: VitalJWTAuth? = null
 
         fun getInstance(context: Context): VitalJWTAuth = synchronized(VitalJWTAuth) {
+            val appContext = context.applicationContext
             val shared = this.shared
             if (shared != null) {
                 return shared
             }
 
             val sharedPreferences = try {
-                createEncryptedSharedPreferences(context)
+                createEncryptedSharedPreferences(appContext)
             } catch (e: Exception) {
                 VitalLogger.getOrCreate().logE(
                     "Failed to decrypt VitalJWTAuth preferences, re-creating it", e
                 )
-                context.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
-                createEncryptedSharedPreferences(context)
+                appContext.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
+                createEncryptedSharedPreferences(appContext)
             }
 
             this.shared = VitalJWTAuth(
@@ -117,7 +122,7 @@ internal class VitalJWTAuth(
     private val httpClient = OkHttpClient()
 
     /** Moments which can materially change VitalClient.Companion.status */
-    internal val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
+    internal val statusChanged = MutableSharedFlow<VitalJWTAuthChangeReason>(extraBufferCapacity = Int.MAX_VALUE)
 
     suspend fun signIn(signInToken: VitalSignInToken) {
         val record = getRecord()
@@ -166,7 +171,7 @@ internal class VitalJWTAuth(
                         expiry = Date.from(Instant.now().plusSeconds(exchangeResponse.expiresIn.toLong()))
                     )
 
-                    setRecord(newRecord)
+                    setRecord(newRecord, VitalJWTAuthChangeReason.SignedIn)
                     VitalLogger.getOrCreate()
                         .logI("sign-in success; expiresIn = ${exchangeResponse.expiresIn}")
                 }
@@ -187,7 +192,7 @@ internal class VitalJWTAuth(
     }
 
     fun signOut() {
-        setRecord(null)
+        setRecord(null, VitalJWTAuthChangeReason.SignedOut)
     }
 
     fun userContext(): VitalJWTAuthUserContext {
@@ -266,23 +271,26 @@ internal class VitalJWTAuth(
                             ),
                         )
 
-                        setRecord(newRecord)
+                        setRecord(newRecord, VitalJWTAuthChangeReason.Update)
                         VitalLogger.getOrCreate()
                             .logI("refresh success; expiresIn = ${refreshResponse.expiresIn}")
                     }
 
                     else -> {
                         if (it.code in 400 until 500) {
-                            val adapter = moshi.adapter(FirebaseTokenRefreshError::class.java)
+                            val adapter = moshi.adapter(FirebaseTokenRefreshErrorResponse::class.java)
                             val response = adapter.fromJson(it.body?.string() ?: "")!!
 
-                            if (response.isInvalidUser) {
-                                setRecord(null)
+                            if (response.error.isInvalidUser) {
+                                setRecord(null, VitalJWTAuthChangeReason.UserNoLongerValid)
                                 throw VitalJWTAuthError(VitalJWTAuthError.Code.InvalidUser)
                             }
 
-                            if (response.needsReauthentication) {
-                                setRecord(record.copy(pendingReauthentication = true))
+                            if (response.error.needsReauthentication) {
+                                setRecord(
+                                    record.copy(pendingReauthentication = true),
+                                    VitalJWTAuthChangeReason.Update,
+                                )
                                 throw VitalJWTAuthError(VitalJWTAuthError.Code.NeedsReauthentication)
                             }
                         }
@@ -321,12 +329,12 @@ internal class VitalJWTAuth(
             return record
         } catch (e: Throwable) {
             VitalLogger.getOrCreate().logE("auto signout: failed to decode keychain auth record", e)
-            setRecord(null)
+            setRecord(null, VitalJWTAuthChangeReason.UserNoLongerValid)
             return null
         }
     }
 
-    private fun setRecord(record: VitalJWTAuthRecord?): Unit = synchronized(this) {
+    private fun setRecord(record: VitalJWTAuthRecord?, reason: VitalJWTAuthChangeReason): Unit = synchronized(this) {
         preferences
             .edit()
             .apply {
@@ -339,7 +347,7 @@ internal class VitalJWTAuth(
             }
             .apply()
         this.cachedRecord = record
-        statusChanged.tryEmit(Unit)
+        statusChanged.tryEmit(reason)
     }
 }
 

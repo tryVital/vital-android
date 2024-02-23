@@ -98,10 +98,12 @@ class VitalHealthConnectManager private constructor(
     @SuppressLint("ApplySharedPref")
     @Suppress("unused")
     fun cleanUp() {
+        vitalClient.cleanUp()
+    }
+
+    private fun resetAutoSync() {
         taskScope.cancel()
         taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-
-        vitalClient.cleanUp()
     }
 
     @Suppress("unused")
@@ -362,6 +364,7 @@ class VitalHealthConnectManager private constructor(
     companion object {
         private const val packageName = "com.google.android.apps.healthdata"
 
+        @SuppressLint("StaticFieldLeak")
         private var sharedInstance: VitalHealthConnectManager? = null
 
         @Suppress("unused")
@@ -392,25 +395,42 @@ class VitalHealthConnectManager private constructor(
         }
 
         fun getOrCreate(context: Context): VitalHealthConnectManager = synchronized(VitalHealthConnectManager) {
+            val appContext = context.applicationContext
             var instance = sharedInstance
 
             if (instance == null) {
+                val coreClient = VitalClient.getOrCreate(appContext)
                 val healthConnectClientProvider = HealthConnectClientProvider()
 
                 instance = VitalHealthConnectManager(
-                    context,
+                    appContext,
                     healthConnectClientProvider,
-                    VitalClient.getOrCreate(context),
-                    HealthConnectRecordReader(context, healthConnectClientProvider),
+                    coreClient,
+                    HealthConnectRecordReader(appContext, healthConnectClientProvider),
                     HealthConnectRecordProcessor(
-                        HealthConnectRecordReader(context, healthConnectClientProvider),
-                        HealthConnectRecordAggregator(context, healthConnectClientProvider),
+                        HealthConnectRecordReader(appContext, healthConnectClientProvider),
+                        HealthConnectRecordAggregator(appContext, healthConnectClientProvider),
                     )
                 )
                 sharedInstance = instance
+                bind(instance, coreClient, appContext)
             }
 
             return instance
+        }
+
+        /**
+         * Must be called exactly once after both Core SDK and Health SDK are initialized.
+         */
+        @OptIn(DelicateCoroutinesApi::class)
+        private fun bind(client: VitalHealthConnectManager, coreClient: VitalClient, context: Context) {
+            VitalClient.Companion.statuses(context)
+                .onEach { statuses ->
+                    if (VitalClient.Status.SignedIn !in statuses) {
+                        client.resetAutoSync()
+                    }
+                }
+                .launchIn(GlobalScope)
         }
     }
 }
