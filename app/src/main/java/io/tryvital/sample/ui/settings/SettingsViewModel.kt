@@ -93,7 +93,12 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
 
     fun forceTokenRefresh(context: Context) {
         viewModelScope.launch {
-            VitalClient.debugForceTokenRefresh(context)
+            try {
+                VitalClient.debugForceTokenRefresh(context)
+            } catch (e: Throwable) {
+                VitalLogger.getOrCreate().logE("Demo: Force Token Refresh Failed", e)
+                viewModelState.update { it.copy(currentError = e) }
+            }
         }
     }
 
@@ -132,7 +137,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     }
 
     fun resetSDK(context: Context) {
-        VitalClient.getOrCreate(context).cleanUp()
+        VitalClient.getOrCreate(context).signOut()
         updateSDKStatus(context)
     }
 

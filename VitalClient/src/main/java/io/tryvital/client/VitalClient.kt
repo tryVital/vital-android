@@ -2,19 +2,28 @@ package io.tryvital.client
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.provider.Settings.Global
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.jwt.VitalJWTAuth
+import io.tryvital.client.jwt.VitalJWTAuthChangeReason
 import io.tryvital.client.jwt.VitalSignInToken
 import io.tryvital.client.services.*
 import io.tryvital.client.utils.VitalLogger
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
@@ -85,7 +94,10 @@ class VitalClient internal constructor(context: Context) {
     /** Moments which can materially change VitalClient.Companion.status */
     private val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
 
-    fun cleanUp() {
+    @Deprecated("Renamed to `signOut()`.", ReplaceWith("signOut()"))
+    fun cleanUp() = signOut()
+
+    fun signOut() {
         sharedPreferences.edit().clear().apply()
         encryptedSharedPreferences.edit().clear().apply()
         jwtAuth.signOut()
@@ -184,11 +196,13 @@ class VitalClient internal constructor(context: Context) {
 
         fun statusChanged(context: Context): Flow<Unit> {
             val client = getOrCreate(context)
-            return merge(client.statusChanged, client.jwtAuth.statusChanged).conflate()
+            return client.statusChanged
         }
 
         fun statuses(context: Context): Flow<Set<Status>> {
-            return statusChanged(context).map { this.status }.conflate()
+            return statusChanged(context)
+                .onStart { emit(Unit) }
+                .map { this.status }
         }
 
         /**
@@ -207,10 +221,12 @@ class VitalClient internal constructor(context: Context) {
             }
 
         fun getOrCreate(context: Context): VitalClient = synchronized(VitalClient) {
+            val appContext = context.applicationContext
             var instance = sharedInstance
             if (instance == null) {
-                instance = VitalClient(context)
+                instance = VitalClient(appContext)
                 sharedInstance = instance
+                bind(instance, VitalJWTAuth.getInstance(appContext), context)
             }
             return instance
         }
@@ -282,6 +298,27 @@ class VitalClient internal constructor(context: Context) {
 
         suspend fun debugForceTokenRefresh(context: Context) {
             VitalJWTAuth.getInstance(context).refreshToken()
+        }
+
+        /**
+         * Must be called exactly once after Core SDK is initialized.
+         */
+        @OptIn(DelicateCoroutinesApi::class)
+        private fun bind(client: VitalClient, jwtAuth: VitalJWTAuth, context: Context) {
+            jwtAuth.statusChanged
+                .filter { it == VitalJWTAuthChangeReason.UserNoLongerValid }
+                .onEach {
+                    client.cleanUp()
+                }
+                .launchIn(GlobalScope)
+
+
+            statuses(context)
+                .onEach { statuses ->
+                    val logger = VitalLogger.getOrCreate()
+                    logger.info { "status: ${statuses.joinToString(separator = ",") { it.name }}" }
+                }
+                .launchIn(GlobalScope)
         }
     }
 
