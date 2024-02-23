@@ -95,10 +95,12 @@ class VitalHealthConnectManager private constructor(
      *
      * You typically only need to [cleanUp] when your application has logged out the current user.
      */
-    @SuppressLint("ApplySharedPref")
+    @Deprecated(
+        "Use [VitalClient.signOut]. It resets both the Vital Core and Health SDKs."
+    )
     @Suppress("unused")
     fun cleanUp() {
-        vitalClient.cleanUp()
+        vitalClient.signOut()
     }
 
     private fun resetAutoSync() {

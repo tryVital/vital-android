@@ -94,7 +94,10 @@ class VitalClient internal constructor(context: Context) {
     /** Moments which can materially change VitalClient.Companion.status */
     private val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
 
-    fun cleanUp() {
+    @Deprecated("Renamed to `signOut()`.", ReplaceWith("signOut()"))
+    fun cleanUp() = signOut()
+
+    fun signOut() {
         sharedPreferences.edit().clear().apply()
         encryptedSharedPreferences.edit().clear().apply()
         jwtAuth.signOut()

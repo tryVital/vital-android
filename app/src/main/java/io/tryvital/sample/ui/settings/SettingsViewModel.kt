@@ -137,7 +137,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     }
 
     fun resetSDK(context: Context) {
-        VitalClient.getOrCreate(context).cleanUp()
+        VitalClient.getOrCreate(context).signOut()
         updateSDKStatus(context)
     }
 
