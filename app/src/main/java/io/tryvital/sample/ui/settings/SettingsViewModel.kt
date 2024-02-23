@@ -107,7 +107,9 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
         VitalClient.configure(context, state.appSettings.region, state.appSettings.environment, state.appSettings.apiKey)
         VitalClient.setUserId(context, state.appSettings.userId)
 
-        VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient()
+        VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
+            logsEnabled = true
+        )
 
         updateSDKStatus(context)
     }
@@ -125,7 +127,9 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
                 // Sign-in with the SDK using the created token.
                 VitalClient.signIn(context, response.signInToken)
 
-                VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient()
+                VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
+                    logsEnabled = true
+                )
 
                 updateSDKStatus(context)
 
@@ -137,8 +141,10 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     }
 
     fun resetSDK(context: Context) {
-        VitalClient.getOrCreate(context).signOut()
-        updateSDKStatus(context)
+        viewModelScope.launch {
+            VitalClient.getOrCreate(context).signOut()
+            updateSDKStatus(context)
+        }
     }
 
     fun updateSDKStatus(context: Context) {
