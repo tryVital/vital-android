@@ -4,7 +4,9 @@ import android.util.Log
 
 private const val VITAL_LOGGER = "vital-logger"
 
-class VitalLogger private constructor(var enabled: Boolean = false) {
+class VitalLogger private constructor() {
+    @Volatile
+    var enabled: Boolean = false
 
     fun info(message: () -> String) {
         if (enabled) {
@@ -33,13 +35,9 @@ class VitalLogger private constructor(var enabled: Boolean = false) {
     companion object {
         private var instance: VitalLogger? = null
 
-        fun getOrCreate(): VitalLogger {
+        fun getOrCreate(): VitalLogger = synchronized(VitalLogger) {
             if (instance == null) {
-                synchronized(VitalLogger::class.java) {
-                    if (instance == null) {
-                        instance = VitalLogger()
-                    }
-                }
+                instance = VitalLogger()
             }
             return instance!!
         }

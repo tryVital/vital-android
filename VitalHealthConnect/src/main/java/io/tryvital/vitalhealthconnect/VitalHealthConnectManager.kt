@@ -100,7 +100,8 @@ class VitalHealthConnectManager private constructor(
     )
     @Suppress("unused")
     fun cleanUp() {
-        vitalClient.signOut()
+        @Suppress("DEPRECATION")
+        vitalClient.cleanUp()
     }
 
     private fun resetAutoSync() {

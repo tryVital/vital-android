@@ -11,6 +11,7 @@ import io.tryvital.client.jwt.VitalJWTAuthChangeReason
 import io.tryvital.client.jwt.VitalSignInToken
 import io.tryvital.client.services.*
 import io.tryvital.client.utils.VitalLogger
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
@@ -24,6 +25,7 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.launch
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
@@ -92,16 +94,22 @@ class VitalClient internal constructor(context: Context) {
     private val jwtAuth get() = dependencies.jwtAuth
 
     /** Moments which can materially change VitalClient.Companion.status */
-    private val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
+    private val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
 
-    @Deprecated("Renamed to `signOut()`.", ReplaceWith("signOut()"))
-    fun cleanUp() = signOut()
 
-    fun signOut() {
+    @Deprecated("Renamed to `signOut()` and is now a suspend function.", ReplaceWith("signOut()"))
+    fun cleanUp() {
+        @OptIn(DelicateCoroutinesApi::class)
+        GlobalScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            signOut()
+        }
+    }
+
+    suspend fun signOut() {
         sharedPreferences.edit().clear().apply()
         encryptedSharedPreferences.edit().clear().apply()
         jwtAuth.signOut()
-        statusChanged.tryEmit(Unit)
+        statusChanged.emit(Unit)
     }
 
     @Deprecated(
@@ -308,7 +316,7 @@ class VitalClient internal constructor(context: Context) {
             jwtAuth.statusChanged
                 .filter { it == VitalJWTAuthChangeReason.UserNoLongerValid }
                 .onEach {
-                    client.cleanUp()
+                    client.signOut()
                 }
                 .launchIn(GlobalScope)
 
