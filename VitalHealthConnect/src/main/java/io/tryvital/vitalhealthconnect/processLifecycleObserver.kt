@@ -17,19 +17,19 @@ internal fun processLifecycleObserver(
         if (event != Lifecycle.Event.ON_START) {
             return
         }
+        if (VitalClient.Status.SignedIn !in VitalClient.status) {
+            return
+        }
+        if (VitalHealthConnectManager.isAvailable(manager.context) != HealthConnectAvailability.Installed) {
+            return
+        }
 
         manager.scheduleNextExactAlarm(force = false)
 
         source.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
             manager.checkAndUpdatePermissions()
-
-            if (
-                VitalClient.Status.SignedIn in VitalClient.status
-                && VitalHealthConnectManager.isAvailable(manager.context) == HealthConnectAvailability.Installed
-            ) {
-                manager.launchAutoSyncWorker {
-                    VitalLogger.getOrCreate().info { "BgSync: triggered by process ON_START" }
-                }
+            manager.launchAutoSyncWorker {
+                VitalLogger.getOrCreate().info { "BgSync: triggered by process ON_START" }
             }
         }
     }

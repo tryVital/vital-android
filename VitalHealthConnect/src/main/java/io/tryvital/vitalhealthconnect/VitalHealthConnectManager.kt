@@ -148,6 +148,7 @@ class VitalHealthConnectManager private constructor(
     }
 
     private fun resetAutoSync() {
+        disableBackgroundSync()
         taskScope.cancel()
         taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
@@ -311,12 +312,18 @@ class VitalHealthConnectManager private constructor(
             VitalLogger.getOrCreate().info { "BgSync: skipped by pause" }
             return
         }
+
         if (shouldSkipAutoSync) {
             VitalLogger.getOrCreate().info {
                 "BgSync: skipped by throttle; last synced at ${Instant.ofEpochMilli(lastAutoSyncedAt)}"
             }
             return
         }
+
+        if (!context.isConnectedToInternet) {
+            return VitalLogger.getOrCreate().info { "BgSync: skipped; no internet" }
+        }
+
         if (!vitalClient.hasUserConnectedTo(ProviderSlug.HealthConnect)) {
             VitalLogger.getOrCreate().info { "BgSync: skipped; no CS" }
             return
@@ -524,14 +531,9 @@ class VitalHealthConnectManager private constructor(
          */
         @OptIn(DelicateCoroutinesApi::class)
         private fun bind(client: VitalHealthConnectManager, coreClient: VitalClient, context: Context) {
-            VitalClient.Companion.statuses(context)
-                .onEach { statuses ->
-                    if (VitalClient.Status.SignedIn !in statuses) {
-                        client.resetAutoSync()
-                    }
-                }
-                .launchIn(GlobalScope)
+            coreClient.childSDKShouldReset
+                .onEach { client.resetAutoSync() }
+                .launchIn(GlobalScope + Dispatchers.Main)
         }
     }
 }
-
