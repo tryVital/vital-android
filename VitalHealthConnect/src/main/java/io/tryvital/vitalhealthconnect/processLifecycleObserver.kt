@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalVitalApi::class)
+
 package io.tryvital.vitalhealthconnect
 
 import androidx.lifecycle.Lifecycle
@@ -24,7 +26,9 @@ internal fun processLifecycleObserver(
             return
         }
 
-        manager.scheduleNextExactAlarm(force = false)
+        if (manager.isBackgroundSyncEnabled) {
+            manager.scheduleNextExactAlarm(force = false)
+        }
 
         source.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
             manager.checkAndUpdatePermissions()

@@ -56,23 +56,29 @@ class VitalHealthConnectManager private constructor(
     var pauseSynchronization: Boolean
         get() = sharedPreferences.getBoolean(UnSecurePrefKeys.pauseSyncKey, false)
         set(newValue) {
+            check(Looper.getMainLooper().isCurrentThread)
+
             val oldValue = sharedPreferences.getBoolean(UnSecurePrefKeys.pauseSyncKey, false)
             sharedPreferences.edit()
                 .putBoolean(UnSecurePrefKeys.pauseSyncKey, newValue)
                 .apply()
 
             // Cancel exact alarm if we are pausing
-            if (!oldValue && newValue) {
-                disableBackgroundSync()
+            if (!oldValue && newValue && isBackgroundSyncEnabled) {
+                cancelPendingAlarm()
             }
 
             if (oldValue && !newValue) {
-                // Re-schedule exact alarm if we are un-pausing.
-                scheduleNextExactAlarm(force = true)
+                if (isBackgroundSyncEnabled) {
+                    // Re-schedule exact alarm if we are un-pausing.
+                    scheduleNextExactAlarm(force = true)
+                }
 
                 // Auto-trigger a sync on unpausing, but only if there is no outstanding sync job
                 if (currentSyncCall.availablePermits > 0) {
-                    taskScope.launch { syncData() }
+                    launchAutoSyncWorker(startForeground = true) {
+                        vitalLogger.info { "BgSync: sync triggered by unpause" }
+                    }
                 }
             }
         }
@@ -147,6 +153,7 @@ class VitalHealthConnectManager private constructor(
         vitalClient.cleanUp()
     }
 
+    @OptIn(ExperimentalVitalApi::class)
     private fun resetAutoSync() {
         disableBackgroundSync()
         taskScope.cancel()

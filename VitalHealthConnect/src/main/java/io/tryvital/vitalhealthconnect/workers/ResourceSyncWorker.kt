@@ -43,7 +43,7 @@ internal val moshi by lazy {
         .build()
 }
 
-data class ResourceSyncWorkerInput(
+internal data class ResourceSyncWorkerInput(
     val resource: VitalResource,
 ) {
     fun toData(): Data = Data.Builder().run {
@@ -61,7 +61,7 @@ data class ResourceSyncWorkerInput(
 }
 
 @JsonClass(generateAdapter = false)
-sealed class ResourceSyncState {
+internal sealed class ResourceSyncState {
     @JsonClass(generateAdapter = true)
     data class Historical(val start: Date, val end: Date) : ResourceSyncState()
     @JsonClass(generateAdapter = true)
@@ -75,7 +75,7 @@ sealed class ResourceSyncState {
     }
 }
 
-class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
+internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
 
     private val input: ResourceSyncWorkerInput by lazy {

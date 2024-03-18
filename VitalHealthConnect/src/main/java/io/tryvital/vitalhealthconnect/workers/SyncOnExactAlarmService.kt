@@ -2,11 +2,10 @@ package io.tryvital.vitalhealthconnect.workers
 
 import android.app.Service
 import android.content.Intent
-import android.os.Build
 import android.os.IBinder
+import androidx.core.app.ServiceCompat
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -27,22 +26,23 @@ class SyncOnExactAlarmService: Service() {
         val syncNotificationBuilder = manager.syncNotificationBuilder
         val notification = syncNotificationBuilder.build(applicationContext, resources)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                VITAL_SYNC_NOTIFICATION_ID,
-                notification,
-                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE
-            )
-        } else {
-            startForeground(VITAL_SYNC_NOTIFICATION_ID, notification)
-        }
+        ServiceCompat.startForeground(
+            this,
+            VITAL_SYNC_NOTIFICATION_ID,
+            notification,
+            foregroundServiceType()
+        )
 
         val job = manager.launchAutoSyncWorker(startForeground = false) {
             VitalLogger.getOrCreate().info { "BgSync: sync triggered by SyncOnExactAlarmService" }
         }
 
         if (job != null) {
-            mainScope.launch { this@SyncOnExactAlarmService.done() }
+            // Use `invokeOnCompletion` so that `done()` is called unconditionally,
+            // no matter whether the job is cancelled, completed or failed.
+            job.invokeOnCompletion {
+                mainScope.launch { this@SyncOnExactAlarmService.done() }
+            }
         } else {
             this.done()
         }
@@ -52,11 +52,12 @@ class SyncOnExactAlarmService: Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-         mainScope.cancel()
+        mainScope.cancel()
     }
 
     private fun done() {
         this.stopForeground(STOP_FOREGROUND_REMOVE)
         this.stopSelf()
+        VitalLogger.getOrCreate().info { "BgSync: stopped SyncOnExactAlarmService" }
     }
 }

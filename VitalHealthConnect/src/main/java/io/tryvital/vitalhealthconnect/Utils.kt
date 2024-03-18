@@ -12,6 +12,7 @@ object UnSecurePrefKeys {
     internal const val useExactAlarmKey = "useExactAlarm"
     internal const val nextAlarmAtKey = "nextAlarmAt"
     internal const val lastAutoSyncedAtKey = "lastAutoSyncedAt"
+    internal const val lastSeenWorkIdKey = "lastSeenWorkId"
     internal fun readResourceGrant(resource: VitalResource) = "resource.read.$resource"
     internal fun writeResourceGrant(resource: WritableVitalResource) = "resource.write.$resource"
 }
