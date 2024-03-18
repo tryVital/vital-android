@@ -14,7 +14,6 @@ class VitalSDKInitializer : Initializer<VitalHealthConnectManager> {
             if (VitalClient.Status.SignedIn in VitalClient.status) {
                 configureHealthConnectClient(
                     logsEnabled = true,
-                    syncNotificationBuilder = VitalSyncNotificationBuilder
                 )
             }
         }
