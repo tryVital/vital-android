@@ -1,7 +1,8 @@
 package io.tryvital.vitalhealthconnect.workers
 
 import android.content.Context
-import android.os.Build
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.work.CoroutineWorker
 import androidx.work.Data
@@ -13,6 +14,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SyncNotificationBuilder
+import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import kotlinx.coroutines.Dispatchers
@@ -21,19 +23,32 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transformWhile
+import java.util.UUID
 import kotlin.random.Random
 
-data class ResourceSyncStarterInput(
+internal data class ResourceSyncStarterInput(
     val resources: Set<VitalResource>,
+    /**
+     * Whether the work should request WorkManager to start a foregorund service.
+     * For sync triggered by user interaction, or sync triggered by ProcessLifecycle ON_START,
+     * this should be `true`.
+     *
+     * However, if the sync is triggered by [SyncOnExactAlarmService], the service itself must
+     * have been an FGS. So [ResourceSyncStarter] should not start another FGS. Otherwise, it
+     * violates the short service FGS requirement.
+     */
+    val startForeground: Boolean,
 ) {
     fun toData(): Data = Data.Builder().run {
         putStringArray("resources", resources.map { it.toString() }.toTypedArray())
+        putBoolean("startForeground", startForeground)
         build()
     }
 
     companion object {
         fun fromData(data: Data) = ResourceSyncStarterInput(
-            resources = data.getStringArray("resources")?.mapTo(mutableSetOf()) { VitalResource.valueOf(it) } ?: emptySet()
+            resources = data.getStringArray("resources")?.mapTo(mutableSetOf()) { VitalResource.valueOf(it) } ?: emptySet(),
+            startForeground = data.getBoolean("startForeground", true),
         )
     }
 }
@@ -46,11 +61,15 @@ data class ResourceSyncStarterInput(
  *
  * Android OS rejects [setForeground] when the app is in background.
  */
-class ResourceSyncStarter(appContext: Context, workerParams: WorkerParameters) :
+internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
 
     private val input: ResourceSyncStarterInput by lazy {
         ResourceSyncStarterInput.fromData(inputData)
+    }
+
+    private val manager by lazy {
+        VitalHealthConnectManager.getOrCreate(applicationContext)
     }
 
     private val syncNotificationBuilder: SyncNotificationBuilder by lazy {
@@ -62,20 +81,40 @@ class ResourceSyncStarter(appContext: Context, workerParams: WorkerParameters) :
 
         logger.logI("ResourceSyncStarter begin")
 
-        val notification = syncNotificationBuilder.build(applicationContext, input.resources)
+        // Normally we would want to start foreground.
+        // But if this worker is enqueued by SyncOnExactAlarmService, the service would have
+        // already started a shortService FGS. Starting another one would violate the shortService
+        // FGS requirement (that it cannot start another FGS).
+        if (input.startForeground) {
+            val processState = ProcessLifecycleOwner.get().lifecycle.currentState
+            if (!processState.isAtLeast(Lifecycle.State.CREATED)) {
+                // We aren't in foreground
+                logger.logI("ResourceSyncStarter cancelled: not in foreground")
+                return Result.failure()
+            }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            val notification = syncNotificationBuilder.build(applicationContext, input.resources)
+
             setForeground(
-                ForegroundInfo(
-                    VITAL_SYNC_NOTIFICATION_ID,
-                    notification,
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE,
-                )
+                ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification, foregroundServiceType())
             )
         } else {
-            setForeground(
-                ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification)
-            )
+            val lastSeenWorkId = manager.sharedPreferences
+                .getString(UnSecurePrefKeys.lastSeenWorkIdKey, null)
+                ?.let { UUID.fromString(it) }
+            val workId = id
+
+            if (lastSeenWorkId == workId) {
+                // This work request is likely a retry of an interrupted ResourceSyncStarter
+                // due to system restart. Since we are not in an FGS in this case, we can't read
+                // Health Connect. No point to continue.
+                logger.logI("ResourceSyncStarter cancelled: likely not inside FGS")
+                return Result.failure()
+            }
+
+            manager.sharedPreferences.edit()
+                .putString(UnSecurePrefKeys.lastSeenWorkIdKey, workId.toString())
+                .apply()
         }
 
         for (resource in input.resources) {

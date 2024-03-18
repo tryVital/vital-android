@@ -15,7 +15,6 @@ import android.os.Looper
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.core.app.AlarmManagerCompat
-import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import java.time.Instant
 import kotlin.time.Duration.Companion.hours
@@ -121,12 +120,7 @@ fun VitalHealthConnectManager.enableBackgroundSyncContract() = object: ActivityR
 fun VitalHealthConnectManager.disableBackgroundSync() {
     check(Looper.getMainLooper().isCurrentThread)
 
-    val pendingIntent = makeSyncPendingIntent(PendingIntent.FLAG_NO_CREATE)
-    if (pendingIntent != null) {
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
-        pendingIntent.cancel()
-        alarmManager.cancel(pendingIntent)
-    }
+    cancelPendingAlarm()
 
     sharedPreferences.edit()
         .putLong(UnSecurePrefKeys.nextAlarmAtKey, -1)
@@ -134,6 +128,21 @@ fun VitalHealthConnectManager.disableBackgroundSync() {
         .apply()
 
     VitalLogger.getOrCreate().info { "BgSync: disabled" }
+}
+
+internal fun VitalHealthConnectManager.cancelPendingAlarm() {
+    check(Looper.getMainLooper().isCurrentThread)
+
+    val pendingIntent = makeSyncPendingIntent(PendingIntent.FLAG_NO_CREATE)
+    if (pendingIntent != null) {
+        val alarmManager = context.getSystemService(AlarmManager::class.java)
+        pendingIntent.cancel()
+        alarmManager.cancel(pendingIntent)
+
+        VitalLogger.getOrCreate().info { "BgSync: cancelled alarm" }
+    } else {
+        VitalLogger.getOrCreate().info { "BgSync: skipped cancelling; found none" }
+    }
 }
 
 /**
@@ -153,11 +162,6 @@ internal fun VitalHealthConnectManager.scheduleNextExactAlarm(force: Boolean): B
 
     if (pauseSynchronization) {
         VitalLogger.getOrCreate().info { "BgSync: scheduling skipped; sync is paused" }
-        return false
-    }
-
-    if (!isBackgroundSyncEnabled) {
-        VitalLogger.getOrCreate().info { "BgSync: scheduling skipped; backgroundSync is disabled" }
         return false
     }
 

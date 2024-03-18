@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalVitalApi::class)
+
 package io.tryvital.vitalhealthconnect
 
 import androidx.lifecycle.Lifecycle
@@ -24,12 +26,14 @@ internal fun processLifecycleObserver(
             return
         }
 
-        manager.scheduleNextExactAlarm(force = false)
+        if (manager.isBackgroundSyncEnabled) {
+            manager.scheduleNextExactAlarm(force = false)
+        }
 
         source.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
             manager.checkAndUpdatePermissions()
-            manager.launchAutoSyncWorker {
-                VitalLogger.getOrCreate().info { "BgSync: triggered by process ON_START" }
+            manager.launchAutoSyncWorker(startForeground = true) {
+                VitalLogger.getOrCreate().info { "BgSync: sync triggered by process ON_START" }
             }
         }
     }
