@@ -8,13 +8,9 @@ import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 
 class VitalSDKInitializer : Initializer<VitalHealthConnectManager> {
     override fun create(context: Context): VitalHealthConnectManager {
-        VitalLogger.getOrCreate().enabled = true
-
         return VitalHealthConnectManager.getOrCreate(context).apply {
             if (VitalClient.Status.SignedIn in VitalClient.status) {
-                configureHealthConnectClient(
-                    logsEnabled = true,
-                )
+                configureHealthConnectClient(logsEnabled = true)
             }
         }
     }
