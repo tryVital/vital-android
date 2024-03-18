@@ -17,8 +17,4 @@ class VitalApp : Application() {
     val vitalDeviceManager by lazy {
         VitalDeviceManager.create(this)
     }
-
-    init {
-        VitalLogger.getOrCreate().enabled = true
-    }
 }
