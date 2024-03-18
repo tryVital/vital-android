@@ -1,9 +1,14 @@
+@file:OptIn(ExperimentalVitalApi::class)
+
 package io.tryvital.vitalhealthconnect
 
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
+import android.net.http.NetworkException
 import android.os.Build
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
@@ -16,6 +21,7 @@ import androidx.lifecycle.asFlow
 import androidx.work.*
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
+import io.tryvital.client.hasUserConnectedTo
 import io.tryvital.client.services.data.*
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -30,9 +36,10 @@ import java.util.*
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
+
 @Suppress("MemberVisibilityCanBePrivate")
 class VitalHealthConnectManager private constructor(
-    private val context: Context,
+    internal val context: Context,
     private val healthConnectClientProvider: HealthConnectClientProvider,
     private val vitalClient: VitalClient,
     private val recordReader: RecordReader,
@@ -53,9 +60,19 @@ class VitalHealthConnectManager private constructor(
                 .putBoolean(UnSecurePrefKeys.pauseSyncKey, newValue)
                 .apply()
 
-            // Auto-trigger a sync on unpausing, but only if there is no outstanding sync job
-            if (oldValue && !newValue && currentSyncCall.availablePermits > 0) {
-                taskScope.launch { syncData() }
+            // Cancel exact alarm if we are pausing
+            if (!oldValue && newValue) {
+                disableBackgroundSync()
+            }
+
+            if (oldValue && !newValue) {
+                // Re-schedule exact alarm if we are un-pausing.
+                scheduleNextExactAlarm(force = true)
+
+                // Auto-trigger a sync on unpausing, but only if there is no outstanding sync job
+                if (currentSyncCall.availablePermits > 0) {
+                    taskScope.launch { syncData() }
+                }
             }
         }
 
@@ -99,7 +116,10 @@ class VitalHealthConnectManager private constructor(
         vitalLogger.logI("VitalHealthConnectManager initialized")
         _status.tryEmit(SyncStatus.Unknown)
 
-        taskScope.launch { checkAndUpdatePermissions() }
+        taskScope.launch(Dispatchers.Main) {
+            checkAndUpdatePermissions()
+            scheduleNextExactAlarm(force = false)
+        }
     }
 
     /**
@@ -256,12 +276,15 @@ class VitalHealthConnectManager private constructor(
             }
 
             // Remap and deduplicate resources before spawning workers
-            // e.g. (Activity | ActiveEnergyBurned | BasalEnergyBurned) -> Activity
+            // e.g. (Activity | ActiveEnergyBurned | BasalEnergyBurned) => Activity
             val remappedCandidates = candidate.mapTo(mutableSetOf()) { it.remapped() }
 
             // Sync each resource one by one for now to lower the possibility of
             // triggering rate limit
-            startSyncWorker(remappedCandidates)
+            val job = startSyncWorker(remappedCandidates)
+
+            // Wait until the sync worker completes.
+            job.join()
 
         } catch (e: Exception) {
             vitalLogger.logE("Error syncing data", e)
@@ -269,6 +292,36 @@ class VitalHealthConnectManager private constructor(
         } finally {
             currentSyncCall.release()
         }
+    }
+
+    /**
+     * Synchronous, no suspension
+     * Also do not wait for [ResourceSyncStarter] completion before returning
+     * Intended for [SyncBroadcastReceiver].
+     *
+     * @param beforeEnqueue Block to invoke before enqueuing the work. Will not be invoke if we
+     * are not going to spawn a sync worker, e.g., due to [pauseSynchronization].
+     */
+    internal fun launchSyncWorkerFromBackground(beforeEnqueue: () -> Unit) {
+        // We assume:
+        // 1. Permissions in our SharedPerfs are up-to-date
+        // 2. ConnectedSource is already created.
+        // Fail gracefully if these assumptions are not satisfied.
+
+        if (!vitalClient.hasUserConnectedTo(ProviderSlug.HealthConnect)) {
+            return
+        }
+
+        val candidates = resourcesWithReadPermission()
+        if (candidates.isEmpty()) {
+            return
+        }
+
+        // Remap and deduplicate resources before spawning workers
+        // e.g. (Activity | ActiveEnergyBurned | BasalEnergyBurned) => Activity
+        val remappedCandidates = candidates.mapTo(mutableSetOf()) { it.remapped() }
+
+        startSyncWorker(remappedCandidates, beforeEnqueue)
     }
 
     suspend fun writeRecord(
@@ -327,27 +380,39 @@ class VitalHealthConnectManager private constructor(
     }
 
     /**
-     * Start a new `ResourceSyncWorker` for the specified [resource].
-     * Suspend until the worker has succeeded, cancelled or failed.
+     * Create a new [ResourceSyncStarter] for the given [resources].
+     *
+     * The returned Job completes only after [ResourceSyncStarter] has succeeded, cancelled
+     * or failed.
      *
      * Worker status change will be mirrored to SDK sync status via [updateStatusFromJob].
      */
-    private suspend fun startSyncWorker(resources: Set<VitalResource>) {
+    @SuppressLint("MissingPermission")
+    private fun startSyncWorker(resources: Set<VitalResource>, beforeEnqueue: (() -> Unit)? = null): Job {
+        if (!context.isConnectedToInternet) {
+            return taskScope.launch {
+                cancel("OS reports no Internet connection")
+            }
+        }
+
         val workRequest = OneTimeWorkRequestBuilder<ResourceSyncStarter>()
             .setInputData(ResourceSyncStarterInput(resources = resources).toData())
             .build()
+        val workRequestId = workRequest.id
 
         val work = WorkManager.getInstance(context).beginUniqueWork(
             "ResourceSyncStarter",
-            ExistingWorkPolicy.KEEP,
+            ExistingWorkPolicy.REPLACE,
             workRequest
         )
+
+        beforeEnqueue?.invoke()
         work.enqueue()
 
         // Launch the work in `taskScope` so that it can be cancelled immediately when the whole
         // VitalHealthConnectManager is closed, independent of the caller of executeWork().
-        val job = work.workInfosLiveData.asFlow()
-            .mapNotNull { workInfos -> workInfos.firstOrNull { it.id == workRequest.id } }
+        return work.workInfosLiveData.asFlow()
+            .mapNotNull { workInfos -> workInfos.firstOrNull { it.id == workRequestId } }
             .transformWhile { info ->
                 emit(info)
                 return@transformWhile when (info.state) {
@@ -363,15 +428,10 @@ class VitalHealthConnectManager private constructor(
                     updateStatusFromJob(listOf(it), resource)
                 }
             }
-            .onStart { work.enqueue() }
             .onCompletion {
                 _status.tryEmit(SyncStatus.SyncingCompleted)
             }
-            .flowOn(Dispatchers.Main)
-            .launchIn(taskScope)
-
-        // Wait for the job to complete.
-        job.join()
+            .launchIn(taskScope + Dispatchers.Main)
     }
 
     private fun updateStatusFromJob(workInfos: List<WorkInfo>, resource: VitalResource) {

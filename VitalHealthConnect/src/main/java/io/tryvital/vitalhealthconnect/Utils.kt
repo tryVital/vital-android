@@ -9,6 +9,8 @@ object UnSecurePrefKeys {
     internal const val syncOnAppStartKey = "syncOnAppStartKey"
     internal const val numberOfDaysToBackFillKey = "numberOfDaysToBackFill"
     internal const val pauseSyncKey = "pauseSync"
+    internal const val useExactAlarmKey = "useExactAlarm"
+    internal const val nextAlarmAtKey = "nextAlarmAt"
     internal fun readResourceGrant(resource: VitalResource) = "resource.read.$resource"
     internal fun writeResourceGrant(resource: WritableVitalResource) = "resource.write.$resource"
 }
