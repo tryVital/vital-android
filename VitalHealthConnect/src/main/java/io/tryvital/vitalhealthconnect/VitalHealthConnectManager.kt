@@ -5,11 +5,9 @@ package io.tryvital.vitalhealthconnect
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.net.ConnectivityManager
-import android.net.NetworkCapabilities
 import android.net.Uri
-import android.net.http.NetworkException
 import android.os.Build
+import android.os.Looper
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectClient.Companion.ACTION_HEALTH_CONNECT_SETTINGS
@@ -17,12 +15,15 @@ import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
 import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Volume
+import androidx.lifecycle.LifecycleObserver
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.work.*
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.hasUserConnectedTo
 import io.tryvital.client.services.data.*
+import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.records.*
@@ -110,16 +111,16 @@ class VitalHealthConnectManager private constructor(
     // Use SupervisorJob so that:
     // 1. child job failure would not cancel the whole scope (it would by default of structured concurrency).
     // 2. cancelling the scope would cancel all running child jobs.
-    private var taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    internal var taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    var processLifecycleObserver: LifecycleObserver
 
     init {
         vitalLogger.logI("VitalHealthConnectManager initialized")
         _status.tryEmit(SyncStatus.Unknown)
 
-        taskScope.launch(Dispatchers.Main) {
-            checkAndUpdatePermissions()
-            scheduleNextExactAlarm(force = false)
-        }
+        processLifecycleObserver = processLifecycleObserver(this)
+            .also { ProcessLifecycleOwner.get().lifecycle.addObserver(it) }
     }
 
     /**
@@ -247,13 +248,6 @@ class VitalHealthConnectManager private constructor(
             .putBoolean(UnSecurePrefKeys.syncOnAppStartKey, syncOnAppStart)
             .putInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, numberOfDaysToBackFill)
             .commit()
-
-        if (VitalClient.Status.SignedIn in VitalClient.status && isAvailable(context) == HealthConnectAvailability.Installed) {
-            vitalLogger.logI("Configuration set, starting sync")
-            taskScope.launch {
-                syncData(healthResources)
-            }
-        }
     }
 
     suspend fun syncData(resources: Set<VitalResource>? = null) {
@@ -296,24 +290,41 @@ class VitalHealthConnectManager private constructor(
 
     /**
      * Synchronous, no suspension
-     * Also do not wait for [ResourceSyncStarter] completion before returning
-     * Intended for [SyncBroadcastReceiver].
+     * Does not wait for [ResourceSyncStarter] completion before returning
+     * Intended for [SyncBroadcastReceiver] and [processLifecycleObserver].
+     *
+     * If the last sync occurs recently within the [AUTO_SYNC_THROTTLE] threshold, the sync is
+     * skipped.
      *
      * @param beforeEnqueue Block to invoke before enqueuing the work. Will not be invoke if we
      * are not going to spawn a sync worker, e.g., due to [pauseSynchronization].
      */
-    internal fun launchSyncWorkerFromBackground(beforeEnqueue: () -> Unit) {
+    internal fun launchAutoSyncWorker(beforeEnqueue: () -> Unit) {
+        check(Looper.getMainLooper().isCurrentThread)
+
         // We assume:
         // 1. Permissions in our SharedPerfs are up-to-date
         // 2. ConnectedSource is already created.
         // Fail gracefully if these assumptions are not satisfied.
 
+        if (pauseSynchronization) {
+            VitalLogger.getOrCreate().info { "BgSync: skipped by pause" }
+            return
+        }
+        if (shouldSkipAutoSync) {
+            VitalLogger.getOrCreate().info {
+                "BgSync: skipped by throttle; last synced at ${Instant.ofEpochMilli(lastAutoSyncedAt)}"
+            }
+            return
+        }
         if (!vitalClient.hasUserConnectedTo(ProviderSlug.HealthConnect)) {
+            VitalLogger.getOrCreate().info { "BgSync: skipped; no CS" }
             return
         }
 
         val candidates = resourcesWithReadPermission()
         if (candidates.isEmpty()) {
+            VitalLogger.getOrCreate().info { "BgSync: skipped; no grant" }
             return
         }
 
@@ -430,6 +441,7 @@ class VitalHealthConnectManager private constructor(
             }
             .onCompletion {
                 _status.tryEmit(SyncStatus.SyncingCompleted)
+                markAutoSyncSuccess()
             }
             .launchIn(taskScope + Dispatchers.Main)
     }

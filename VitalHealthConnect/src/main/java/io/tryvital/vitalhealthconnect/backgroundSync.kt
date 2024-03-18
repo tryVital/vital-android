@@ -18,8 +18,10 @@ import androidx.core.app.AlarmManagerCompat
 import io.tryvital.client.utils.VitalLogger
 import java.time.Instant
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 private val MIN_SYNC_INTERVAL = 1.hours
+private val AUTO_SYNC_THROTTLE = 10.minutes
 
 @ExperimentalVitalApi
 val VitalHealthConnectManager.isBackgroundSyncEnabled: Boolean
@@ -30,6 +32,19 @@ val VitalHealthConnectManager.backgroundSyncScheduledAt: Instant?
     get() = sharedPreferences.getLong(UnSecurePrefKeys.nextAlarmAtKey, -1)
         .takeIf { it >= System.currentTimeMillis() }
         ?.let { Instant.ofEpochMilli(it) }
+
+internal val VitalHealthConnectManager.lastAutoSyncedAt: Long
+    get() = sharedPreferences.getLong(UnSecurePrefKeys.lastAutoSyncedAtKey, 0)
+
+internal val VitalHealthConnectManager.shouldSkipAutoSync: Boolean
+    get() = lastAutoSyncedAt
+        .let { System.currentTimeMillis() < it + AUTO_SYNC_THROTTLE.inWholeMilliseconds }
+
+internal fun VitalHealthConnectManager.markAutoSyncSuccess() {
+    sharedPreferences.edit()
+        .putLong(UnSecurePrefKeys.lastAutoSyncedAtKey, System.currentTimeMillis())
+        .apply()
+}
 
 /**
  * An [ActivityResultContract] to enable automatic data sync. This includes requesting permissions
