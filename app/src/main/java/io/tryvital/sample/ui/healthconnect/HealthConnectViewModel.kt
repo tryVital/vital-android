@@ -6,11 +6,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import io.tryvital.client.VitalClient
-import io.tryvital.client.VitalClientPrefKeys
-import io.tryvital.client.services.data.User
-import io.tryvital.sample.AppSettingsStore
-import io.tryvital.sample.UserRepository
+import io.tryvital.vitalhealthconnect.ExperimentalVitalApi
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
+import io.tryvital.vitalhealthconnect.disableBackgroundSync
+import io.tryvital.vitalhealthconnect.enableBackgroundSyncContract
+import io.tryvital.vitalhealthconnect.isBackgroundSyncEnabled
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.WritableVitalResource
@@ -20,7 +20,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import kotlin.system.exitProcess
 
 class HealthConnectViewModel(context: Context) : ViewModel() {
     private val vitalHealthConnectManager = VitalHealthConnectManager.getOrCreate(context)
@@ -30,6 +29,10 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
     var pauseSync: Boolean
         get() = vitalHealthConnectManager.pauseSynchronization
         set(newValue) { vitalHealthConnectManager.pauseSynchronization = newValue }
+
+    @OptIn(ExperimentalVitalApi::class)
+    val isBackgroundSyncEnabled: Boolean
+        get() = vitalHealthConnectManager.isBackgroundSyncEnabled
 
     val uiState = viewModelState.asStateFlow()
 
@@ -52,6 +55,14 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
         readResources = VitalResource.values().toSet(),
         writeResources = WritableVitalResource.values().toSet(),
     )
+
+    @OptIn(ExperimentalVitalApi::class)
+    fun enableBackgroundSyncContract()
+        = vitalHealthConnectManager.enableBackgroundSyncContract()
+
+    @OptIn(ExperimentalVitalApi::class)
+    fun disableBackgroundSync()
+        = vitalHealthConnectManager.disableBackgroundSync()
 
     fun checkAvailability(context: Context) {
         viewModelState.update {

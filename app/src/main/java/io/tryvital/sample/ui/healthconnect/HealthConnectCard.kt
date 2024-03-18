@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.tryvital.vitalhealthconnect.enableBackgroundSyncContract
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.WritableVitalResource
@@ -75,6 +76,11 @@ fun PermissionInfo(
         }
 
     val pauseSync = remember { mutableStateOf(viewModel.pauseSync) }
+    val isBackgroundSyncEnabled = remember { mutableStateOf(viewModel.isBackgroundSyncEnabled) }
+    val backgroundSyncEnabler =
+        rememberLauncherForActivityResult(viewModel.enableBackgroundSyncContract()) {
+            isBackgroundSyncEnabled.value = it
+        }
 
     Column(
         modifier = Modifier
@@ -155,6 +161,24 @@ fun PermissionInfo(
             )
             Spacer(Modifier.size(ButtonDefaults.IconSpacing))
             Text("Pause Synchronization")
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(
+                checked = isBackgroundSyncEnabled.value,
+                onCheckedChange = { checked ->
+                    if (checked) {
+                        backgroundSyncEnabler.launch(Unit)
+                    } else {
+                        viewModel.disableBackgroundSync()
+                        isBackgroundSyncEnabled.value = false
+                    }
+                },
+            )
+            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+            Text("Background Sync (Experimental)")
         }
     }
 }

@@ -25,9 +25,17 @@
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
 
+    <!-- BEGIN: [🔴 REQUIRED] Vital Health SDK operation -->
     <uses-permission
         android:name="android.permission.FOREGROUND_SERVICE"
-    />
+        />
+    <!-- END:   [🔴 REQUIRED] for Vital Health SDK operation -->
+
+    <!-- BEGIN: [🔘 OPTIONAL] Background Sync -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" android:minSdkVersion="33" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- END:   [🔘 OPTIONAL] Background Sync -->
 
     <!-- BEGIN: Health Connect permissions -->
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
@@ -56,7 +64,7 @@
 
     <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
     <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
-    <!-- END: Health Connect permissions -->
+    <!-- END:   Health Connect permissions -->
 
     <application
         android:name=".VitalApp"
@@ -100,7 +108,7 @@
                 android:value="androidx.startup" />
         </provider>
 
-        <!-- BEGIN: Mandatory for Health Connect permission flow -->
+        <!-- BEGIN: [🔴 REQUIRED] Health Connect permission request flows -->
         <activity
             android:name=".PermissionsRationaleActivity"
             android:exported="true">
@@ -121,16 +129,29 @@
                 <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
             </intent-filter>
         </activity-alias>
-        <!-- END: Mandatory for Health Connect permission flow -->
+        <!-- END:   [🔴 REQUIRED] Health Connect permission request flows -->
 
-        <!-- BEGIN: Mandatory for running Health Connect as foreground service on Android 14+ -->
+        <!-- BEGIN: [🔴 REQUIRED] Vital Health SDK operation -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="shortService"
             android:exported="false">
         </service>
-        <!-- END: Mandatory for running Health Connect as foreground service on Android 14+ -->
+        <!-- END:   [🔴 REQUIRED] Vital Health SDK operation -->
 
+        <!-- BEGIN: [🔘 OPTIONAL] Background Sync -->
+        <receiver
+            android:name="io.tryvital.vitalhealthconnect.SyncBroadcastReceiver"
+            android:exported="true"
+            tools:ignore="ExportedReceiver">
+            <intent-filter>
+                <action android:name="io.tryvital.vitalhealthconnect.action.SYNC_DATA" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+        <!-- END:   [🔘 OPTIONAL] Background Sync -->
     </application>
 
     <queries>
