@@ -4,7 +4,6 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
@@ -24,12 +23,6 @@
     <uses-permission
         android:name="android.permission.BLUETOOTH_ADMIN"
         android:maxSdkVersion="30" />
-
-    <!-- BEGIN: [🔴 REQUIRED] Vital Health SDK operation -->
-    <uses-permission
-        android:name="android.permission.FOREGROUND_SERVICE"
-        />
-    <!-- END:   [🔴 REQUIRED] for Vital Health SDK operation -->
 
     <!-- BEGIN: [🔘 OPTIONAL] Background Sync -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
@@ -99,15 +92,6 @@
             </intent-filter>
         </activity>
 
-        <provider
-            android:name="androidx.startup.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
-            android:exported="false"
-            tools:node="merge">
-            <meta-data  android:name="io.tryvital.sample.VitalSDKInitializer"
-                android:value="androidx.startup" />
-        </provider>
-
         <!-- BEGIN: [🔴 REQUIRED] Health Connect permission request flows -->
         <activity
             android:name=".PermissionsRationaleActivity"
@@ -130,14 +114,6 @@
             </intent-filter>
         </activity-alias>
         <!-- END:   [🔴 REQUIRED] Health Connect permission request flows -->
-
-        <!-- BEGIN: [🔴 REQUIRED] Vital Health SDK operation -->
-        <service
-            android:name="androidx.work.impl.foreground.SystemForegroundService"
-            android:foregroundServiceType="shortService"
-            android:exported="false">
-        </service>
-        <!-- END:   [🔴 REQUIRED] Vital Health SDK operation -->
 
         <!-- BEGIN: [🔘 OPTIONAL] Background Sync -->
         <receiver

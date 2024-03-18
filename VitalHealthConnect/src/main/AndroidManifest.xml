@@ -3,7 +3,33 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     tools:overrideLibrary="androidx.health.connect.client">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- SDK Sync Worker is always wrapped in a foreground service -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
     <uses-sdk tools:overrideLibrary="androidx.health.connect.client" />
+
+    <application tools:node="merge">
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="io.tryvital.vitalhealthconnect.VitalHealthConnectInitializer"
+                android:value="androidx.startup" />
+        </provider>
+
+        <!-- SDK Sync Worker is managed by WorkManager -->
+        <!-- https://developer.android.com/develop/background-work/background-tasks/persistent/how-to/long-running#declare-foreground-service-types-manifest -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="shortService"
+            android:exported="false"
+            tools:node="merge" />
+    </application>
 
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
