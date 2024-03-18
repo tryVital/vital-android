@@ -48,9 +48,9 @@ class SyncBroadcastReceiver: BroadcastReceiver() {
             return VitalLogger.getOrCreate().info { "BgSync: skipped launch - sync paused" }
         }
 
-        manager.launchSyncWorkerFromBackground {
-            check(Looper.getMainLooper().isCurrentThread)
+        manager.launchAutoSyncWorker {
             context.startForegroundService(intent)
+            VitalLogger.getOrCreate().info { "BgSync: triggered by exact alarm" }
         }
     }
 }
