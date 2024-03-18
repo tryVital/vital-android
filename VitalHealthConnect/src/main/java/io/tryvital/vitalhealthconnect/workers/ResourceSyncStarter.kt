@@ -25,15 +25,18 @@ import kotlin.random.Random
 
 data class ResourceSyncStarterInput(
     val resources: Set<VitalResource>,
+    val startForeground: Boolean,
 ) {
     fun toData(): Data = Data.Builder().run {
         putStringArray("resources", resources.map { it.toString() }.toTypedArray())
+        putBoolean("startForeground", startForeground)
         build()
     }
 
     companion object {
         fun fromData(data: Data) = ResourceSyncStarterInput(
-            resources = data.getStringArray("resources")?.mapTo(mutableSetOf()) { VitalResource.valueOf(it) } ?: emptySet()
+            resources = data.getStringArray("resources")?.mapTo(mutableSetOf()) { VitalResource.valueOf(it) } ?: emptySet(),
+            startForeground = data.getBoolean("startForeground", true),
         )
     }
 }
@@ -62,20 +65,26 @@ class ResourceSyncStarter(appContext: Context, workerParams: WorkerParameters) :
 
         logger.logI("ResourceSyncStarter begin")
 
-        val notification = syncNotificationBuilder.build(applicationContext, input.resources)
+        // Normally we would want to start foreground.
+        // But if this worker is enqueued by SyncOnExactAlarmService, the service would have
+        // already started a shortService FGS. Starting another one would violate the shortService
+        // FGS requirement (that it cannot start another FGS).
+        if (input.startForeground) {
+            val notification = syncNotificationBuilder.build(applicationContext, input.resources)
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            setForeground(
-                ForegroundInfo(
-                    VITAL_SYNC_NOTIFICATION_ID,
-                    notification,
-                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                setForeground(
+                    ForegroundInfo(
+                        VITAL_SYNC_NOTIFICATION_ID,
+                        notification,
+                        android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE,
+                    )
                 )
-            )
-        } else {
-            setForeground(
-                ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification)
-            )
+            } else {
+                setForeground(
+                    ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification)
+                )
+            }
         }
 
         for (resource in input.resources) {

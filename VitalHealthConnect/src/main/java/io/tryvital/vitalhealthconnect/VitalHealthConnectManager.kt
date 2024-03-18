@@ -276,7 +276,7 @@ class VitalHealthConnectManager private constructor(
 
             // Sync each resource one by one for now to lower the possibility of
             // triggering rate limit
-            val job = startSyncWorker(remappedCandidates)
+            val job = startSyncWorker(remappedCandidates, startForeground = true)
 
             // Wait until the sync worker completes.
             job.join()
@@ -300,7 +300,7 @@ class VitalHealthConnectManager private constructor(
      * @param beforeEnqueue Block to invoke before enqueuing the work. Will not be invoke if we
      * are not going to spawn a sync worker, e.g., due to [pauseSynchronization].
      */
-    internal fun launchAutoSyncWorker(beforeEnqueue: () -> Unit) {
+    internal fun launchAutoSyncWorker(startForeground: Boolean, beforeEnqueue: () -> Unit): Job? {
         check(Looper.getMainLooper().isCurrentThread)
 
         // We assume:
@@ -310,36 +310,37 @@ class VitalHealthConnectManager private constructor(
 
         if (pauseSynchronization) {
             VitalLogger.getOrCreate().info { "BgSync: skipped by pause" }
-            return
+            return null
         }
 
         if (shouldSkipAutoSync) {
             VitalLogger.getOrCreate().info {
                 "BgSync: skipped by throttle; last synced at ${Instant.ofEpochMilli(lastAutoSyncedAt)}"
             }
-            return
+            return null
         }
 
         if (!context.isConnectedToInternet) {
-            return VitalLogger.getOrCreate().info { "BgSync: skipped; no internet" }
+            VitalLogger.getOrCreate().info { "BgSync: skipped; no internet" }
+            return null
         }
 
         if (!vitalClient.hasUserConnectedTo(ProviderSlug.HealthConnect)) {
             VitalLogger.getOrCreate().info { "BgSync: skipped; no CS" }
-            return
+            return null
         }
 
         val candidates = resourcesWithReadPermission()
         if (candidates.isEmpty()) {
             VitalLogger.getOrCreate().info { "BgSync: skipped; no grant" }
-            return
+            return null
         }
 
         // Remap and deduplicate resources before spawning workers
         // e.g. (Activity | ActiveEnergyBurned | BasalEnergyBurned) => Activity
         val remappedCandidates = candidates.mapTo(mutableSetOf()) { it.remapped() }
 
-        startSyncWorker(remappedCandidates, beforeEnqueue)
+        return startSyncWorker(remappedCandidates, startForeground, beforeEnqueue)
     }
 
     suspend fun writeRecord(
@@ -406,15 +407,20 @@ class VitalHealthConnectManager private constructor(
      * Worker status change will be mirrored to SDK sync status via [updateStatusFromJob].
      */
     @SuppressLint("MissingPermission")
-    private fun startSyncWorker(resources: Set<VitalResource>, beforeEnqueue: (() -> Unit)? = null): Job {
+    private fun startSyncWorker(
+        resources: Set<VitalResource>,
+        startForeground: Boolean,
+        beforeEnqueue: (() -> Unit)? = null
+    ): Job {
         if (!context.isConnectedToInternet) {
             return taskScope.launch {
                 cancel("OS reports no Internet connection")
             }
         }
 
+        val input = ResourceSyncStarterInput(resources = resources, startForeground = startForeground)
         val workRequest = OneTimeWorkRequestBuilder<ResourceSyncStarter>()
-            .setInputData(ResourceSyncStarterInput(resources = resources).toData())
+            .setInputData(input.toData())
             .build()
         val workRequestId = workRequest.id
 

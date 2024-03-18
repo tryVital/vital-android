@@ -28,8 +28,8 @@ internal fun processLifecycleObserver(
 
         source.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
             manager.checkAndUpdatePermissions()
-            manager.launchAutoSyncWorker {
-                VitalLogger.getOrCreate().info { "BgSync: triggered by process ON_START" }
+            manager.launchAutoSyncWorker(startForeground = true) {
+                VitalLogger.getOrCreate().info { "BgSync: sync triggered by process ON_START" }
             }
         }
     }

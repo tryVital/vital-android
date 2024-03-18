@@ -23,13 +23,19 @@
                 android:value="androidx.startup" />
         </provider>
 
-        <!-- SDK Sync Worker is managed by WorkManager -->
+        <!-- SDK Sync Worker can run inside the WorkManager FGS -->
         <!-- https://developer.android.com/develop/background-work/background-tasks/persistent/how-to/long-running#declare-foreground-service-types-manifest -->
         <service
             android:name="androidx.work.impl.foreground.SystemForegroundService"
             android:foregroundServiceType="shortService"
             android:exported="false"
             tools:node="merge" />
+
+        <!-- SDK Sync Worker can also run inside its own SyncOnExactAlarmService FGS -->
+        <service
+            android:name="io.tryvital.vitalhealthconnect.workers.SyncOnExactAlarmService"
+            android:foregroundServiceType="shortService"
+            android:exported="false" />
 
         <!-- BroadcastReceiver for Background Sync -->
         <receiver

@@ -1,14 +1,13 @@
 package io.tryvital.vitalhealthconnect
 
-import android.annotation.SuppressLint
 import android.app.AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_BOOT_COMPLETED
-import android.os.Looper
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.workers.SyncOnExactAlarmService
 
 const val ACTION_SYNC_DATA = "io.tryvital.vitalhealthconnect.action.SYNC_DATA"
 private val ACTION_QUICKBOOT_POWERON = "android.intent.action.QUICKBOOT_POWERON"
@@ -57,9 +56,8 @@ class SyncBroadcastReceiver: BroadcastReceiver() {
         }
 
         manager.scheduleNextExactAlarm(force = true)
-        manager.launchAutoSyncWorker {
-            context.startForegroundService(intent)
-            VitalLogger.getOrCreate().info { "BgSync: triggered by exact alarm" }
-        }
+        context.startForegroundService(
+            Intent(context, SyncOnExactAlarmService::class.java)
+        )
     }
 }
