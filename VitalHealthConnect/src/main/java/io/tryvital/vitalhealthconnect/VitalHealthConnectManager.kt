@@ -27,6 +27,7 @@ import kotlinx.coroutines.sync.Semaphore
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.*
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -59,7 +60,28 @@ class VitalHealthConnectManager private constructor(
         }
 
     private val vitalLogger = vitalClient.vitalLogger
-    internal var syncNotificationBuilder: SyncNotificationBuilder? = null
+
+    /**
+     * When the Vital SDK launches a Foreground Service to handle data synchronization,
+     * it asks the current [SyncNotificationBuilder] to produce a user-facing notification
+     * indicating that such sync task is ongoing. This is **required** by the Android platform.
+     *
+     * Running as a Foreground Service ensures that Vital SDK can read from Health Connect, as well
+     * as synchronization not being interrupted when the user switches away from your app.
+     *
+     * In some cases, the system may grant a grace period of 10 seconds before notifying the user.
+     * This means if the SDK data sync ends within the grace period, the user may not be notified
+     * in the end.
+     *
+     * Ref: https://developer.android.com/develop/background-work/services/foreground-services
+     */
+    var syncNotificationBuilder: SyncNotificationBuilder
+        get() = _syncNotificationBuilder.get()
+        set(newValue) = _syncNotificationBuilder.set(newValue)
+
+    private val _syncNotificationBuilder = AtomicReference<SyncNotificationBuilder>(
+        DefaultSyncNotificationBuilder(vitalClient.sharedPreferences)
+    )
 
     // Unlimited buffering for slow subscribers.
     // https://github.com/Kotlin/kotlinx.coroutines/issues/2034#issuecomment-630381961
@@ -194,7 +216,10 @@ class VitalHealthConnectManager private constructor(
             throw IllegalStateException("VitalClient has not been configured.")
         }
 
-        this.syncNotificationBuilder = syncNotificationBuilder
+        if (syncNotificationBuilder != null) {
+            this._syncNotificationBuilder.set(syncNotificationBuilder)
+        }
+
         vitalLogger.enabled = logsEnabled
 
         sharedPreferences.edit()
