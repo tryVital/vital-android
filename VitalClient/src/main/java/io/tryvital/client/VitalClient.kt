@@ -17,6 +17,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
@@ -96,6 +97,9 @@ class VitalClient internal constructor(context: Context) {
     /** Moments which can materially change VitalClient.Companion.status */
     private val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
 
+    val childSDKShouldReset: SharedFlow<Unit> get() = _childSDKShouldReset
+    private val _childSDKShouldReset = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
+
 
     @Deprecated("Renamed to `signOut()` and is now a suspend function.", ReplaceWith("signOut()"))
     fun cleanUp() {
@@ -110,6 +114,7 @@ class VitalClient internal constructor(context: Context) {
         encryptedSharedPreferences.edit().clear().apply()
         jwtAuth.signOut()
         statusChanged.emit(Unit)
+        _childSDKShouldReset.emit(Unit)
     }
 
     @Deprecated(

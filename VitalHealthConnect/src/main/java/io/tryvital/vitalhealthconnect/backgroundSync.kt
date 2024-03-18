@@ -15,6 +15,7 @@ import android.os.Looper
 import android.provider.Settings
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.core.app.AlarmManagerCompat
+import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import java.time.Instant
 import kotlin.time.Duration.Companion.hours
@@ -152,6 +153,11 @@ internal fun VitalHealthConnectManager.scheduleNextExactAlarm(force: Boolean): B
 
     if (pauseSynchronization) {
         VitalLogger.getOrCreate().info { "BgSync: scheduling skipped; sync is paused" }
+        return false
+    }
+
+    if (!isBackgroundSyncEnabled) {
+        VitalLogger.getOrCreate().info { "BgSync: scheduling skipped; backgroundSync is disabled" }
         return false
     }
 
