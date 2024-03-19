@@ -21,7 +21,7 @@ import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
 private val MIN_SYNC_INTERVAL = 1.hours
-private val AUTO_SYNC_THROTTLE = 10.minutes
+private val AUTO_SYNC_THROTTLE = 2.minutes
 
 @ExperimentalVitalApi
 val VitalHealthConnectManager.isBackgroundSyncEnabled: Boolean

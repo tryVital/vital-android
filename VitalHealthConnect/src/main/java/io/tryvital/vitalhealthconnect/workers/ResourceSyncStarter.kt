@@ -12,15 +12,22 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import io.tryvital.client.VitalClient
+import io.tryvital.client.createConnectedSourceIfNotExist
+import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SyncNotificationBuilder
 import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
+import io.tryvital.vitalhealthconnect.isConnectedToInternet
+import io.tryvital.vitalhealthconnect.markAutoSyncSuccess
 import io.tryvital.vitalhealthconnect.model.VitalResource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transformWhile
 import java.util.UUID
@@ -80,6 +87,16 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
         val logger = VitalLogger.getOrCreate()
 
         logger.logI("ResourceSyncStarter begin")
+        setProgress(
+            Data.Builder()
+                .putStringArray("resources", input.resources.map { it.toString() }.toTypedArray())
+                .build()
+        )
+
+        if (!applicationContext.isConnectedToInternet) {
+            VitalLogger.getOrCreate().info { "ResourceSyncStarter: cancelled; no internet" }
+            return Result.failure()
+        }
 
         // Normally we would want to start foreground.
         // But if this worker is enqueued by SyncOnExactAlarmService, the service would have
@@ -117,14 +134,22 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
                 .apply()
         }
 
+        // Before starting the sync, check that a connected source exists.
+        // This mirrors iOS SDK VitalHealthKitClient.syncData behaviour.
+        VitalClient.getOrCreate(applicationContext).run {
+            createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
+        }
+
         for (resource in input.resources) {
             val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>()
                 .setInputData(ResourceSyncWorkerInput(resource = resource).toData())
                 .addTag(resource.name)
                 .build()
 
-            val work = WorkManager.getInstance(applicationContext).beginUniqueWork(
-                "ResourceSyncWorker.${resource}",
+            val workManager = WorkManager.getInstance(applicationContext)
+            val workName = "ResourceSyncWorker.${resource}"
+            val work = workManager.beginUniqueWork(
+                workName,
                 ExistingWorkPolicy.REPLACE,
                 workRequest
             )
@@ -141,14 +166,17 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
                     }
                 }
                 .onStart { work.enqueue() }
+                .onCompletion {
+                    if (it is CancellationException) {
+                        workManager.cancelUniqueWork(workName)
+                    }
+                }
                 .flowOn(Dispatchers.Main)
                 .collect {}
-
-            // Rate limit mitigation, ugh
-            delay(Random.nextLong(1, 15) * 100)
         }
 
         logger.logI("ResourceSyncStarter ends")
+        manager.markAutoSyncSuccess()
 
         return Result.success()
     }

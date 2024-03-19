@@ -74,11 +74,11 @@ class VitalPermissionRequestContract(
             // The activity result reports only permissions granted in this UI interaction.
             // Since we have VitalResources that are an aggregate of multiple record types, we need
             // to recompute based on the full set of permissions.
-            manager.checkAndUpdatePermissions()
+            val discoveredNewGrants = manager.checkAndUpdatePermissions()
 
             // Asynchronously start syncing the newly granted read resources
             taskScope.launch {
-                manager.syncData(readGrants)
+                manager.syncData(readGrants + discoveredNewGrants)
             }
 
             PermissionOutcome.Success

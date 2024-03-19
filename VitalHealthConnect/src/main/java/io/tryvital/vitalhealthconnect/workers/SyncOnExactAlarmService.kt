@@ -33,15 +33,16 @@ class SyncOnExactAlarmService: Service() {
             foregroundServiceType()
         )
 
-        val job = manager.launchAutoSyncWorker(startForeground = false) {
+        val launched = manager.launchAutoSyncWorker(startForeground = false) {
             VitalLogger.getOrCreate().info { "BgSync: sync triggered by SyncOnExactAlarmService" }
         }
 
-        if (job != null) {
+        if (launched) {
             // Use `invokeOnCompletion` so that `done()` is called unconditionally,
             // no matter whether the job is cancelled, completed or failed.
-            job.invokeOnCompletion {
-                mainScope.launch { this@SyncOnExactAlarmService.done() }
+            mainScope.launch {
+                manager.observeSyncWorkerCompleted()
+                this@SyncOnExactAlarmService.done()
             }
         } else {
             this.done()
