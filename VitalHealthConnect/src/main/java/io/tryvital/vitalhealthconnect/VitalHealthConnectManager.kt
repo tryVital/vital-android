@@ -20,8 +20,6 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.work.*
 import io.tryvital.client.VitalClient
-import io.tryvital.client.createConnectedSourceIfNotExist
-import io.tryvital.client.hasUserConnectedTo
 import io.tryvital.client.services.data.*
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
@@ -30,7 +28,6 @@ import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.sync.Semaphore
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.*
@@ -66,6 +63,7 @@ class VitalHealthConnectManager private constructor(
             // Cancel exact alarm if we are pausing
             if (!oldValue && newValue && isBackgroundSyncEnabled) {
                 cancelPendingAlarm()
+                cancelSyncWorker()
             }
 
             if (oldValue && !newValue) {
@@ -74,11 +72,9 @@ class VitalHealthConnectManager private constructor(
                     scheduleNextExactAlarm(force = true)
                 }
 
-                // Auto-trigger a sync on unpausing, but only if there is no outstanding sync job
-                if (currentSyncCall.availablePermits > 0) {
-                    launchAutoSyncWorker(startForeground = true) {
-                        vitalLogger.info { "BgSync: sync triggered by unpause" }
-                    }
+                // Auto-trigger a sync on unpausing
+                launchAutoSyncWorker(startForeground = true) {
+                    vitalLogger.info { "BgSync: sync triggered by unpause" }
                 }
             }
         }
@@ -112,8 +108,6 @@ class VitalHealthConnectManager private constructor(
     private val _status = MutableSharedFlow<SyncStatus>(replay = 1, extraBufferCapacity = Int.MAX_VALUE)
     val status: SharedFlow<SyncStatus> = _status
 
-    private val currentSyncCall = Semaphore(1, 0)
-
     // Use SupervisorJob so that:
     // 1. child job failure would not cancel the whole scope (it would by default of structured concurrency).
     // 2. cancelling the scope would cancel all running child jobs.
@@ -127,6 +121,8 @@ class VitalHealthConnectManager private constructor(
 
         processLifecycleObserver = processLifecycleObserver(this)
             .also { ProcessLifecycleOwner.get().lifecycle.addObserver(it) }
+
+        setupSyncWorkerObservation()
     }
 
     /**
@@ -155,6 +151,7 @@ class VitalHealthConnectManager private constructor(
 
     @OptIn(ExperimentalVitalApi::class)
     private fun resetAutoSync() {
+        cancelSyncWorker()
         disableBackgroundSync()
         taskScope.cancel()
         taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -183,17 +180,20 @@ class VitalHealthConnectManager private constructor(
             .toSet()
     }
 
-    suspend fun checkAndUpdatePermissions() {
+    internal suspend fun checkAndUpdatePermissions(): Set<VitalResource> {
         if (isAvailable(context) != HealthConnectAvailability.Installed) {
-            return
+            return setOf()
         }
 
+        val lastKnownGrantedResources = resourcesWithReadPermission()
         val currentGrants = getGrantedPermissions(context)
 
         val readResourcesByStatus = VitalResource.values()
             .groupBy { currentGrants.containsAll(permissionsRequiredToSyncResources(setOf(it))) }
         val writeResourcesByStatus = WritableVitalResource.values()
             .groupBy { currentGrants.containsAll(permissionsRequiredToWriteResources(setOf(it))) }
+
+        val upToDateGrantedResources = readResourcesByStatus.getOrDefault(true, listOf()).toSet()
 
         sharedPreferences.edit().run {
             readResourcesByStatus.forEach { (hasGranted, resources) ->
@@ -204,6 +204,8 @@ class VitalHealthConnectManager private constructor(
             }
             apply()
         }
+
+        return upToDateGrantedResources - lastKnownGrantedResources
     }
 
     internal fun permissionsRequiredToWriteResources(resources: Set<WritableVitalResource>): Set<String> {
@@ -263,11 +265,18 @@ class VitalHealthConnectManager private constructor(
             return
         }
 
+        if (VitalClient.Status.SignedIn !in VitalClient.status) {
+            return
+        }
+
+        if (isSyncWorkerActive()) {
+            VitalLogger.getOrCreate().info { "syncData: found active worker; wait for completion" }
+            observeSyncWorkerCompleted()
+            VitalLogger.getOrCreate().info { "syncData: observed worker completion" }
+            return
+        }
+
         try {
-            currentSyncCall.acquire()
-
-            vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
-
             checkAndUpdatePermissions()
 
             val available = resourcesWithReadPermission()
@@ -283,16 +292,14 @@ class VitalHealthConnectManager private constructor(
 
             // Sync each resource one by one for now to lower the possibility of
             // triggering rate limit
-            val job = startSyncWorker(remappedCandidates, startForeground = true)
+            startSyncWorker(remappedCandidates, startForeground = true)
 
             // Wait until the sync worker completes.
-            job.join()
+            observeSyncWorkerCompleted()
 
         } catch (e: Exception) {
             vitalLogger.logE("Error syncing data", e)
             _status.tryEmit(SyncStatus.Unknown)
-        } finally {
-            currentSyncCall.release()
         }
     }
 
@@ -307,7 +314,7 @@ class VitalHealthConnectManager private constructor(
      * @param beforeEnqueue Block to invoke before enqueuing the work. Will not be invoke if we
      * are not going to spawn a sync worker, e.g., due to [pauseSynchronization].
      */
-    internal fun launchAutoSyncWorker(startForeground: Boolean, beforeEnqueue: () -> Unit): Job? {
+    internal fun launchAutoSyncWorker(startForeground: Boolean, beforeEnqueue: () -> Unit): Boolean {
         check(Looper.getMainLooper().isCurrentThread)
 
         // We assume:
@@ -317,37 +324,33 @@ class VitalHealthConnectManager private constructor(
 
         if (pauseSynchronization) {
             VitalLogger.getOrCreate().info { "BgSync: skipped by pause" }
-            return null
+            return false
         }
 
         if (shouldSkipAutoSync) {
             VitalLogger.getOrCreate().info {
                 "BgSync: skipped by throttle; last synced at ${Instant.ofEpochMilli(lastAutoSyncedAt)}"
             }
-            return null
+            return false
         }
 
         if (!context.isConnectedToInternet) {
             VitalLogger.getOrCreate().info { "BgSync: skipped; no internet" }
-            return null
-        }
-
-        if (!vitalClient.hasUserConnectedTo(ProviderSlug.HealthConnect)) {
-            VitalLogger.getOrCreate().info { "BgSync: skipped; no CS" }
-            return null
+            return false
         }
 
         val candidates = resourcesWithReadPermission()
         if (candidates.isEmpty()) {
             VitalLogger.getOrCreate().info { "BgSync: skipped; no grant" }
-            return null
+            return false
         }
 
         // Remap and deduplicate resources before spawning workers
         // e.g. (Activity | ActiveEnergyBurned | BasalEnergyBurned) => Activity
         val remappedCandidates = candidates.mapTo(mutableSetOf()) { it.remapped() }
 
-        return startSyncWorker(remappedCandidates, startForeground, beforeEnqueue)
+        startSyncWorker(remappedCandidates, startForeground, beforeEnqueue)
+        return true
     }
 
     suspend fun writeRecord(
@@ -406,7 +409,8 @@ class VitalHealthConnectManager private constructor(
     }
 
     /**
-     * Create a new [ResourceSyncStarter] for the given [resources].
+     * Create a new [ResourceSyncStarter] for the given [resources]. It uses [ExistingWorkPolicy.KEEP],
+     * so if there is an active [ResourceSyncStarter], another one would not spawn.
      *
      * The returned Job completes only after [ResourceSyncStarter] has succeeded, cancelled
      * or failed.
@@ -418,66 +422,73 @@ class VitalHealthConnectManager private constructor(
         resources: Set<VitalResource>,
         startForeground: Boolean,
         beforeEnqueue: (() -> Unit)? = null
-    ): Job {
-        if (!context.isConnectedToInternet) {
-            return taskScope.launch {
-                cancel("OS reports no Internet connection")
-            }
-        }
-
+    ) {
         val input = ResourceSyncStarterInput(resources = resources, startForeground = startForeground)
         val workRequest = OneTimeWorkRequestBuilder<ResourceSyncStarter>()
             .setInputData(input.toData())
             .build()
-        val workRequestId = workRequest.id
 
-        val work = WorkManager.getInstance(context).beginUniqueWork(
+        val workManager = WorkManager.getInstance(context)
+        val work = workManager.beginUniqueWork(
             "ResourceSyncStarter",
-            ExistingWorkPolicy.REPLACE,
+            ExistingWorkPolicy.KEEP,
             workRequest
         )
 
         beforeEnqueue?.invoke()
         work.enqueue()
-
-        // Launch the work in `taskScope` so that it can be cancelled immediately when the whole
-        // VitalHealthConnectManager is closed, independent of the caller of executeWork().
-        return work.workInfosLiveData.asFlow()
-            .mapNotNull { workInfos -> workInfos.firstOrNull { it.id == workRequestId } }
-            .transformWhile { info ->
-                emit(info)
-                return@transformWhile when (info.state) {
-                    // Work is running; continue the observation
-                    WorkInfo.State.ENQUEUED, WorkInfo.State.RUNNING, WorkInfo.State.BLOCKED -> true
-                    // Work has ended; stop the observation
-                    WorkInfo.State.SUCCEEDED, WorkInfo.State.CANCELLED, WorkInfo.State.FAILED -> false
-                }
-            }
-            .onEach {
-                // TODO: Temporary
-                for (resource in resources) {
-                    updateStatusFromJob(listOf(it), resource)
-                }
-            }
-            .onCompletion {
-                _status.tryEmit(SyncStatus.SyncingCompleted)
-                markAutoSyncSuccess()
-            }
-            .launchIn(taskScope + Dispatchers.Main)
     }
 
-    private fun updateStatusFromJob(workInfos: List<WorkInfo>, resource: VitalResource) {
-        workInfos.forEach {
-            when (it.state) {
-                WorkInfo.State.RUNNING -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
-                WorkInfo.State.SUCCEEDED -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
-                WorkInfo.State.FAILED -> _status.tryEmit(SyncStatus.Unknown)
-                WorkInfo.State.ENQUEUED,
-                WorkInfo.State.BLOCKED,
-                WorkInfo.State.CANCELLED -> {
-                    //do nothing
+    private fun cancelSyncWorker() {
+        WorkManager.getInstance(context)
+            .cancelUniqueWork("ResourceSyncStarter")
+    }
+
+    private suspend fun isSyncWorkerActive(): Boolean {
+        val work = WorkManager.getInstance(context)
+            .getWorkInfosForUniqueWorkLiveData("ResourceSyncStarter")
+            .asFlow()
+            .first()
+
+        return work.hasActiveWork()
+    }
+
+    internal suspend fun observeSyncWorkerCompleted() {
+        WorkManager.getInstance(context)
+            .getWorkInfosForUniqueWorkLiveData("ResourceSyncStarter")
+            .asFlow()
+            .takeWhile { it.hasActiveWork() }
+            .collect()
+    }
+
+    @OptIn(DelicateCoroutinesApi::class)
+    private fun setupSyncWorkerObservation() {
+        WorkManager.getInstance(context)
+            .getWorkInfosForUniqueWorkLiveData("ResourceSyncStarter")
+            .asFlow()
+            // There should only be one [ResourceSyncStarter] at any given time.
+            .mapNotNull { it.singleOrNull() }
+            .onEach {
+                val resources = it.progress.getStringArray("resources") ?: emptyArray()
+                for (resource in resources) {
+                    updateStatusFromJob(it, VitalResource.valueOf(resource))
+                }
+
+                when (it.state) {
+                    WorkInfo.State.SUCCEEDED -> _status.tryEmit(SyncStatus.SyncingCompleted)
+                    else -> {}
                 }
             }
+            // This is a permanent observation, not a cancellable task on logOut().
+            .launchIn(GlobalScope + Dispatchers.Main)
+    }
+
+    private fun updateStatusFromJob(workInfo: WorkInfo, resource: VitalResource) {
+        when (workInfo.state) {
+            WorkInfo.State.RUNNING -> _status.tryEmit(SyncStatus.ResourceSyncing(resource))
+            WorkInfo.State.SUCCEEDED -> _status.tryEmit(SyncStatus.ResourceSyncingComplete(resource))
+            WorkInfo.State.FAILED -> _status.tryEmit(SyncStatus.ResourceSyncFailed(resource))
+            WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED, WorkInfo.State.CANCELLED -> {}
         }
     }
 
@@ -533,7 +544,7 @@ class VitalHealthConnectManager private constructor(
                     )
                 )
                 sharedInstance = instance
-                bind(instance, coreClient, appContext)
+                bind(instance, coreClient)
             }
 
             return instance
@@ -543,10 +554,18 @@ class VitalHealthConnectManager private constructor(
          * Must be called exactly once after both Core SDK and Health SDK are initialized.
          */
         @OptIn(DelicateCoroutinesApi::class)
-        private fun bind(client: VitalHealthConnectManager, coreClient: VitalClient, context: Context) {
+        private fun bind(client: VitalHealthConnectManager, coreClient: VitalClient) {
             coreClient.childSDKShouldReset
                 .onEach { client.resetAutoSync() }
                 .launchIn(GlobalScope + Dispatchers.Main)
         }
     }
+}
+
+private fun List<WorkInfo>?.hasActiveWork(): Boolean {
+    if (isNullOrEmpty()) {
+        return false
+    }
+
+    return firstOrNull { it.state in setOf(WorkInfo.State.RUNNING, WorkInfo.State.ENQUEUED) } != null
 }
