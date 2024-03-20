@@ -149,6 +149,7 @@ fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Record>> = w
     VitalResource.Water -> listOf(HydrationRecord::class)
     VitalResource.Activity -> listOf(
         ActiveCaloriesBurnedRecord::class,
+        TotalCaloriesBurnedRecord::class,
         BasalMetabolicRateRecord::class,
         StepsRecord::class,
         DistanceRecord::class,
