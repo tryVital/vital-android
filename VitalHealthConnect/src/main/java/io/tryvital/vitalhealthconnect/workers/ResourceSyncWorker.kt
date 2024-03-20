@@ -3,6 +3,8 @@ package io.tryvital.vitalhealthconnect.workers
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
+import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.request.ChangesTokenRequest
 import androidx.health.connect.client.response.ChangesResponse
 import androidx.work.CoroutineWorker
@@ -16,6 +18,7 @@ import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
+import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -33,6 +36,7 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.TimeZone
+import kotlin.reflect.KClass
 
 const val VITAL_SYNC_NOTIFICATION_ID = 123
 
@@ -174,6 +178,21 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val userId = vitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
 
+        val recordTypesToMonitor = recordTypesToMonitor().toSimpleNameSet()
+        val monitoringTypes = monitoringRecordTypes()
+
+        // The types being monitored by the current `changesToken` no longer match the set
+        // we want to monitor, probably due to permission changes.
+        // Treat this as if the changesToken has expired.
+        if (recordTypesToMonitor != monitoringTypes) {
+            return genericBackfill(
+                stage = DataStage.Daily,
+                start = state.lastSync.toInstant(),
+                end = Instant.now(),
+                timeZone = timeZone,
+            )
+        }
+
         var token = state.changesToken
         var changes: ChangesResponse
 
@@ -218,11 +237,16 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     private suspend fun genericBackfill(stage: DataStage, start: Instant, end: Instant, timeZone: TimeZone) {
         val userId = vitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
-        var token = client.getChangesToken(
-            ChangesTokenRequest(
-                recordTypes = input.resource.recordTypeChangesToTriggerSync().toSet(),
+
+        val recordTypesToMonitor = recordTypesToMonitor()
+        var token = client.getChangesToken(ChangesTokenRequest(recordTypes = recordTypesToMonitor))
+
+        sharedPreferences.edit()
+            .putStringSet(
+                UnSecurePrefKeys.typesMonitoredByChangesTokenKey,
+                recordTypesToMonitor.toSimpleNameSet()
             )
-        )
+            .apply()
 
         val (stageStart, stageEnd) = when (stage) {
             // Historical stage must pass the same start ..< end throughout all the chunks.
@@ -274,6 +298,25 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         setIncremental(token = token)
     }
 
+    private fun monitoringRecordTypes(): Set<String> {
+        return sharedPreferences.getStringSet(UnSecurePrefKeys.typesMonitoredByChangesTokenKey, null) ?: setOf()
+    }
+
+    /**
+     * Health Connect rejects the request if we include [Record] types we do not have permission
+     * for. So we need to proactively filter out [Record] types based on what read permissions we
+     * have at the moment.
+     */
+    private suspend fun recordTypesToMonitor(): Set<KClass<out Record>> {
+        val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
+        val grantedPermissions = client.permissionController.getGrantedPermissions()
+
+        return input.resource.recordTypeChangesToTriggerSync()
+            .filterTo(mutableSetOf()) { recordType ->
+                HealthPermission.getReadPermission(recordType) in grantedPermissions
+            }
+    }
+
     private fun setIncremental(token: String) {
         val newState = ResourceSyncState.Incremental(token, lastSync = Date())
 
@@ -298,3 +341,7 @@ internal inline fun <reified T: Any> SharedPreferences.Editor.putJson(key: Strin
 }
 
 internal val VitalResource.syncStateKey get() = "sync-state.${this.name}"
+
+// All Record types are public JVM types, so they must have a simple name.
+private fun Set<KClass<out Record>>.toSimpleNameSet(): Set<String>
+    = mapTo(mutableSetOf()) { it.simpleName!! }
