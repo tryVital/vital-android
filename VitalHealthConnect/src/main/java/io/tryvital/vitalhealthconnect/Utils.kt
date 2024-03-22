@@ -14,6 +14,8 @@ object UnSecurePrefKeys {
     internal const val lastAutoSyncedAtKey = "lastAutoSyncedAt"
     internal const val lastSeenWorkIdKey = "lastSeenWorkId"
     internal const val typesMonitoredByChangesTokenKey = "typesMonitoredByChangesToken"
+    internal const val autoSyncThrottleKey = "autoSyncThrottle"
+    internal const val backgroundSyncMinIntervalKey = "backgroundSyncMinInterval"
     internal fun readResourceGrant(resource: VitalResource) = "resource.read.$resource"
     internal fun writeResourceGrant(resource: WritableVitalResource) = "resource.write.$resource"
 }
