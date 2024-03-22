@@ -200,6 +200,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             changes = client.getChanges(token)
 
             if (changes.changesTokenExpired) {
+                vitalLogger.info { "incremental: changesToken expired; " }
                 return genericBackfill(
                     stage = DataStage.Daily,
                     start = state.lastSync.toInstant(),
