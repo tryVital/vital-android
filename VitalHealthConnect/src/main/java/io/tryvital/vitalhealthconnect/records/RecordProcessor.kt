@@ -23,6 +23,7 @@ import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.SampleType
+import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
 import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.HCQuantitySample
@@ -485,6 +486,7 @@ internal class HealthConnectRecordProcessor(
 
             // between is start-inclusive, end-exclusive
             val numberOfDays = ChronoUnit.DAYS.between(startDate, endDate.plusDays(1)).toInt()
+            VitalLogger.getOrCreate().info { "activity: summarizing $numberOfDays ($startDate ... $endDate)" }
 
             val summaryAggregators = Array(numberOfDays) { offset ->
                 async {

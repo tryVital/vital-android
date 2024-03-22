@@ -2,13 +2,13 @@ package io.tryvital.client.utils
 
 import android.util.Log
 
-private const val VITAL_LOGGER = "vital-logger"
+const val VITAL_LOGGER = "vital-logger"
 
 class VitalLogger private constructor() {
     @Volatile
     var enabled: Boolean = false
 
-    fun info(message: () -> String) {
+    inline fun info(crossinline message: () -> String) {
         if (enabled) {
             Log.i(VITAL_LOGGER, message())
         }
