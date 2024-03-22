@@ -67,9 +67,14 @@ internal data class ResourceSyncWorkerInput(
 @JsonClass(generateAdapter = false)
 internal sealed class ResourceSyncState {
     @JsonClass(generateAdapter = true)
-    data class Historical(val start: Date, val end: Date) : ResourceSyncState()
+    data class Historical(val start: Date, val end: Date) : ResourceSyncState() {
+        override fun toString(): String = "historical(${start.toInstant()} ..< ${end.toInstant()})"
+    }
+
     @JsonClass(generateAdapter = true)
-    data class Incremental(val changesToken: String, val lastSync: Date) : ResourceSyncState()
+    data class Incremental(val changesToken: String, val lastSync: Date) : ResourceSyncState() {
+        override fun toString(): String = "incremental($changesToken at ${lastSync.toInstant()})"
+    }
 
     companion object {
         val adapterFactory: PolymorphicJsonAdapterFactory<ResourceSyncState>
@@ -148,7 +153,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val state = sharedPreferences.getJson(input.resource.syncStateKey)
             ?: initialState(timeZone)
 
-        vitalLogger.logI("ResourceSyncWorker: starting for ${input.resource}; state = $state")
+        vitalLogger.logI("${input.resource}: begin at $state")
 
         when (state) {
             is ResourceSyncState.Historical -> historicalBackfill(state, timeZone)
@@ -185,6 +190,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         // we want to monitor, probably due to permission changes.
         // Treat this as if the changesToken has expired.
         if (recordTypesToMonitor != monitoringTypes) {
+            vitalLogger.info { "${input.resource}: types to monitor have changed" }
+
             return genericBackfill(
                 stage = DataStage.Daily,
                 start = state.lastSync.toInstant(),
@@ -200,7 +207,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             changes = client.getChanges(token)
 
             if (changes.changesTokenExpired) {
-                vitalLogger.info { "incremental: changesToken expired; " }
+                vitalLogger.info { "${input.resource}: changesToken expired" }
+
                 return genericBackfill(
                     stage = DataStage.Daily,
                     start = state.lastSync.toInstant(),
@@ -209,28 +217,34 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 )
             }
 
-            val delta = processChangesResponse(
-                resource = input.resource,
-                responses = changes,
-                timeZone = timeZone,
-                currentDevice = Build.MODEL,
-                reader = recordReader,
-                processor = recordProcessor,
-            )
+            if (changes.changes.isNotEmpty()) {
+                vitalLogger.info { "${input.resource}: found ${changes.changes.count()} changes" }
 
-            uploadResources(
-                delta,
-                uploader = recordUploader,
-                stage = DataStage.Daily,
-                timeZoneId = timeZone.id,
-                userId = userId,
-            )
+                val delta = processChangesResponse(
+                    resource = input.resource,
+                    responses = changes,
+                    timeZone = timeZone,
+                    currentDevice = Build.MODEL,
+                    reader = recordReader,
+                    processor = recordProcessor,
+                )
+
+                uploadResources(
+                    delta,
+                    uploader = recordUploader,
+                    stage = DataStage.Daily,
+                    timeZoneId = timeZone.id,
+                    userId = userId,
+                )
+            } else {
+                vitalLogger.info { "${input.resource}: found no change" }
+            }
 
             // Since we have successfully uploaded this batch of changes,
             // save the next change token, in case we get rate limited on the
             // next `getChanges(token)` call.
-            setIncremental(token = state.changesToken)
-            token = state.changesToken
+            setIncremental(token = changes.nextChangesToken)
+            token = changes.nextChangesToken
 
         } while (changes.hasMore)
     }
@@ -255,6 +269,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             DataStage.Daily -> Pair(null, null)
         }
 
+        vitalLogger.info { "${input.resource}: generic backfill $start ..< $end" }
+
         // TODO: Chunk by days
         val allData = mutableListOf<ProcessedResourceData>()
         allData += readResourceByTimeRange(
@@ -272,6 +288,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         do {
             changes = client.getChanges(token)
             check(!changes.changesTokenExpired)
+
+            vitalLogger.info { "${input.resource}: found ${changes.changes.count()} new changes after range request" }
 
             token = changes.nextChangesToken
 
@@ -324,6 +342,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         sharedPreferences.edit()
             .putJson<ResourceSyncState>(input.resource.syncStateKey, newState)
             .apply()
+
+        vitalLogger.info { "${input.resource}: updated to $newState" }
     }
 }
 
