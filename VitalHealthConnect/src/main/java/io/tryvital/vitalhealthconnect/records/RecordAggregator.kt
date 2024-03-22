@@ -21,6 +21,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.TimeZone
+import kotlin.math.floor
+import kotlin.math.nextDown
 import kotlin.reflect.KClass
 
 interface RecordAggregator {
@@ -132,9 +134,9 @@ internal class HealthConnectRecordAggregator(
                 TimeRangeFilter.between(startOfDay.toInstant(), endOfDay.toInstant())
             )
         )
-        val totalCaloriesBurned = response[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories
-        var activeCaloriesBurned = response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories
-        var basalCaloriesBurned = response[BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL]?.inKilocalories
+        val totalCaloriesBurned = response[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories?.let { floor(it) }
+        var activeCaloriesBurned = response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.let { floor(it) }
+        var basalCaloriesBurned = response[BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL]?.inKilocalories?.let { floor(it) }
 
         if (totalCaloriesBurned != null && basalCaloriesBurned != null && activeCaloriesBurned == null) {
             activeCaloriesBurned = totalCaloriesBurned - basalCaloriesBurned
@@ -148,8 +150,8 @@ internal class HealthConnectRecordAggregator(
             steps = response[StepsRecord.COUNT_TOTAL],
             activeCaloriesBurned = activeCaloriesBurned,
             basalCaloriesBurned = basalCaloriesBurned,
-            distance = response[DistanceRecord.DISTANCE_TOTAL]?.inMeters,
-            floorsClimbed = response[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL],
+            distance = response[DistanceRecord.DISTANCE_TOTAL]?.inMeters?.let { floor(it) },
+            floorsClimbed = response[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.let { floor(it) },
             totalExerciseDuration = response[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes(),
         )
     }
