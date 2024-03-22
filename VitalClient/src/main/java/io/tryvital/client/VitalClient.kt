@@ -170,7 +170,7 @@ class VitalClient internal constructor(context: Context) {
     }
 
     companion object {
-        const val sdkVersion = "2.0.0-beta.6"
+        const val sdkVersion = "2.0.0-rc.1"
 
         private var sharedInstance: VitalClient? = null
 
