@@ -36,8 +36,6 @@ data class HCActivitySummary(
         basalEnergyBurnedSum = basalCaloriesBurned,
         distanceWalkingRunningSum = distance,
         floorsClimbedSum = floorsClimbed?.toLong(),
-        low = null,
-        medium = null,
-        high = totalExerciseDuration?.toDouble(),
+        exerciseTime = totalExerciseDuration?.toDouble(),
     )
 }
