@@ -190,7 +190,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         // we want to monitor, probably due to permission changes.
         // Treat this as if the changesToken has expired.
         if (recordTypesToMonitor != monitoringTypes) {
-            vitalLogger.info { "${input.resource}: types to monitor have changed" }
+            vitalLogger.info { "${input.resource}: types to monitor have changed from $monitoringTypes to $recordTypesToMonitor" }
 
             return genericBackfill(
                 stage = DataStage.Daily,
@@ -257,10 +257,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         var token = client.getChangesToken(ChangesTokenRequest(recordTypes = recordTypesToMonitor))
 
         sharedPreferences.edit()
-            .putStringSet(
-                UnSecurePrefKeys.typesMonitoredByChangesTokenKey,
-                recordTypesToMonitor.toSimpleNameSet()
-            )
+            .putStringSet(input.resource.monitoringTypesKey, recordTypesToMonitor.toSimpleNameSet())
             .apply()
 
         val (stageStart, stageEnd) = when (stage) {
@@ -318,7 +315,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     }
 
     private fun monitoringRecordTypes(): Set<String> {
-        return sharedPreferences.getStringSet(UnSecurePrefKeys.typesMonitoredByChangesTokenKey, null) ?: setOf()
+        return sharedPreferences.getStringSet(input.resource.monitoringTypesKey, null) ?: setOf()
     }
 
     /**
@@ -361,7 +358,8 @@ internal inline fun <reified T: Any> SharedPreferences.Editor.putJson(key: Strin
     return putString(key, value?.let(adapter::toJson))
 }
 
-internal val VitalResource.syncStateKey get() = "sync-state.${this.name}"
+internal val VitalResource.syncStateKey get() = UnSecurePrefKeys.syncStateKey(this)
+internal val VitalResource.monitoringTypesKey get() = UnSecurePrefKeys.monitoringTypesKey(this)
 
 // All Record types are public JVM types, so they must have a simple name.
 private fun Set<KClass<out Record>>.toSimpleNameSet(): Set<String>
