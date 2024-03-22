@@ -45,7 +45,6 @@ data class ActivityDaySummary(
     val distanceWalkingRunningSum: Double?,
     @Json(name = "floors_climbed_sum")
     val floorsClimbedSum: Long?,
-    val low: Double?,
-    val medium: Double?,
-    val high: Double?,
+    @Json(name = "exercise_time")
+    val exerciseTime: Double?,
 )
