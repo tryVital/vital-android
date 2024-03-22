@@ -17,11 +17,18 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.core.app.AlarmManagerCompat
 import io.tryvital.client.utils.VitalLogger
 import java.time.Instant
+import kotlin.math.max
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
-private val MIN_SYNC_INTERVAL = 1.hours
-private val AUTO_SYNC_THROTTLE = 2.minutes
+@ExperimentalVitalApi
+val AUTO_SYNC_THROTTLE_DEFAULT = 5.seconds
+
+@ExperimentalVitalApi
+private val BACKGROUND_SYNC_INTERVAL_DEFAULT = 1.hours
 
 @ExperimentalVitalApi
 val VitalHealthConnectManager.isBackgroundSyncEnabled: Boolean
@@ -33,12 +40,36 @@ val VitalHealthConnectManager.backgroundSyncScheduledAt: Instant?
         .takeIf { it >= System.currentTimeMillis() }
         ?.let { Instant.ofEpochMilli(it) }
 
+@ExperimentalVitalApi
+var VitalHealthConnectManager.autoSyncThrottle: Duration
+    get() = maxOf(
+        sharedPreferences.getLong(UnSecurePrefKeys.autoSyncThrottleKey, 0).milliseconds,
+        AUTO_SYNC_THROTTLE_DEFAULT,
+    )
+    set(newValue) {
+        sharedPreferences.edit()
+            .putLong(UnSecurePrefKeys.autoSyncThrottleKey, newValue.inWholeMilliseconds)
+            .apply()
+    }
+
+@ExperimentalVitalApi
+var VitalHealthConnectManager.backgroundSyncMinimumInterval: Duration
+    get() = maxOf(
+        sharedPreferences.getLong(UnSecurePrefKeys.backgroundSyncMinIntervalKey, 0).milliseconds,
+        BACKGROUND_SYNC_INTERVAL_DEFAULT,
+    )
+    set(newValue) {
+        sharedPreferences.edit()
+            .putLong(UnSecurePrefKeys.backgroundSyncMinIntervalKey, newValue.inWholeMilliseconds)
+            .apply()
+    }
+
 internal val VitalHealthConnectManager.lastAutoSyncedAt: Long
     get() = sharedPreferences.getLong(UnSecurePrefKeys.lastAutoSyncedAtKey, 0)
 
 internal val VitalHealthConnectManager.shouldSkipAutoSync: Boolean
     get() = lastAutoSyncedAt
-        .let { System.currentTimeMillis() < it + AUTO_SYNC_THROTTLE.inWholeMilliseconds }
+        .let { System.currentTimeMillis() < it + autoSyncThrottle.inWholeMilliseconds }
 
 internal fun VitalHealthConnectManager.markAutoSyncSuccess() {
     sharedPreferences.edit()
@@ -181,7 +212,7 @@ internal fun VitalHealthConnectManager.scheduleNextExactAlarm(force: Boolean): B
         return true
     }
 
-    val nextAlarmAt = now + MIN_SYNC_INTERVAL.inWholeMilliseconds
+    val nextAlarmAt = now + backgroundSyncMinimumInterval.inWholeMilliseconds
     sharedPreferences.edit()
         .putLong(UnSecurePrefKeys.nextAlarmAtKey, nextAlarmAt)
         .apply()
