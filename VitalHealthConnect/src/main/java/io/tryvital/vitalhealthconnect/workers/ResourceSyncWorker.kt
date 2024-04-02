@@ -229,13 +229,16 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                     processor = recordProcessor,
                 )
 
-                uploadResources(
-                    delta,
-                    uploader = recordUploader,
-                    stage = DataStage.Daily,
-                    timeZoneId = timeZone.id,
-                    userId = userId,
-                )
+                // Skip empty POST requests
+                if (delta.isNotEmpty()) {
+                    uploadResources(
+                        delta,
+                        uploader = recordUploader,
+                        stage = DataStage.Daily,
+                        timeZoneId = timeZone.id,
+                        userId = userId,
+                    )
+                }
             } else {
                 vitalLogger.info { "${input.resource}: found no change" }
             }
@@ -301,15 +304,24 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
         } while (changes.hasMore)
 
-        uploadResources(
-            allData.merged(),
-            uploader = recordUploader,
-            stage = stage,
-            start = stageStart?.toDate(),
-            end = stageEnd?.toDate(),
-            timeZoneId = timeZone.id,
-            userId = userId,
-        )
+        val mergedData = allData.merged()
+        // We always make a POST request in DataStage.Historical, even if there is no data, so that
+        // the historical.data.*.created event is consistently triggered.
+        //
+        // Only skip empty POST requests when we are in DataStage.Daily.
+        val shouldUpload = stage == DataStage.Historical || mergedData.isNotEmpty()
+
+        if (shouldUpload) {
+            uploadResources(
+                mergedData,
+                uploader = recordUploader,
+                stage = stage,
+                start = stageStart?.toDate(),
+                end = stageEnd?.toDate(),
+                timeZoneId = timeZone.id,
+                userId = userId,
+            )
+        }
 
         setIncremental(token = token)
     }

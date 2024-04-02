@@ -92,18 +92,16 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         sleepPayloads: List<SleepPayload>,
         stage: DataStage,
     ) {
-        if (sleepPayloads.isNotEmpty()) {
-            vitalClient.summaryService.addSleeps(
-                userId, SummaryPayload(
-                    stage = stage,
-                    provider = ManualProviderSlug.HealthConnect,
-                    startDate = startDate,
-                    endDate = endDate,
-                    timeZoneId = timeZoneId,
-                    data = sleepPayloads,
-                )
+        vitalClient.summaryService.addSleeps(
+            userId, SummaryPayload(
+                stage = stage,
+                provider = ManualProviderSlug.HealthConnect,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneId = timeZoneId,
+                data = sleepPayloads,
             )
-        }
+        )
     }
 
     override suspend fun uploadBody(
@@ -154,18 +152,16 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         activityPayloads: List<ActivityPayload>,
         stage: DataStage,
     ) {
-        if (activityPayloads.isNotEmpty()) {
-            vitalClient.summaryService.addActivities(
-                userId, SummaryPayload(
-                    stage = stage,
-                    provider = ManualProviderSlug.HealthConnect,
-                    startDate = startDate,
-                    endDate = endDate,
-                    timeZoneId = timeZoneId,
-                    data = activityPayloads,
-                )
+        vitalClient.summaryService.addActivities(
+            userId, SummaryPayload(
+                stage = stage,
+                provider = ManualProviderSlug.HealthConnect,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneId = timeZoneId,
+                data = activityPayloads,
             )
-        }
+        )
     }
 
     override suspend fun uploadWorkouts(
@@ -176,18 +172,16 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         workoutPayloads: List<WorkoutPayload>,
         stage: DataStage,
     ) {
-        if (workoutPayloads.isNotEmpty()) {
-            vitalClient.summaryService.addWorkouts(
-                userId, SummaryPayload(
-                    stage = stage,
-                    provider = ManualProviderSlug.HealthConnect,
-                    startDate = startDate,
-                    endDate = endDate,
-                    timeZoneId = timeZoneId,
-                    data = workoutPayloads,
-                )
+        vitalClient.summaryService.addWorkouts(
+            userId, SummaryPayload(
+                stage = stage,
+                provider = ManualProviderSlug.HealthConnect,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneId = timeZoneId,
+                data = workoutPayloads,
             )
-        }
+        )
     }
 
     override suspend fun uploadQuantitySamples(
@@ -199,18 +193,16 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         quantitySamples: List<QuantitySamplePayload>,
         stage: DataStage,
     ) {
-        if (quantitySamples.isNotEmpty()) {
-            vitalClient.vitalsService.sendQuantitySamples(
-                resource, userId, TimeseriesPayload(
-                    stage = stage,
-                    provider = ManualProviderSlug.HealthConnect,
-                    startDate = startDate,
-                    endDate = endDate,
-                    timeZoneId = timeZoneId,
-                    data = quantitySamples,
-                )
+        vitalClient.vitalsService.sendQuantitySamples(
+            resource, userId, TimeseriesPayload(
+                stage = stage,
+                provider = ManualProviderSlug.HealthConnect,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneId = timeZoneId,
+                data = quantitySamples,
             )
-        }
+        )
     }
 
     override suspend fun uploadBloodPressure(
@@ -221,17 +213,15 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         bloodPressurePayloads: List<BloodPressureSamplePayload>,
         stage: DataStage,
     ) {
-        if (bloodPressurePayloads.isNotEmpty()) {
-            vitalClient.vitalsService.sendBloodPressure(
-                userId, TimeseriesPayload(
-                    stage = stage,
-                    provider = ManualProviderSlug.HealthConnect,
-                    startDate = startDate,
-                    endDate = endDate,
-                    timeZoneId = timeZoneId,
-                    data = bloodPressurePayloads,
-                )
+        vitalClient.vitalsService.sendBloodPressure(
+            userId, TimeseriesPayload(
+                stage = stage,
+                provider = ManualProviderSlug.HealthConnect,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneId = timeZoneId,
+                data = bloodPressurePayloads,
             )
-        }
+        )
     }
 }

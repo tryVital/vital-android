@@ -22,16 +22,23 @@ sealed class ProcessedResourceData {
         }
         throw IllegalArgumentException("cannot merge two different cases of ProcessedResourceData")
     }
+
+    fun isNotEmpty() = when (this) {
+        is Summary -> this.summaryData.isNotEmpty()
+        is TimeSeries -> this.timeSeriesData.isNotEmpty()
+    }
 }
 
 sealed class TimeSeriesData {
     abstract fun merge(other: TimeSeriesData): TimeSeriesData
+    abstract fun isNotEmpty(): Boolean
 
     data class BloodPressure(val samples: List<BloodPressureSample>) : TimeSeriesData() {
         override fun merge(other: TimeSeriesData): TimeSeriesData {
             check(other is BloodPressure)
             return BloodPressure(samples + other.samples)
         }
+        override fun isNotEmpty(): Boolean = samples.isNotEmpty()
     }
 
     data class QuantitySamples(val resource: IngestibleTimeseriesResource, val samples: List<QuantitySample>) : TimeSeriesData() {
@@ -39,11 +46,13 @@ sealed class TimeSeriesData {
             check(other is QuantitySamples && resource == other.resource)
             return QuantitySamples(resource, samples + other.samples)
         }
+        override fun isNotEmpty(): Boolean = samples.isNotEmpty()
     }
 }
 
 sealed class SummaryData {
     abstract fun merge(other: SummaryData): SummaryData
+    abstract fun isNotEmpty(): Boolean
 
     data class Profile(
         val biologicalSex: String,
@@ -64,6 +73,8 @@ sealed class SummaryData {
             // RHS bias
             return other
         }
+
+        override fun isNotEmpty(): Boolean = true
     }
 
     data class Body(
@@ -83,6 +94,8 @@ sealed class SummaryData {
             // RHS bias
             return other
         }
+
+        override fun isNotEmpty(): Boolean = bodyMass.isNotEmpty() || bodyFatPercentage.isNotEmpty()
     }
 
     data class Activities(
@@ -92,6 +105,7 @@ sealed class SummaryData {
             check(other is Activities)
             return Activities(activities + other.activities)
         }
+        override fun isNotEmpty(): Boolean = activities.isNotEmpty()
     }
 
     data class Sleeps(
@@ -101,6 +115,7 @@ sealed class SummaryData {
             check(other is Sleeps)
             return Sleeps(samples + other.samples)
         }
+        override fun isNotEmpty(): Boolean = samples.isNotEmpty()
     }
 
     data class Workouts(
@@ -110,6 +125,7 @@ sealed class SummaryData {
             check(other is Workouts)
             return Workouts(samples + other.samples)
         }
+        override fun isNotEmpty(): Boolean = samples.isNotEmpty()
     }
 }
 
