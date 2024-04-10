@@ -91,6 +91,11 @@ class VitalClient internal constructor(context: Context) {
         VitalsService.create(dependencies.retrofit)
     }
 
+    @VitalPrivateApi
+    val vitalPrivateService by lazy {
+        VitalPrivateService.create(dependencies.retrofit)
+    }
+
     val vitalLogger get() = dependencies.vitalLogger
     private val jwtAuth get() = dependencies.jwtAuth
 

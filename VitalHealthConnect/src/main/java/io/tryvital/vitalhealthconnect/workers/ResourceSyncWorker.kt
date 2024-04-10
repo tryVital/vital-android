@@ -1,5 +1,7 @@
 package io.tryvital.vitalhealthconnect.workers
 
+import UserSDKSyncStateBody
+import UserSDKSyncStatus
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
@@ -15,6 +17,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import io.tryvital.client.VitalClient
+import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
@@ -36,6 +39,7 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.TimeZone
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.reflect.KClass
 
 const val VITAL_SYNC_NOTIFICATION_ID = 123
@@ -153,11 +157,16 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val state = sharedPreferences.getJson(input.resource.syncStateKey)
             ?: initialState(timeZone)
 
+        val reconciledState = reconcileBackendSyncState(
+            state, timeZone
+        )
+
         vitalLogger.logI("${input.resource}: begin at $state")
 
-        when (state) {
-            is ResourceSyncState.Historical -> historicalBackfill(state, timeZone)
-            is ResourceSyncState.Incremental -> incrementalBackfill(state, timeZone)
+        when (reconciledState) {
+            is ResourceSyncState.Historical -> historicalBackfill(reconciledState, timeZone)
+            is ResourceSyncState.Incremental -> incrementalBackfill(reconciledState, timeZone)
+            null -> Result.success()
         }
 
         // TODO: Report synced vs nothing to sync
@@ -168,6 +177,44 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val now = ZonedDateTime.now(timeZone.toZoneId())
         val start = now.minus(30, ChronoUnit.DAYS)
         return ResourceSyncState.Historical(start = start.toInstant().toDate(), end = now.toInstant().toDate())
+    }
+
+    @OptIn(VitalPrivateApi::class)
+    private suspend fun reconcileBackendSyncState(state: ResourceSyncState, timeZone: TimeZone): ResourceSyncState? {
+        val backendState = vitalClient.vitalPrivateService.healthConnectSyncState(
+            vitalClient.checkUserId(),
+            when (state) {
+                is ResourceSyncState.Historical -> UserSDKSyncStateBody(
+                    stage = DataStage.Historical,
+                    tzinfo = timeZone.id,
+                    requestStartDate = state.start,
+                    requestEndDate = state.end,
+                )
+                is ResourceSyncState.Incremental -> UserSDKSyncStateBody(
+                    stage = DataStage.Daily,
+                    tzinfo = timeZone.id,
+                    requestStartDate = null,
+                    requestEndDate = null,
+                )
+            },
+        )
+
+        vitalLogger.info { "${input.resource}: $backendState" }
+
+        return when (backendState.status) {
+            UserSDKSyncStatus.Paused, UserSDKSyncStatus.Error -> {
+                return null
+            }
+            UserSDKSyncStatus.Active -> when (state) {
+                // If backend provides a more restrictive range, prefer backend
+                // provided range over the local settings.
+                is ResourceSyncState.Historical -> state.copy(
+                    start = backendState.requestStartDate?.let { maxOf(state.start, it) } ?: state.start,
+                    end = backendState.requestEndDate?.let { minOf(state.end, it) } ?: state.end,
+                )
+                is ResourceSyncState.Incremental -> state
+            }
+        }
     }
 
     private suspend fun historicalBackfill(state: ResourceSyncState.Historical, timeZone: TimeZone) {
