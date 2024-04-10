@@ -30,7 +30,7 @@ data class UserSDKSyncStateResponse(
     val requestEndDate: Date?,
 ) {
     override fun toString(): String = buildString {
-        append("SDKSyncState(status=${status.name})")
+        append("(status=${status.name})")
         if (requestStartDate != null) {
             append(", start=")
             append(requestStartDate.toInstant().toString())

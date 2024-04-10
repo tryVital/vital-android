@@ -1,6 +1,7 @@
 package io.tryvital.vitalhealthconnect.workers
 
 import UserSDKSyncStateBody
+import UserSDKSyncStateResponse
 import UserSDKSyncStatus
 import android.content.Context
 import android.content.SharedPreferences
@@ -34,6 +35,7 @@ import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import io.tryvital.vitalhealthconnect.records.RecordUploader
 import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
+import java.time.Duration
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -41,6 +43,8 @@ import java.util.Date
 import java.util.TimeZone
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.reflect.KClass
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.toKotlinDuration
 
 const val VITAL_SYNC_NOTIFICATION_ID = 123
 
@@ -157,16 +161,29 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val state = sharedPreferences.getJson(input.resource.syncStateKey)
             ?: initialState(timeZone)
 
-        val reconciledState = reconcileBackendSyncState(
-            state, timeZone
-        )
+        val backendState = fetchBackendSyncState(state, timeZone)
+
+        val reconciledState = when (backendState.status) {
+            UserSDKSyncStatus.Paused, UserSDKSyncStatus.Error -> {
+                vitalLogger.logI("${input.resource}: skipped because backend status is ${backendState.status}")
+                return Result.success()
+            }
+            UserSDKSyncStatus.Active -> when (state) {
+                // If backend provides a more restrictive range, prefer backend
+                // provided range over the local settings.
+                is ResourceSyncState.Historical -> state.copy(
+                    start = backendState.requestStartDate?.let { maxOf(state.start, it) } ?: state.start,
+                    end = backendState.requestEndDate?.let { minOf(state.end, it) } ?: state.end,
+                )
+                is ResourceSyncState.Incremental -> state
+            }
+        }
 
         vitalLogger.logI("${input.resource}: begin at $state")
 
         when (reconciledState) {
             is ResourceSyncState.Historical -> historicalBackfill(reconciledState, timeZone)
             is ResourceSyncState.Incremental -> incrementalBackfill(reconciledState, timeZone)
-            null -> Result.success()
         }
 
         // TODO: Report synced vs nothing to sync
@@ -180,7 +197,22 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     }
 
     @OptIn(VitalPrivateApi::class)
-    private suspend fun reconcileBackendSyncState(state: ResourceSyncState, timeZone: TimeZone): ResourceSyncState? {
+    private suspend fun fetchBackendSyncState(state: ResourceSyncState, timeZone: TimeZone): UserSDKSyncStateResponse {
+        val lastQueried = sharedPreferences.getLong(UnSecurePrefKeys.backendSyncStateLastQueriedKey, 0)
+            .let(Instant::ofEpochMilli)
+
+        if (Duration.between(Instant.now(), lastQueried).toMinutes() <= 30) {
+            // If it has been less than 30 minutes since last queried,
+            // let's try to serve the cached sync state.
+            val cachedState = sharedPreferences.getJson<UserSDKSyncStateResponse>(
+                UnSecurePrefKeys.backendSyncStateKey
+            )
+
+            if (cachedState != null) {
+                return cachedState
+            }
+        }
+
         val backendState = vitalClient.vitalPrivateService.healthConnectSyncState(
             vitalClient.checkUserId(),
             when (state) {
@@ -199,22 +231,13 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             },
         )
 
-        vitalLogger.info { "${input.resource}: $backendState" }
+        sharedPreferences.edit()
+            .putJson(UnSecurePrefKeys.backendSyncStateKey, backendState)
+            .apply()
 
-        return when (backendState.status) {
-            UserSDKSyncStatus.Paused, UserSDKSyncStatus.Error -> {
-                return null
-            }
-            UserSDKSyncStatus.Active -> when (state) {
-                // If backend provides a more restrictive range, prefer backend
-                // provided range over the local settings.
-                is ResourceSyncState.Historical -> state.copy(
-                    start = backendState.requestStartDate?.let { maxOf(state.start, it) } ?: state.start,
-                    end = backendState.requestEndDate?.let { minOf(state.end, it) } ?: state.end,
-                )
-                is ResourceSyncState.Incremental -> state
-            }
-        }
+        vitalLogger.info { "BackendSyncState: fetched $backendState" }
+
+        return backendState
     }
 
     private suspend fun historicalBackfill(state: ResourceSyncState.Historical, timeZone: TimeZone) {
