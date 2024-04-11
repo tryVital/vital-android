@@ -17,9 +17,6 @@ object UnSecurePrefKeys {
     internal const val autoSyncThrottleKey = "autoSyncThrottle"
     internal const val backgroundSyncMinIntervalKey = "backgroundSyncMinInterval"
 
-    internal const val backendSyncStateLastQueriedKey = "backendSyncStateLastQueried"
-    internal const val backendSyncStateKey = "backendSyncState"
-
     internal fun syncStateKey(resource: VitalResource) = "sync-state.${resource.name}"
     internal fun monitoringTypesKey(resource: VitalResource) = "monitoringTypes.${resource.name}"
 

@@ -41,10 +41,7 @@ import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.TimeZone
-import kotlin.coroutines.cancellation.CancellationException
 import kotlin.reflect.KClass
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.toKotlinDuration
 
 const val VITAL_SYNC_NOTIFICATION_ID = 123
 
@@ -169,11 +166,10 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 return Result.success()
             }
             UserSDKSyncStatus.Active -> when (state) {
-                // If backend provides a more restrictive range, prefer backend
-                // provided range over the local settings.
+                // Prefer backend provided pull range if present.
                 is ResourceSyncState.Historical -> state.copy(
-                    start = backendState.requestStartDate?.let { maxOf(state.start, it) } ?: state.start,
-                    end = backendState.requestEndDate?.let { minOf(state.end, it) } ?: state.end,
+                    start = backendState.requestStartDate ?: state.start,
+                    end = backendState.requestEndDate ?: state.end,
                 )
                 is ResourceSyncState.Incremental -> state
             }
@@ -198,22 +194,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
     @OptIn(VitalPrivateApi::class)
     private suspend fun fetchBackendSyncState(state: ResourceSyncState, timeZone: TimeZone): UserSDKSyncStateResponse {
-        val lastQueried = sharedPreferences.getLong(UnSecurePrefKeys.backendSyncStateLastQueriedKey, 0)
-            .let(Instant::ofEpochMilli)
-
-        if (Duration.between(Instant.now(), lastQueried).toMinutes() <= 30) {
-            // If it has been less than 30 minutes since last queried,
-            // let's try to serve the cached sync state.
-            val cachedState = sharedPreferences.getJson<UserSDKSyncStateResponse>(
-                UnSecurePrefKeys.backendSyncStateKey
-            )
-
-            if (cachedState != null) {
-                return cachedState
-            }
-        }
-
-        val backendState = vitalClient.vitalPrivateService.healthConnectSyncState(
+        val backendState = vitalClient.vitalPrivateService.healthConnectSdkSyncState(
             vitalClient.checkUserId(),
             when (state) {
                 is ResourceSyncState.Historical -> UserSDKSyncStateBody(
@@ -230,13 +211,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 )
             },
         )
-
-        sharedPreferences.edit()
-            .putJson(UnSecurePrefKeys.backendSyncStateKey, backendState)
-            .apply()
-
         vitalLogger.info { "BackendSyncState: fetched $backendState" }
-
         return backendState
     }
 
