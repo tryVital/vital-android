@@ -11,6 +11,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
+import retrofit2.Response
 import retrofit2.Retrofit
 import java.time.Instant
 import java.util.*
@@ -61,7 +62,7 @@ class SummaryServiceTest {
             )
         )
         assertEquals("POST /summary/workouts/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
-        assertEquals(Unit, response)
+        assert(response.isSuccessful)
     }
 
     @Test
@@ -89,7 +90,7 @@ class SummaryServiceTest {
         )
 
         assertEquals("POST /summary/profile/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
-        assertEquals(Unit, response)
+        assert(response.isSuccessful)
     }
 
     @Test
@@ -116,7 +117,7 @@ class SummaryServiceTest {
         )
 
         assertEquals("POST /summary/body/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
-        assertEquals(Unit, response)
+        assert(response.isSuccessful)
     }
 
     @Test
@@ -140,7 +141,7 @@ class SummaryServiceTest {
         )
 
         assertEquals("POST /summary/sleep/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
-        assertEquals(Unit, response)
+        assert(response.isSuccessful)
     }
 
     @Test
@@ -164,7 +165,7 @@ class SummaryServiceTest {
         )
 
         assertEquals("POST /summary/activity/user_id_1 HTTP/1.1", server.takeRequest().requestLine)
-        assertEquals(Unit, response)
+        assert(response.isSuccessful)
     }
 
 }
