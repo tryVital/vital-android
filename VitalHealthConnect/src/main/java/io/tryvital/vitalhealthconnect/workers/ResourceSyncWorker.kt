@@ -1,5 +1,8 @@
 package io.tryvital.vitalhealthconnect.workers
 
+import UserSDKSyncStateBody
+import UserSDKSyncStateResponse
+import UserSDKSyncStatus
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
@@ -15,6 +18,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import io.tryvital.client.VitalClient
+import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
@@ -31,6 +35,7 @@ import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import io.tryvital.vitalhealthconnect.records.RecordUploader
 import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
+import java.time.Duration
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -153,11 +158,28 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val state = sharedPreferences.getJson(input.resource.syncStateKey)
             ?: initialState(timeZone)
 
+        val backendState = fetchBackendSyncState(state, timeZone)
+
+        val reconciledState = when (backendState.status) {
+            UserSDKSyncStatus.Paused, UserSDKSyncStatus.Error -> {
+                vitalLogger.logI("${input.resource}: skipped because backend status is ${backendState.status}")
+                return Result.success()
+            }
+            UserSDKSyncStatus.Active -> when (state) {
+                // Prefer backend provided pull range if present.
+                is ResourceSyncState.Historical -> state.copy(
+                    start = backendState.requestStartDate ?: state.start,
+                    end = backendState.requestEndDate ?: state.end,
+                )
+                is ResourceSyncState.Incremental -> state
+            }
+        }
+
         vitalLogger.logI("${input.resource}: begin at $state")
 
-        when (state) {
-            is ResourceSyncState.Historical -> historicalBackfill(state, timeZone)
-            is ResourceSyncState.Incremental -> incrementalBackfill(state, timeZone)
+        when (reconciledState) {
+            is ResourceSyncState.Historical -> historicalBackfill(reconciledState, timeZone)
+            is ResourceSyncState.Incremental -> incrementalBackfill(reconciledState, timeZone)
         }
 
         // TODO: Report synced vs nothing to sync
@@ -168,6 +190,29 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val now = ZonedDateTime.now(timeZone.toZoneId())
         val start = now.minus(30, ChronoUnit.DAYS)
         return ResourceSyncState.Historical(start = start.toInstant().toDate(), end = now.toInstant().toDate())
+    }
+
+    @OptIn(VitalPrivateApi::class)
+    private suspend fun fetchBackendSyncState(state: ResourceSyncState, timeZone: TimeZone): UserSDKSyncStateResponse {
+        val backendState = vitalClient.vitalPrivateService.healthConnectSdkSyncState(
+            vitalClient.checkUserId(),
+            when (state) {
+                is ResourceSyncState.Historical -> UserSDKSyncStateBody(
+                    stage = DataStage.Historical,
+                    tzinfo = timeZone.id,
+                    requestStartDate = state.start,
+                    requestEndDate = state.end,
+                )
+                is ResourceSyncState.Incremental -> UserSDKSyncStateBody(
+                    stage = DataStage.Daily,
+                    tzinfo = timeZone.id,
+                    requestStartDate = null,
+                    requestEndDate = null,
+                )
+            },
+        )
+        vitalLogger.info { "BackendSyncState: fetched $backendState" }
+        return backendState
     }
 
     private suspend fun historicalBackfill(state: ResourceSyncState.Historical, timeZone: TimeZone) {
