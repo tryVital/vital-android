@@ -1,6 +1,7 @@
 package io.tryvital.client.services
 
 import io.tryvital.client.services.data.*
+import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.*
 import java.util.*
@@ -85,7 +86,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         userId: String,
         timeseriesPayload: TimeseriesPayload<List<BloodPressureSamplePayload>>
     ) {
-        return timeSeries.bloodPressureTimeseriesPost(
+        timeSeries.bloodPressureTimeseriesPost(
             userId = userId,
             resource = "blood_pressure",
             payload = timeseriesPayload
@@ -97,7 +98,7 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         userId: String,
         timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
     ) {
-        return timeSeries.timeseriesPost(
+        timeSeries.timeseriesPost(
             userId = userId,
             resource = resource.toString(),
             payload = timeseriesPayload
@@ -126,13 +127,13 @@ private interface TimeSeries {
         @Path("user_id") userId: String,
         @Path("resource", encoded = true) resource: String,
         @Body payload: TimeseriesPayload<List<QuantitySamplePayload>>
-    )
+    ): Response<Unit>
 
     @POST("timeseries/{user_id}/{resource}")
     suspend fun bloodPressureTimeseriesPost(
         @Path("user_id") userId: String,
         @Path("resource", encoded = true) resource: String,
         @Body payload: TimeseriesPayload<List<BloodPressureSamplePayload>>
-    )
+    ): Response<Unit>
 }
 
