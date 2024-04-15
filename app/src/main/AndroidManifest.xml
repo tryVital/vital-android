@@ -54,6 +54,7 @@
 
     <uses-permission android:name="android.permission.health.WRITE_NUTRITION" />
     <uses-permission android:name="android.permission.health.WRITE_HYDRATION" />
+    <uses-permission android:name="android.permission.health.WRITE_BLOOD_GLUCOSE" />
     <!-- END:   Health Connect permissions -->
 
     <application
