@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import io.tryvital.client.VitalClient
 import io.tryvital.vitalhealthconnect.ExperimentalVitalApi
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
+import io.tryvital.vitalhealthconnect.VitalHealthConnectManager.Companion.openHealthConnectIntent
 import io.tryvital.vitalhealthconnect.disableBackgroundSync
 import io.tryvital.vitalhealthconnect.enableBackgroundSyncContract
 import io.tryvital.vitalhealthconnect.isBackgroundSyncEnabled
@@ -70,7 +71,9 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
         }
     }
 
-    fun openHealthConnect(context: Context) = VitalHealthConnectManager.openHealthConnect(context)
+    fun openHealthConnect(context: Context) {
+        openHealthConnectIntent(context)?.let { context.startActivity(it) }
+    }
 
     fun checkPermissions() {
         viewModelScope.launch {
