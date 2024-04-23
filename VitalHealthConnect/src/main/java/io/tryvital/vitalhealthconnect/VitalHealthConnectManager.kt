@@ -509,18 +509,29 @@ class VitalHealthConnectManager private constructor(
         }
 
         @Suppress("unused")
+        @Deprecated(
+            message="Use `openHealthConnectIntent(context)`.",
+            replaceWith = ReplaceWith(
+            "openHealthConnectIntent(context)?.let { context.startActivity(it) }",
+            "io.tryvital.vitalhealthconnect.VitalHealthConnectManager.Companion.openHealthConnectIntent"
+            )
+        )
         fun openHealthConnect(context: Context) {
-            when (isAvailable(context)) {
-                HealthConnectAvailability.NotSupportedSDK -> {}
+            openHealthConnectIntent(context)?.let { context.startActivity(it) }
+        }
+
+        @Suppress("unused")
+        fun openHealthConnectIntent(context: Context): Intent? {
+            return when (isAvailable(context)) {
+                HealthConnectAvailability.NotSupportedSDK -> null
                 HealthConnectAvailability.NotInstalled -> {
-                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                    Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")
                         setPackage("com.android.vending")
                     }
-                    context.startActivity(intent)
                 }
                 HealthConnectAvailability.Installed -> {
-                    context.startActivity(Intent(ACTION_HEALTH_CONNECT_SETTINGS))
+                    Intent(ACTION_HEALTH_CONNECT_SETTINGS)
                 }
             }
         }
