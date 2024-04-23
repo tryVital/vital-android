@@ -3,6 +3,7 @@ package io.tryvital.sample.ui.healthconnect
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import android.widget.ToggleButton
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
@@ -70,7 +71,7 @@ fun PermissionInfo(
         rememberLauncherForActivityResult(viewModel.createPermissionRequestContract()) { outcomeAsync ->
             coroutineScope.launch {
                 val outcome = outcomeAsync.await()
-                Log.i("VitalPermissionOutcome", outcome.toString())
+                Toast.makeText(context, outcome.toString(), Toast.LENGTH_LONG).show()
                 viewModel.checkPermissions()
             }
         }
