@@ -6,6 +6,7 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.PermissionController
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -28,38 +29,63 @@ class VitalPermissionRequestContract(
             return SynchronousResult(CompletableDeferred(PermissionOutcome.HealthConnectUnavailable))
         }
 
-        val grantedPermissions = contract.getSynchronousResult(context, permissionsToRequest())?.value
+        val permissions = permissionsToRequest()
+        val grantedPermissions = contract.getSynchronousResult(context, permissions)?.value
 
         return if (grantedPermissions != null) {
-            processGrantedPermissionsAsync(grantedPermissions).let(::SynchronousResult)
+            processGrantedPermissionsAsync(requested = permissions, granted = grantedPermissions)
+                .let(::SynchronousResult)
         } else {
             null
         }
     }
 
-    override fun createIntent(context: Context, input: Unit): Intent
-        = contract.createIntent(context, permissionsToRequest())
+    override fun createIntent(context: Context, input: Unit): Intent {
+        val permissions = permissionsToRequest()
+
+        // Health Connect keeps a counter per individual permission
+        // 14+: count both Cancel and Allow-but-Unselected
+        // 13: count only when user presses Cancel
+        val prefs = manager.sharedPreferences
+        prefs.edit().apply {
+            for (permission in permissions) {
+                val key = UnSecurePrefKeys.requestCount(permission)
+                putLong(key, prefs.getLong(key, 0) + 1)
+            }
+            putStringSet(UnSecurePrefKeys.currentAskRequest, permissions)
+            apply()
+        }
+
+        return contract.createIntent(context, permissions)
+    }
 
     @Suppress("DeferredIsResult")
     override fun parseResult(resultCode: Int, intent: Intent?): Deferred<PermissionOutcome> {
         val grantedPermissions = contract.parseResult(resultCode, intent)
 
         if (intent == null) {
-            return CompletableDeferred(
-                PermissionOutcome.Failure(cause = IllegalStateException("Missing intent in parseResult."))
-            )
+            val outcome = when (resultCode) {
+                0 -> PermissionOutcome.Cancelled
+                else -> PermissionOutcome.UnknownError(IllegalStateException("Missing intent in parseResult."))
+            }
+            return CompletableDeferred(outcome)
         }
 
-        return processGrantedPermissionsAsync(grantedPermissions)
+        val currentAskRequest = manager.sharedPreferences.getStringSet(
+            UnSecurePrefKeys.currentAskRequest,
+            null
+        ) ?: emptySet()
+
+        return processGrantedPermissionsAsync(requested = currentAskRequest, granted = grantedPermissions)
     }
 
-    private fun processGrantedPermissionsAsync(permissions: Set<String>): Deferred<PermissionOutcome> {
+    private fun processGrantedPermissionsAsync(requested: Set<String>, granted: Set<String>): Deferred<PermissionOutcome> {
         val readGrants = readResources
-            .filter { permissions.containsAll(manager.permissionsRequiredToSyncResources(setOf(it))) }
+            .filter { granted.containsAll(manager.permissionsRequiredToSyncResources(setOf(it))) }
             .toSet()
 
         val writeGrants = writeResources
-            .filter { permissions.containsAll(manager.permissionsRequiredToWriteResources(setOf(it))) }
+            .filter { granted.containsAll(manager.permissionsRequiredToWriteResources(setOf(it))) }
             .toSet()
 
         manager.sharedPreferences.edit().run {
@@ -74,14 +100,36 @@ class VitalPermissionRequestContract(
             // The activity result reports only permissions granted in this UI interaction.
             // Since we have VitalResources that are an aggregate of multiple record types, we need
             // to recompute based on the full set of permissions.
-            val discoveredNewGrants = manager.checkAndUpdatePermissions()
+            val (allGrants, discoveredNewGrants) = manager.checkAndUpdatePermissions()
 
-            // Asynchronously start syncing the newly granted read resources
-            taskScope.launch {
-                manager.syncData(readGrants + discoveredNewGrants)
+            val allNewGrants = readGrants + discoveredNewGrants
+
+            if (allNewGrants.isNotEmpty()) {
+                // Asynchronously start syncing the newly granted read resources
+                taskScope.launch {
+                    manager.syncData(allNewGrants)
+                }
             }
 
-            PermissionOutcome.Success
+            return@async if (allGrants.isEmpty() || allNewGrants.isEmpty()) {
+                // https://issuetracker.google.com/issues/233239418#comment2
+                val notPromptThreshold = requested.all { permission ->
+                    // We increment upfront, so if this is the 3rd attempt, the value
+                    // would be 3 (post increment).
+                    manager.sharedPreferences.getLong(
+                        UnSecurePrefKeys.requestCount(permission),
+                        0
+                    ) >= 3
+                }
+
+                if (notPromptThreshold) {
+                    PermissionOutcome.NotPrompted
+                } else {
+                    PermissionOutcome.Success
+                }
+            } else {
+                PermissionOutcome.Success
+            }
         }
     }
 

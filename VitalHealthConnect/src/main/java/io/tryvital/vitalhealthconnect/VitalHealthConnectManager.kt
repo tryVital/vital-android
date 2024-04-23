@@ -180,9 +180,9 @@ class VitalHealthConnectManager private constructor(
             .toSet()
     }
 
-    internal suspend fun checkAndUpdatePermissions(): Set<VitalResource> {
+    internal suspend fun checkAndUpdatePermissions(): Pair<Set<VitalResource>, Set<VitalResource>> {
         if (isAvailable(context) != HealthConnectAvailability.Installed) {
-            return setOf()
+            return emptySet<VitalResource>() to emptySet()
         }
 
         val lastKnownGrantedResources = resourcesWithReadPermission()
@@ -205,7 +205,7 @@ class VitalHealthConnectManager private constructor(
             apply()
         }
 
-        return upToDateGrantedResources - lastKnownGrantedResources
+        return upToDateGrantedResources to upToDateGrantedResources - lastKnownGrantedResources
     }
 
     internal fun permissionsRequiredToWriteResources(resources: Set<WritableVitalResource>): Set<String> {
