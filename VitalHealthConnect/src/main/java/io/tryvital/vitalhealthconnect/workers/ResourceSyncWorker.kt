@@ -165,14 +165,10 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 vitalLogger.logI("${input.resource}: skipped because backend status is ${backendState.status}")
                 return Result.success()
             }
-            UserSDKSyncStatus.Active -> when (state) {
-                // Prefer backend provided pull range if present.
-                is ResourceSyncState.Historical -> state.copy(
-                    start = backendState.requestStartDate ?: state.start,
-                    end = backendState.requestEndDate ?: state.end,
-                )
-                is ResourceSyncState.Incremental -> state
-            }
+            UserSDKSyncStatus.Active -> state.copy(
+                start = backendState.requestStartDate ?: state.start,
+                end = backendState.requestEndDate ?: state.end
+            )
         }
 
         vitalLogger.logI("${input.resource}: begin at $state")
