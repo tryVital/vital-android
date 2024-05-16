@@ -10,6 +10,8 @@
 /.idea/androidTestResultsUserPreferences.xml
 /.idea/deploymentTargetDropDown.xml
 /.idea/inspectionProfiles/Project_Default.xml
+.idea/vcs.xml
+.idea/misc.xml
 .DS_Store
 /build
 /captures

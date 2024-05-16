@@ -77,8 +77,10 @@ internal sealed class ResourceSyncState {
     }
 
     @JsonClass(generateAdapter = true)
-    data class Incremental(val changesToken: String, val lastSync: Date) : ResourceSyncState() {
-        override fun toString(): String = "incremental($changesToken at ${lastSync.toInstant()})"
+    data class Incremental(val changesToken: String, val lastSync: Date, val end: Date? = null) :
+        ResourceSyncState() {
+        override fun toString(): String =
+            "incremental($changesToken at ${lastSync.toInstant()}; end = ${end})"
     }
 
     companion object {
@@ -165,10 +167,18 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 vitalLogger.logI("${input.resource}: skipped because backend status is ${backendState.status}")
                 return Result.success()
             }
-            UserSDKSyncStatus.Active -> state.copy(
-                start = backendState.requestStartDate ?: state.start,
-                end = backendState.requestEndDate ?: state.end
-            )
+
+            UserSDKSyncStatus.Active -> when (state) {
+                // Prefer backend provided pull range if present.
+                is ResourceSyncState.Historical -> state.copy(
+                    start = backendState.requestStartDate ?: state.start,
+                    end = backendState.requestEndDate ?: state.end,
+                )
+
+                is ResourceSyncState.Incremental -> state.copy(
+                    end = backendState.requestEndDate
+                )
+            }
         }
 
         vitalLogger.logI("${input.resource}: begin at $state")
@@ -185,11 +195,17 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     private fun initialState(timeZone: TimeZone): ResourceSyncState {
         val now = ZonedDateTime.now(timeZone.toZoneId())
         val start = now.minus(30, ChronoUnit.DAYS)
-        return ResourceSyncState.Historical(start = start.toInstant().toDate(), end = now.toInstant().toDate())
+        return ResourceSyncState.Historical(
+            start = start.toInstant().toDate(),
+            end = now.toInstant().toDate()
+        )
     }
 
     @OptIn(VitalPrivateApi::class)
-    private suspend fun fetchBackendSyncState(state: ResourceSyncState, timeZone: TimeZone): UserSDKSyncStateResponse {
+    private suspend fun fetchBackendSyncState(
+        state: ResourceSyncState,
+        timeZone: TimeZone
+    ): UserSDKSyncStateResponse {
         val backendState = vitalClient.vitalPrivateService.healthConnectSdkSyncState(
             vitalClient.checkUserId(),
             when (state) {
@@ -199,6 +215,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                     requestStartDate = state.start,
                     requestEndDate = state.end,
                 )
+
                 is ResourceSyncState.Incremental -> UserSDKSyncStateBody(
                     stage = DataStage.Daily,
                     tzinfo = timeZone.id,
@@ -211,7 +228,10 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         return backendState
     }
 
-    private suspend fun historicalBackfill(state: ResourceSyncState.Historical, timeZone: TimeZone) {
+    private suspend fun historicalBackfill(
+        state: ResourceSyncState.Historical,
+        timeZone: TimeZone
+    ) {
         genericBackfill(
             stage = DataStage.Historical,
             start = state.start.toInstant(),
@@ -220,7 +240,10 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         )
     }
 
-    private suspend fun incrementalBackfill(state: ResourceSyncState.Incremental, timeZone: TimeZone) {
+    private suspend fun incrementalBackfill(
+        state: ResourceSyncState.Incremental,
+        timeZone: TimeZone
+    ) {
         val userId = vitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
 
@@ -236,7 +259,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             return genericBackfill(
                 stage = DataStage.Daily,
                 start = state.lastSync.toInstant(),
-                end = Instant.now(),
+                end = minOf(Instant.now(), state.end?.toInstant() ?: Instant.now()),
                 timeZone = timeZone,
             )
         }
@@ -253,7 +276,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 return genericBackfill(
                     stage = DataStage.Daily,
                     start = state.lastSync.toInstant(),
-                    end = Instant.now(),
+                    end = minOf(Instant.now(), state.end?.toInstant() ?: Instant.now()),
                     timeZone = timeZone,
                 )
             }
@@ -268,6 +291,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                     currentDevice = Build.MODEL,
                     reader = recordReader,
                     processor = recordProcessor,
+                    end = state.end?.toInstant()
                 )
 
                 // Skip empty POST requests
@@ -293,7 +317,12 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         } while (changes.hasMore)
     }
 
-    private suspend fun genericBackfill(stage: DataStage, start: Instant, end: Instant, timeZone: TimeZone) {
+    private suspend fun genericBackfill(
+        stage: DataStage,
+        start: Instant,
+        end: Instant,
+        timeZone: TimeZone
+    ) {
         val userId = vitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
 
@@ -397,16 +426,20 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     }
 }
 
-internal inline fun <reified T: Any> SharedPreferences.getJson(key: String): T?
-    = getJson(key, default = null)
+internal inline fun <reified T : Any> SharedPreferences.getJson(key: String): T? =
+    getJson(key, default = null)
 
 internal inline fun <reified T> SharedPreferences.getJson(key: String, default: T): T {
     val jsonString = getString(key, null) ?: return default
     val adapter = moshi.adapter(T::class.java)
-    return adapter.fromJson(jsonString) ?: throw IllegalStateException("Failed to decode JSON string")
+    return adapter.fromJson(jsonString)
+        ?: throw IllegalStateException("Failed to decode JSON string")
 }
 
-internal inline fun <reified T: Any> SharedPreferences.Editor.putJson(key: String, value: T?): SharedPreferences.Editor {
+internal inline fun <reified T : Any> SharedPreferences.Editor.putJson(
+    key: String,
+    value: T?
+): SharedPreferences.Editor {
     val adapter = moshi.adapter(T::class.java)
     return putString(key, value?.let(adapter::toJson))
 }
@@ -415,5 +448,5 @@ internal val VitalResource.syncStateKey get() = UnSecurePrefKeys.syncStateKey(th
 internal val VitalResource.monitoringTypesKey get() = UnSecurePrefKeys.monitoringTypesKey(this)
 
 // All Record types are public JVM types, so they must have a simple name.
-private fun Set<KClass<out Record>>.toSimpleNameSet(): Set<String>
-    = mapTo(mutableSetOf()) { it.simpleName!! }
+private fun Set<KClass<out Record>>.toSimpleNameSet(): Set<String> =
+    mapTo(mutableSetOf()) { it.simpleName!! }
