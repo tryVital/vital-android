@@ -10,6 +10,7 @@ import io.tryvital.client.services.data.OAuthProviderSlug
 import io.tryvital.client.services.data.User
 import io.tryvital.client.services.linkOAuthProvider
 import io.tryvital.client.services.linkUserWithOauthProvider
+import io.tryvital.client.userConnectedSources
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.sample.AppSettings
 import io.tryvital.sample.AppSettingsStore
@@ -68,7 +69,7 @@ class UsersViewModel(
                 val response = service.getAll()
                 viewModelState.update { it.copy(loading = false, users = response.users) }
             } catch (e: Exception) {
-                viewModelState.update { it.copy(loading = false, users = null) }
+                viewModelState.update { it.copy(loading = false, users = null, currentError = e) }
             }
         }
     }

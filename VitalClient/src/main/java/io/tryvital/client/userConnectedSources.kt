@@ -52,7 +52,7 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
     }
 }
 
-suspend fun VitalClient.userConnectedSources(): List<Source> {
+suspend fun VitalClient.userConnectedSources(): List<UserConnection> {
     val userId = checkUserId()
     resetCachedUserConnectedSourceRecordIfNeeded()
 
