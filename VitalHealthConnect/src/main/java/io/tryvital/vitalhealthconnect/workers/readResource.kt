@@ -4,6 +4,7 @@ import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.remapped
+import io.tryvital.vitalhealthconnect.records.ProcessorOptions
 import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import java.time.Instant
@@ -17,6 +18,7 @@ internal suspend fun readResourceByTimeRange(
     currentDevice: String,
     reader: RecordReader,
     processor: RecordProcessor,
+    processorOptions: ProcessorOptions,
 ): ProcessedResourceData {
     suspend fun <Record, T: TimeSeriesData> readTimeseries(
         read: suspend (Instant, Instant) -> List<Record>,
@@ -39,6 +41,7 @@ internal suspend fun readResourceByTimeRange(
             distance = reader.readDistance(startTime, endTime),
             steps = reader.readSteps(startTime, endTime),
             vo2Max = reader.readVo2Max(startTime, endTime),
+            options = processorOptions,
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Workout -> processor.processWorkoutsFromRecords(
