@@ -125,30 +125,6 @@ class VitalHealthConnectManager private constructor(
         setupSyncWorkerObservation()
     }
 
-    /**
-     * Stop any running task, and close this VitalHealthConnectManager instance.
-     *
-     * Note that this is not [cleanUp], which erases all SDK settings and persistent state.
-     */
-    @Suppress("unused")
-    fun close() {
-        taskScope.cancel()
-    }
-
-    /**
-     * Erase all SDK settings and persistent state for the current user.
-     *
-     * You typically only need to [cleanUp] when your application has logged out the current user.
-     */
-    @Deprecated(
-        "Use [VitalClient.signOut]. It resets both the Vital Core and Health SDKs."
-    )
-    @Suppress("unused")
-    fun cleanUp() {
-        @Suppress("DEPRECATION")
-        vitalClient.cleanUp()
-    }
-
     @OptIn(ExperimentalVitalApi::class)
     private fun resetAutoSync() {
         cancelSyncWorker()
@@ -506,18 +482,6 @@ class VitalHealthConnectManager private constructor(
                 HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> HealthConnectAvailability.NotInstalled
                 else -> HealthConnectAvailability.NotSupportedSDK
             }
-        }
-
-        @Suppress("unused")
-        @Deprecated(
-            message="Use `openHealthConnectIntent(context)`.",
-            replaceWith = ReplaceWith(
-            "openHealthConnectIntent(context)?.let { context.startActivity(it) }",
-            "io.tryvital.vitalhealthconnect.VitalHealthConnectManager.Companion.openHealthConnectIntent"
-            )
-        )
-        fun openHealthConnect(context: Context) {
-            openHealthConnectIntent(context)?.let { context.startActivity(it) }
         }
 
         @Suppress("unused")
