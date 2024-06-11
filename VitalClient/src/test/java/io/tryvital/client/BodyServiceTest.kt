@@ -3,6 +3,7 @@ package io.tryvital.client
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.BodyService
 import io.tryvital.client.services.data.ProviderSlug
+import io.tryvital.client.services.data.SourceType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -54,16 +55,16 @@ class BodyServiceTest {
         assertEquals(userId, bodyData.userId)
         assertEquals(0.0, bodyData.fat)
         assertEquals(80.0, bodyData.weight)
-        assertEquals("Fitbit", bodyData.source.name)
-        assertEquals(ProviderSlug.Fitbit, bodyData.source.slug)
+        assertEquals(SourceType.Scale, bodyData.source.type)
+        assertEquals(ProviderSlug.Fitbit, bodyData.source.provider)
 
         val bodyData2 = response.body[1]
         assertEquals("id_2", bodyData2.id)
         assertNull(bodyData2.userId)
         assertNull(bodyData2.fat)
         assertNull(bodyData2.weight)
-        assertEquals("Health Connect", bodyData2.source.name)
-        assertEquals(ProviderSlug.HealthConnect, bodyData2.source.slug)
+        assertEquals(ProviderSlug.HealthConnect, bodyData2.source.provider)
+        assertEquals(SourceType.App, bodyData2.source.type)
 
     }
 
@@ -86,9 +87,8 @@ const val fakeBodyResponse = """{
             "weight": 80.0,
             "fat": 0.0,
             "source": {
-                "name": "Fitbit",
-                "slug": "fitbit",
-                "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
+                "provider": "fitbit",
+                "type": "scale"
             }
         },
         {
@@ -99,9 +99,8 @@ const val fakeBodyResponse = """{
             "weight": null,
             "fat": null,
             "source": {
-                "name": "Health Connect",
-                "slug": "health_connect",
-                "logo": null
+                "provider": "health_connect",
+                "type": "app"
             }
         }
     ]

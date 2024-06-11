@@ -11,8 +11,12 @@ import io.tryvital.client.Region
 import io.tryvital.client.VitalClientUnconfigured
 import io.tryvital.client.jwt.AbstractVitalJWTAuth
 import io.tryvital.client.jwt.VitalJWTAuth
+import io.tryvital.client.services.data.UserConnectionStatus
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.ProviderSlug
+import io.tryvital.client.services.data.ResourceAvailability
+import io.tryvital.client.services.data.SourceType
+import io.tryvital.client.services.data.VitalAPIResource
 import io.tryvital.client.utils.ApiKeyInterceptor
 import io.tryvital.client.utils.VitalRequestInterceptor
 import io.tryvital.client.utils.LocalDateJsonAdapter
@@ -100,6 +104,10 @@ internal class Dependencies(
             .add(LocalDate::class.java, LocalDateJsonAdapter)
             .add(ProviderSlug::class.java, ProviderSlug.jsonAdapter)
             .add(ManualProviderSlug::class.java, ManualProviderSlug.jsonAdapter)
+            .add(ResourceAvailability.Status::class.java, ResourceAvailability.Status.jsonAdapter)
+            .add(VitalAPIResource::class.java, VitalAPIResource.jsonAdapter)
+            .add(UserConnectionStatus::class.java, UserConnectionStatus.jsonAdapter)
+            .add(SourceType::class.java, SourceType.jsonAdapter)
             .build()
 
         internal fun resolveUrl(configurationReader: ConfigurationReader): String {

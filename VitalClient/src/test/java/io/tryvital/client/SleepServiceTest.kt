@@ -5,6 +5,7 @@ import io.tryvital.client.services.SleepService
 import io.tryvital.client.services.data.ProviderSlug
 import io.tryvital.client.services.data.SleepData
 import io.tryvital.client.services.data.SleepStreamResponse
+import io.tryvital.client.services.data.SourceType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -53,8 +54,8 @@ class SleepServiceTest {
         val sleep = response.sleep[0]
         checkFirstSleep(sleep)
 
-        assertEquals("Health Connect", response.sleep[1].source.name)
-        assertEquals(ProviderSlug.HealthConnect, response.sleep[1].source.slug)
+        assertEquals(ProviderSlug.HealthConnect, response.sleep[1].source.provider)
+        assertEquals(SourceType.Watch, response.sleep[1].source.type)
     }
 
     @Test
@@ -82,8 +83,8 @@ class SleepServiceTest {
         checkFirstSleep(sleep)
         checkFirstSleepStream(sleep.sleepStream!!)
 
-        assertEquals("Health Connect", response.sleep[1].source.name)
-        assertEquals(ProviderSlug.HealthConnect, response.sleep[1].source.slug)
+        assertEquals(ProviderSlug.HealthConnect, response.sleep[1].source.provider)
+        assertEquals(SourceType.Watch, response.sleep[1].source.type)
     }
 
     @Test
@@ -111,8 +112,8 @@ class SleepServiceTest {
         assertEquals(21480, sleep.duration)
         assertEquals(80.0, sleep.efficiency)
         assertEquals(17.12, sleep.respiratoryRate)
-        assertEquals("Oura", sleep.source.name)
-        assertEquals(ProviderSlug.Oura, sleep.source.slug)
+        assertEquals(ProviderSlug.Oura, sleep.source.provider)
+        assertEquals(SourceType.Ring, sleep.source.type)
     }
 
     private fun checkFirstSleepStream(sleepStream: SleepStreamResponse) {
@@ -157,9 +158,8 @@ const val fakeSleepDataResponse = """{
     "average_hrv": 42.0,
     "respiratory_rate": 17.12,
     "source": {
-    "name": "Oura",
-    "slug": "oura",
-    "logo": "https://storage.googleapis.com/vital-assets/oura.png"
+    "provider": "oura",
+    "type": "ring"
 },
     "sleep_stream": null
 },
@@ -186,9 +186,8 @@ const val fakeSleepDataResponse = """{
     "average_hrv": null,
     "respiratory_rate": null,
     "source": {
-    "name": "Health Connect",
-    "slug": "health_connect",
-    "logo": null
+    "provider": "health_connect",
+    "type": "watch"
 },
     "sleep_stream": null
 }
@@ -220,9 +219,8 @@ const val fakeSleepStreamSeriesResponse = """{
     "average_hrv": 42.0,
     "respiratory_rate": 17.12,
     "source": {
-    "name": "Oura",
-    "slug": "oura",
-    "logo": "https://storage.googleapis.com/vital-assets/oura.png"
+    "provider": "oura",
+    "type": "ring"
 },
     "sleep_stream": {
     "hrv": [
@@ -293,9 +291,8 @@ const val fakeSleepStreamSeriesResponse = """{
     "average_hrv": null,
     "respiratory_rate": null,
     "source": {
-    "name": "Health Connect",
-    "slug": "health_connect",
-    "logo": null
+    "provider": "health_connect",
+    "type": "watch"
 },
     "sleep_stream": {}
 }

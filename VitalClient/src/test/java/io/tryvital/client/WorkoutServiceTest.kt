@@ -3,6 +3,7 @@ package io.tryvital.client
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.WorkoutService
 import io.tryvital.client.services.data.ProviderSlug
+import io.tryvital.client.services.data.SourceType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -51,12 +52,12 @@ class WorkoutServiceTest {
         assertEquals(5.81152, workout1.averageSpeed)
         assertEquals(43, workout1.sport!!.id)
         assertEquals("Cycling", workout1.sport!!.name)
-        assertEquals("Peloton", workout1.source.name)
-        assertEquals(ProviderSlug.Peloton, workout1.source.slug)
+        assertEquals(ProviderSlug.Peloton, workout1.source.provider)
+        assertEquals(SourceType.Unknown, workout1.source.type)
 
         val workout2 = response.workouts[1]
-        assertEquals("Health Connect", workout2.source.name)
-        assertEquals(ProviderSlug.HealthConnect, workout2.source.slug)
+        assertEquals(ProviderSlug.HealthConnect, workout2.source.provider)
+        assertEquals(SourceType.Watch, workout2.source.type)
     }
 
     @Test
@@ -150,9 +151,8 @@ const val fakeWorkoutsResponse = """
         "map": null,
         "provider_id": "b16d5dee1f83431787c2d3df8fbd50a9",
         "source": {
-        "name": "Peloton",
-        "slug": "peloton",
-        "logo": "https://storage.googleapis.com/vital-assets/peloton.png"
+        "provider": "peloton",
+        "type": "unknown"
     }
     },
     {
@@ -182,9 +182,8 @@ const val fakeWorkoutsResponse = """
         "map": null,
         "provider_id": null,
         "source": {
-        "name": "Health Connect",
-        "slug": "health_connect",
-        "logo": ""
+        "provider": "health_connect",
+        "type": "watch"
         }
     }
     ]

@@ -2,6 +2,7 @@ package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.adapters.EnumJsonAdapter
 import java.util.*
 
 @JsonClass(generateAdapter = true)
@@ -22,16 +23,77 @@ data class User(
 
 @JsonClass(generateAdapter = true)
 data class ConnectedSource(
-    val source: Source,
+    val source: Provider,
     @Json(name = "created_on")
     val createdOn: Date
 )
 
 @JsonClass(generateAdapter = true)
-data class Source(
+data class Provider(
     val name: String,
     val slug: ProviderSlug,
-    val logo: String?
+    val logo: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class UserConnection(
+    val name: String,
+    val slug: ProviderSlug,
+    val logo: String,
+    val status: UserConnectionStatus,
+    @Json(name = "resource_availability")
+    val resourceAvailability: Map<VitalAPIResource, ResourceAvailability>,
+)
+
+@JsonClass(generateAdapter = false)
+enum class UserConnectionStatus {
+    @Json(name = "connected")
+    Connected,
+    @Json(name = "error")
+    Error,
+    @Json(name = "paused")
+    Paused,
+    @Json(name = "unrecognized")
+    Unrecognized;
+
+    companion object {
+        val jsonAdapter: EnumJsonAdapter<UserConnectionStatus>
+            get() = EnumJsonAdapter.create(UserConnectionStatus::class.java).withUnknownFallback(Unrecognized)
+    }
+}
+
+@JsonClass(generateAdapter = true)
+data class ResourceAvailability(
+    val status: Status,
+    val scopeRequirements: ScopeRequirementsGrants? = null,
+) {
+
+    @JsonClass(generateAdapter = false)
+    enum class Status {
+        @Json(name = "available")
+        Available,
+        @Json(name = "unavailable")
+        Unavailable;
+
+        companion object {
+            val jsonAdapter: EnumJsonAdapter<Status>
+                get() = EnumJsonAdapter.create(Status::class.java)
+        }
+    }
+}
+
+@JsonClass(generateAdapter = true)
+data class ScopeRequirementsGrants(
+    @Json(name = "user_granted")
+    val userGranted: ScopeRequirements,
+    @Json(name = "user_denied")
+    val userDenied: ScopeRequirements,
+)
+
+@JsonClass(generateAdapter = true)
+data class ScopeRequirements(
+    val required: List<String>,
+    val optional: List<String>,
 )
 
 @JsonClass(generateAdapter = true)
@@ -48,7 +110,7 @@ data class RefreshResponse(
 
 @JsonClass(generateAdapter = true)
 data class ProvidersResponse(
-    val providers: List<Source> = emptyList()
+    val providers: List<UserConnection> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)

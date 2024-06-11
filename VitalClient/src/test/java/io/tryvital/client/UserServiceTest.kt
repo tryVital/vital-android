@@ -274,7 +274,23 @@ class UserServiceTest {
             {
                 "name": "Fitbit",
                 "slug": "fitbit",
-                "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
+                "logo": "https://storage.googleapis.com/vital-assets/fitbit.png",
+                "status": "connected",
+                "resource_availability": {
+                    "activity": {
+                        "status": "available",
+                        "scope_requirements": {
+                            "user_granted": {
+                                "required": ["activity"],
+                                "optional": []
+                            },
+                            "user_denied": {
+                                "required": [],
+                                "optional": ["heartrate"]
+                            }
+                        }
+                    }
+                }
             }
         ]
     }"""

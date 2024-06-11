@@ -11,5 +11,5 @@ data class Profile(
     val userKey: String?,
     val id: String,
     val height: Double?,
-    val source: Source?,
+    val source: Source,
 )
