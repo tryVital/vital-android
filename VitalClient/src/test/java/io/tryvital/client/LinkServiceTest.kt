@@ -57,7 +57,7 @@ class LinkServiceTest {
         )
 
         val sut = LinkService.create(retrofit)
-        val oauthResponse = sut.oauthProvider(
+        val oauthResponse = sut.linkOauthProvider(
             provider = "strava",
             linkToken = linkToken
         )
@@ -78,17 +78,17 @@ class LinkServiceTest {
         )
 
         val sut = LinkService.create(retrofit)
-        val response = sut.emailProvider(
+        val response = sut.linkEmailProvider(
             provider = "strava",
             linkToken = linkToken,
-            request = EmailProviderRequest(
+            request = LinkEmailProviderInput(
                 email = "test@test.com",
-                region = Region.US,
+                region = "us",
             )
         )
 
         assertEquals("POST /link/provider/email/strava HTTP/1.1", server.takeRequest().requestLine)
-        assertTrue(response.success)
+        assertEquals(response.state, LinkResponse.State.Success)
         assertEquals("callback://vital", response.redirectUrl)
     }
 
@@ -101,13 +101,12 @@ class LinkServiceTest {
         )
 
         val sut = LinkService.create(retrofit)
-        val response = sut.passwordProvider(
+        val response = sut.linkPasswordProvider(
             provider = "strava",
             linkToken = linkToken,
-            request = PasswordProviderRequest(
+            request = LinkPasswordProviderInput(
                 username = "username",
                 password = "password",
-                redirectUrl = "callback://vital",
             )
         )
 
@@ -115,7 +114,7 @@ class LinkServiceTest {
             "POST /link/provider/password/strava HTTP/1.1",
             server.takeRequest().requestLine
         )
-        assertTrue(response.success)
+        assertEquals(response.state, LinkResponse.State.Success)
         assertEquals("callback://vital", response.redirectUrl)
     }
 
@@ -142,6 +141,6 @@ class LinkServiceTest {
 "id": 5
 }"""
 
-    private val fakeEmailLinkResponse = """{"success":true,"redirect_url":"callback://vital"}"""
+    private val fakeEmailLinkResponse = """{"state":"success","redirect_url":"callback://vital"}"""
 
 }

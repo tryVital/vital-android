@@ -1,7 +1,10 @@
 package io.tryvital.client.services
 
+import ManualProviderRequest
+import ManualProviderResponse
 import UserSDKSyncStateBody
 import UserSDKSyncStateResponse
+import io.tryvital.client.services.data.ManualProviderSlug
 import retrofit2.Retrofit
 import retrofit2.http.Body
 import retrofit2.http.POST
@@ -17,6 +20,13 @@ interface VitalPrivateService {
         @Path("user_id") userId: String,
         @Body body: UserSDKSyncStateBody
     ): UserSDKSyncStateResponse
+
+    @VitalPrivateApi
+    @POST("link/provider/manual/{provider}")
+    suspend fun manualProvider(
+        @Path("provider") provider: ManualProviderSlug,
+        @Body request: ManualProviderRequest,
+    ): ManualProviderResponse
 
     companion object {
         fun create(retrofit: Retrofit): VitalPrivateService {

@@ -1,5 +1,7 @@
 package io.tryvital.client
 
+import ManualProviderRequest
+import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.*
 import retrofit2.HttpException
 
@@ -33,9 +35,10 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
             .apply()
     }
 
+    @OptIn(VitalPrivateApi::class)
     try {
         // Remote Miss: Try to create the manual connected source.
-        linkService.manualProvider(
+        vitalPrivateService.manualProvider(
             provider = provider,
             request = ManualProviderRequest(userId = userId)
         )

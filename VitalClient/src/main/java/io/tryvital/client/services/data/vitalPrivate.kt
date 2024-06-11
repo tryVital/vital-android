@@ -42,3 +42,17 @@ data class UserSDKSyncStateResponse(
         append(")")
     }
 }
+
+@JsonClass(generateAdapter = true)
+data class ManualProviderRequest(
+    @Json(name = "user_id")
+    val userId: String,
+    @Json(name = "provider_id")
+    val providerId: String? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class ManualProviderResponse(
+    @Json(name = "success")
+    val success: Boolean,
+)
