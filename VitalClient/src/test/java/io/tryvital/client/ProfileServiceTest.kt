@@ -1,15 +1,14 @@
 package io.tryvital.client
 
-import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.ProfileService
 import io.tryvital.client.services.data.ProviderSlug
+import io.tryvital.client.services.data.SourceType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
@@ -46,32 +45,9 @@ class ProfileServiceTest {
         assertEquals(userId, profile.id)
         assertEquals(userId, profile.userId)
         assertEquals(180.0, profile.height)
-        assertEquals("Oura", profile.source?.name)
-        assertEquals(ProviderSlug.Oura, profile.source?.slug)
+        assertEquals(ProviderSlug.Oura, profile.source.provider)
+        assertEquals(SourceType.App, profile.source.type)
     }
-
-    @Test
-    fun `Get profile nulls`() = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(fakeProfileResponseNulls)
-        )
-        val sut = ProfileService.create(retrofit)
-        val profile = sut.getProfile(
-            userId = userId,
-            provider = null
-        )
-        assertEquals(
-            "GET /summary/profile/$userId HTTP/1.1",
-            server.takeRequest().requestLine
-        )
-        assertEquals(userId, profile.id)
-        assertEquals(userId, profile.userId)
-        assertNull(profile.height)
-        assertNull(profile.source)
-    }
-
 }
 
 private lateinit var server: MockWebServer
@@ -88,17 +64,8 @@ const val fakeProfileResponse = """
 "id": "user_id_1",
 "height": 180,
 "source": {
-    "name": "Oura",
-    "slug": "oura",
-    "logo": "https://storage.googleapis.com/vital-assets/oura.png"
+    "provider": "oura",
+    "type": "app"
 }
 }
 """
-
-const val fakeProfileResponseNulls = """{
-"user_id": "user_id_1",
-"user_key": null,
-"id": "user_id_1",
-"height": null,
-"source": null
-}"""

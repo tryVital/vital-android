@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
@@ -19,11 +21,13 @@ data class SourceType(
     val rawValue: String
 ) {
     companion object {
-        val Unknown = VitalAPIResource("unknown")
-        val Watch = VitalAPIResource("watch")
-        val Phone = VitalAPIResource("phone")
-        val MultipleSources = VitalAPIResource("multiple_sources")
-        val Ring = VitalAPIResource("ring")
+        val Unknown = SourceType("unknown")
+        val Watch = SourceType("watch")
+        val Phone = SourceType("phone")
+        val MultipleSources = SourceType("multiple_sources")
+        val Ring = SourceType("ring")
+        val Scale = SourceType("scale")
+        val App = SourceType("app")
 
         val jsonAdapter = object: JsonAdapter<SourceType>() {
             override fun fromJson(reader: JsonReader): SourceType?
