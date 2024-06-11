@@ -60,7 +60,7 @@ class BodyServiceTest {
 
         val bodyData2 = response.body[1]
         assertEquals("id_2", bodyData2.id)
-        assertNull(bodyData2.userId)
+        assertEquals("user_id_2", bodyData2.userId)
         assertNull(bodyData2.fat)
         assertNull(bodyData2.weight)
         assertEquals(ProviderSlug.HealthConnect, bodyData2.source.provider)
@@ -81,9 +81,8 @@ const val fakeBodyResponse = """{
 "body": [
         {
             "user_id": "user_id_1",
-            "user_key": "user_key_1",
             "id": "id_1",
-            "date": "2022-07-19T00:00:00+00:00",
+            "calendar_date": "2022-07-19",
             "weight": 80.0,
             "fat": 0.0,
             "source": {
@@ -92,10 +91,9 @@ const val fakeBodyResponse = """{
             }
         },
         {
-            "user_id": null,
-            "user_key": null,
+            "user_id": "user_id_2",
             "id": "id_2",
-            "date": "2022-07-18T00:00:00+00:00",
+            "calendar_date": "2022-07-18",
             "weight": null,
             "fat": null,
             "source": {

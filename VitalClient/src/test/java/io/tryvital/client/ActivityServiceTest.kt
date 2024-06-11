@@ -48,7 +48,7 @@ class ActivityServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals(2, response.activity.size)
+        assertEquals(1, response.activity.size)
         val activity = response.activity[0]
         assertEquals("id_1", activity.id)
         assertEquals(userId, activity.userId)
@@ -57,10 +57,6 @@ class ActivityServiceTest {
         assertEquals(1565.0, activity.caloriesActive)
         assertEquals(ProviderSlug.Fitbit, activity.source.provider)
         assertEquals(SourceType.Watch, activity.source.type)
-
-        val activity2 = response.activity[1]
-        assertEquals(ProviderSlug.HealthConnect, activity2.source.provider)
-        assertEquals(SourceType.Phone, activity2.source.type)
     }
 
 }
@@ -78,7 +74,7 @@ const val fakeActivityResponse = """{
     "user_id": "user_id_1",
     "user_key": "user_key_1",
     "id": "id_1",
-    "date": "2022-07-22T00:00:00+00:00",
+    "calendar_date": "2022-07-22",
     "calories_total": 1565.0,
     "calories_active": 1565.0,
     "steps": 0,
@@ -90,23 +86,6 @@ const val fakeActivityResponse = """{
         "provider": "fitbit",
         "type": "watch"
     }
-},
-{
-    "user_id": null,
-    "user_key": null,
-    "id": "id_2",
-    "date": "2022-07-22T00:00:00+00:00",
-    "calories_total": null,
-    "calories_active": null,
-    "steps": null,
-    "daily_movement": null,
-    "low": null,
-    "medium": null,
-    "high": null,
-    "source": {
-        "provider": "health_connect",
-        "type": "phone"
-}
 }
 ]
 }"""

@@ -1,10 +1,8 @@
 package io.tryvital.client
 
-import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.SleepService
 import io.tryvital.client.services.data.ProviderSlug
 import io.tryvital.client.services.data.SleepData
-import io.tryvital.client.services.data.SleepStreamResponse
 import io.tryvital.client.services.data.SourceType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -50,60 +48,9 @@ class SleepServiceTest {
             server.takeRequest().requestLine
         )
 
-        assertEquals(2, response.sleep.size)
+        assertEquals(1, response.sleep.size)
         val sleep = response.sleep[0]
         checkFirstSleep(sleep)
-
-        assertEquals(ProviderSlug.HealthConnect, response.sleep[1].source.provider)
-        assertEquals(SourceType.Watch, response.sleep[1].source.type)
-    }
-
-    @Test
-    fun `Get sleep stream series`() = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(fakeSleepStreamSeriesResponse)
-        )
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
-        val sut = SleepService.create(retrofit)
-        val response = sut.getSleepStreamSeries(
-            userId = userId,
-            startDate = dateFormat.parse("2022-07-01")!!,
-            endDate = dateFormat.parse("2022-07-21"),
-            provider = null
-        )
-        assertEquals(
-            "GET /summary/sleep/$userId/stream?start_date=2022-07-01&end_date=2022-07-21 HTTP/1.1",
-            server.takeRequest().requestLine
-        )
-
-        assertEquals(2, response.sleep.size)
-        val sleep = response.sleep[0]
-        checkFirstSleep(sleep)
-        checkFirstSleepStream(sleep.sleepStream!!)
-
-        assertEquals(ProviderSlug.HealthConnect, response.sleep[1].source.provider)
-        assertEquals(SourceType.Watch, response.sleep[1].source.type)
-    }
-
-    @Test
-    fun `Get sleep stream`() = runTest {
-        server.enqueue(
-            MockResponse()
-                .setResponseCode(200)
-                .setBody(fakeSleepStreamResponse)
-        )
-        val sut = SleepService.create(retrofit)
-        val response = sut.getSleepStream(
-            sleepId = streamId
-        )
-        assertEquals(
-            "GET /timeseries/sleep/$streamId/stream HTTP/1.1",
-            server.takeRequest().requestLine
-        )
-
-        checkFirstSleepStream(response)
     }
 
     private fun checkFirstSleep(sleep: SleepData) {
@@ -115,14 +62,6 @@ class SleepServiceTest {
         assertEquals(ProviderSlug.Oura, sleep.source.provider)
         assertEquals(SourceType.Ring, sleep.source.type)
     }
-
-    private fun checkFirstSleepStream(sleepStream: SleepStreamResponse) {
-        assertEquals(2, sleepStream.hrv.size)
-        assertEquals(1, sleepStream.heartrate.size)
-        assertEquals(1, sleepStream.hypnogram.size)
-        assertEquals(1, sleepStream.respiratoryRate.size)
-    }
-
 }
 
 private lateinit var server: MockWebServer
@@ -139,7 +78,7 @@ const val fakeSleepDataResponse = """{
     "user_id": "user_id_1",
     "user_key": "user_id_1",
     "id": "id_1",
-    "date": "2022-07-15T00:00:00+00:00",
+    "calendar_date": "2022-07-16",
     "bedtime_start": "2022-07-16T01:25:42+00:00",
     "bedtime_stop": "2022-07-16T07:23:42+00:00",
     "timezone_offset": 3600,
@@ -158,188 +97,9 @@ const val fakeSleepDataResponse = """{
     "average_hrv": 42.0,
     "respiratory_rate": 17.12,
     "source": {
-    "provider": "oura",
-    "type": "ring"
-},
-    "sleep_stream": null
-},
-{
-    "user_id": "user_id_1",
-    "user_key": "user_id_1",
-    "id": "id_2",
-    "date": "2022-07-14T00:00:00+00:00",
-    "bedtime_start": null,
-    "bedtime_stop": null,
-    "timezone_offset": null,
-    "duration": null,
-    "total": null,
-    "awake": null,
-    "light": null,
-    "rem": null,
-    "deep": null,
-    "score": null,
-    "hr_lowest": null,
-    "hr_average": null,
-    "efficiency": null,
-    "latency": null,
-    "temperature_delta": null,
-    "average_hrv": null,
-    "respiratory_rate": null,
-    "source": {
-    "provider": "health_connect",
-    "type": "watch"
-},
-    "sleep_stream": null
-}
-]
-}"""
-
-const val fakeSleepStreamSeriesResponse = """{
-"sleep": [
-{
-    "user_id": "user_id_1",
-    "user_key": "user_id_1",
-    "id": "id_1",
-    "date": "2022-07-15T00:00:00+00:00",
-    "bedtime_start": "2022-07-16T01:25:42+00:00",
-    "bedtime_stop": "2022-07-16T07:23:42+00:00",
-    "timezone_offset": 3600,
-    "duration": 21480,
-    "total": 17280,
-    "awake": 4200,
-    "light": 5970,
-    "rem": 3420,
-    "deep": 7890,
-    "score": 58,
-    "hr_lowest": 49,
-    "hr_average": 58,
-    "efficiency": 80.0,
-    "latency": 1200,
-    "temperature_delta": 0.28,
-    "average_hrv": 42.0,
-    "respiratory_rate": 17.12,
-    "source": {
-    "provider": "oura",
-    "type": "ring"
-},
-    "sleep_stream": {
-    "hrv": [
-    {
-        "id": 1,
-        "timestamp": "2022-07-16T00:25:42+00:00",
-        "value": 0.0,
-        "type": "automatic",
-        "unit": "rmssd"
-    },
-    {
-        "id": 2,
-        "timestamp": "2022-07-16T00:30:42+00:00",
-        "value": null,
-        "type": null,
-        "unit": null
+        "provider": "oura",
+        "type": "ring"
     }
-    ],
-    "heartrate": [
-    {
-        "id": 3,
-        "timestamp": "2022-07-14T00:01:00+00:00",
-        "value": 79.0,
-        "type": "automatic",
-        "unit": "bpm"
-    }
-    ],
-    "hypnogram": [
-    {
-        "id": 4,
-        "timestamp": "2022-07-16T00:25:42+00:00",
-        "value": 4.0,
-        "type": "automatic",
-        "unit": "vital_hypnogram"
-    }
-    ],
-    "respiratory_rate": [
-    {
-        "id": 5,
-        "timestamp": "2022-07-16T00:25:42+00:00",
-        "value": 4.0,
-        "type": "automatic",
-        "unit": "rate"
-    }
-    ]
-}
-},
-{
-    "user_id": "user_id_1",
-    "user_key": "user_id_1",
-    "id": "id_2",
-    "date": "2022-07-14T00:00:00+00:00",
-    "bedtime_start": null,
-    "bedtime_stop": null,
-    "timezone_offset": null,
-    "duration": null,
-    "total": null,
-    "awake": null,
-    "light": null,
-    "rem": null,
-    "deep": null,
-    "score": null,
-    "hr_lowest": null,
-    "hr_average": null,
-    "efficiency": null,
-    "latency": null,
-    "temperature_delta": null,
-    "average_hrv": null,
-    "respiratory_rate": null,
-    "source": {
-    "provider": "health_connect",
-    "type": "watch"
-},
-    "sleep_stream": {}
-}
-]
-}"""
-const val fakeSleepStreamResponse = """{
-"hrv": [
-{
-    "id": 1,
-    "timestamp": "2022-07-16T00:25:42+00:00",
-    "value": 0.0,
-    "type": "automatic",
-    "unit": "rmssd"
-},
-{
-    "id": 2,
-    "timestamp": "2022-07-16T00:30:42+00:00",
-    "value": null,
-    "type": null,
-    "unit": null
-}
-],
-"heartrate": [
-{
-    "id": 3,
-    "timestamp": "2022-07-14T00:01:00+00:00",
-    "value": 79.0,
-    "type": "automatic",
-    "unit": "bpm"
-}
-],
-"hypnogram": [
-{
-    "id": 4,
-    "timestamp": "2022-07-16T00:25:42+00:00",
-    "value": 4.0,
-    "type": "automatic",
-    "unit": "vital_hypnogram"
-}
-],
-"respiratory_rate": [
-{
-    "id": 5,
-    "timestamp": "2022-07-16T00:25:42+00:00",
-    "value": 4.0,
-    "type": "automatic",
-    "unit": "rate"
 }
 ]
 }"""

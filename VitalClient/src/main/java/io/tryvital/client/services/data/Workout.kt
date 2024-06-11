@@ -17,6 +17,8 @@ data class Workout(
     val userKey: String,
     val id: String,
     val title: String?,
+    @Json(name = "calendar_date")
+    val calendarDate: String,
     @Json(name = "timezone_offset")
     val timezoneOffset: Int?,
     @Json(name = "average_hr")

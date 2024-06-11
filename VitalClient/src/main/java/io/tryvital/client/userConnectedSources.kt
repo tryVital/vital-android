@@ -21,7 +21,7 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
     }
 
     // Local Miss: First try to query the user's current set of connected sources.
-    val sources = userConnectedSources()
+    val sources = userConnections()
     if (sources.any { it.slug == slug }) {
         // Remote Hit: The client has connected to this provider.
         return
@@ -52,11 +52,11 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
     }
 }
 
-suspend fun VitalClient.userConnectedSources(): List<UserConnection> {
+suspend fun VitalClient.userConnections(): List<UserConnection> {
     val userId = checkUserId()
     resetCachedUserConnectedSourceRecordIfNeeded()
 
-    val response = userService.getProviders(userId = userId)
+    val response = userService.getUserConnections(userId = userId)
 
     val remote = response.providers.mapTo(mutableSetOf()) { it.slug }
     val keysToClear = (ProviderSlug.values().toSet() - remote)

@@ -9,16 +9,12 @@ import io.tryvital.client.services.data.CreateUserRequest
 import io.tryvital.client.services.data.OAuthProviderSlug
 import io.tryvital.client.services.data.User
 import io.tryvital.client.services.linkOAuthProvider
-import io.tryvital.client.services.linkUserWithOauthProvider
-import io.tryvital.client.userConnectedSources
 import io.tryvital.client.utils.VitalLogger
-import io.tryvital.sample.AppSettings
 import io.tryvital.sample.AppSettingsStore
 import io.tryvital.sample.UserRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.launchIn

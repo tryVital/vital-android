@@ -32,29 +32,3 @@ suspend fun VitalClient.linkOAuthProvider(
         customTabsIntent.launchUrl(context, Uri.parse(oauth.oauthUrl!!))
     }
 }
-
-@Deprecated(message = "Use `linkOAuthProvider` instead")
-suspend fun VitalClient.linkUserWithOauthProvider(
-    context: Context,
-    user: User,
-    provider: String,
-    callback: String,
-    customizeTabs: (CustomTabsIntent.Builder) -> Unit = {}
-): Result<Boolean> {
-    try {
-        val token = linkService
-            .createLink(CreateLinkRequest(user.userId, provider, callback))
-
-        val oauth = linkService.oauthProvider(
-            provider = provider,
-            linkToken = token.linkToken!!,
-        )
-        val builder = CustomTabsIntent.Builder()
-        customizeTabs(builder)
-        val customTabsIntent = builder.build()
-        customTabsIntent.launchUrl(context, Uri.parse(oauth.oauthUrl!!))
-    } catch (e: IOException) {
-        return Result.failure(e)
-    }
-    return Result.success(true)
-}

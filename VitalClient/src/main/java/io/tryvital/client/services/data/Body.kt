@@ -12,11 +12,10 @@ data class BodyDataResponse(
 @JsonClass(generateAdapter = true)
 data class BodyData(
     @Json(name = "user_id")
-    val userId: String?,
-    @Json(name = "user_key")
-    val userKey: String?,
+    val userId: String,
     val id: String,
-    val date: Date,
+    @Json(name = "calendar_date")
+    val calendarDate: String,
     val weight: Double?,
     val fat: Double?,
     val source: Source,
