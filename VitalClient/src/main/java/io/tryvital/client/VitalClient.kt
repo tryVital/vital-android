@@ -105,31 +105,12 @@ class VitalClient internal constructor(context: Context) {
     val childSDKShouldReset: SharedFlow<Unit> get() = _childSDKShouldReset
     private val _childSDKShouldReset = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
 
-
-    @Deprecated("Renamed to `signOut()` and is now a suspend function.", ReplaceWith("signOut()"))
-    fun cleanUp() {
-        @OptIn(DelicateCoroutinesApi::class)
-        GlobalScope.launch(start = CoroutineStart.UNDISPATCHED) {
-            signOut()
-        }
-    }
-
     suspend fun signOut() {
         sharedPreferences.edit().clear().apply()
         encryptedSharedPreferences.edit().clear().apply()
         jwtAuth.signOut()
         statusChanged.emit(Unit)
         _childSDKShouldReset.emit(Unit)
-    }
-
-    @Deprecated(
-        message = "Use VitalClient.configure (API Key) or VitalClient.signIn (Vital Sign-In Token) instead.",
-        replaceWith = ReplaceWith("VitalClient.configure(context, region, environment, apiKey)"),
-    )
-    fun configure(region: Region, environment: Environment, apiKey: String) {
-        setConfiguration(
-            VitalClientAuthStrategy.APIKey(apiKey, environment, region)
-        )
     }
 
     private fun setConfiguration(strategy: VitalClientAuthStrategy) {
@@ -142,11 +123,7 @@ class VitalClient internal constructor(context: Context) {
         statusChanged.tryEmit(Unit)
     }
 
-    @Deprecated(
-        message = "Use VitalClient.setUserId instead.",
-        replaceWith = ReplaceWith("VitalClient.setUserId(context, userId)"),
-    )
-    fun setUserId(userId: String) {
+    private fun setUserId(userId: String) {
         // No-op if the SDK has been configured into JWT mode.
         if (configurationReader.authStrategy is VitalClientAuthStrategy.JWT) {
             return
@@ -158,20 +135,6 @@ class VitalClient internal constructor(context: Context) {
         }
 
         statusChanged.tryEmit(Unit)
-    }
-
-    @Deprecated(
-        message = "Use VitalClient.status instead.",
-        replaceWith = ReplaceWith("VitalClient.Status.SignedIn in VitalClient.status"),
-    )
-    fun hasUserId(): Boolean {
-        return encryptedSharedPreferences.getString(VITAL_ENCRYPTED_USER_ID_KEY, null) != null
-    }
-
-    fun checkUserId(): String {
-        return currentUserId ?: throw IllegalStateException(
-            "The SDK does not have a signed-in user, or is not configured with an API Key for evaluation."
-        )
     }
 
     companion object {
@@ -237,6 +200,12 @@ class VitalClient internal constructor(context: Context) {
                     is VitalClientAuthStrategy.JWT -> shared.jwtAuth.currentUserId
                 }
             }
+
+        fun checkUserId(): String {
+            return currentUserId ?: throw IllegalStateException(
+                "The SDK does not have a signed-in user, or is not configured with an API Key for evaluation."
+            )
+        }
 
         fun getOrCreate(context: Context): VitalClient = synchronized(VitalClient) {
             val appContext = context.applicationContext

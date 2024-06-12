@@ -207,7 +207,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         timeZone: TimeZone
     ): UserSDKSyncStateResponse {
         val backendState = vitalClient.vitalPrivateService.healthConnectSdkSyncState(
-            vitalClient.checkUserId(),
+            VitalClient.checkUserId(),
             when (state) {
                 is ResourceSyncState.Historical -> UserSDKSyncStateBody(
                     stage = DataStage.Historical,
@@ -244,7 +244,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         state: ResourceSyncState.Incremental,
         timeZone: TimeZone
     ) {
-        val userId = vitalClient.checkUserId()
+        val userId = VitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
 
         val recordTypesToMonitor = recordTypesToMonitor().toSimpleNameSet()
@@ -323,7 +323,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         end: Instant,
         timeZone: TimeZone
     ) {
-        val userId = vitalClient.checkUserId()
+        val userId = VitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
 
         val recordTypesToMonitor = recordTypesToMonitor()

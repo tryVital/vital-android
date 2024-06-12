@@ -15,7 +15,7 @@ fun VitalClient.hasUserConnectedTo(provider: ProviderSlug): Boolean {
 }
 
 suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProviderSlug) {
-    val userId = checkUserId()
+    val userId = VitalClient.checkUserId()
     val slug = provider.toProviderSlug()
     if (hasUserConnectedTo(slug)) {
         // Local Hit: The client has witnessed a valid connected source for this provider before.
@@ -56,7 +56,7 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
 }
 
 suspend fun VitalClient.userConnections(): List<UserConnection> {
-    val userId = checkUserId()
+    val userId = VitalClient.checkUserId()
     resetCachedUserConnectedSourceRecordIfNeeded()
 
     val response = userService.getUserConnections(userId = userId)
