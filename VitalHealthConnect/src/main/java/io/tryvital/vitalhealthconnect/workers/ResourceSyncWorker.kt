@@ -34,6 +34,7 @@ import io.tryvital.vitalhealthconnect.model.recordTypeChangesToTriggerSync
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordAggregator
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordProcessor
 import io.tryvital.vitalhealthconnect.records.HealthConnectRecordReader
+import io.tryvital.vitalhealthconnect.records.ProcessorOptions
 import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import io.tryvital.vitalhealthconnect.records.RecordUploader
@@ -177,7 +178,6 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
      *     a. Fetch the maximum timestamp of the resource type as `max`.
      *     b. `generic_backfill(stage="daily", start=max(), end=now())`
      */
-    @Suppress("UNUSED_VARIABLE")
     override suspend fun doWork(): Result {
         val timeZone = TimeZone.getDefault()
 
@@ -190,9 +190,13 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
         vitalLogger.logI("${input.resource}: $instruction")
 
+        val processorOptions = ProcessorOptions(
+            perDeviceActivityTS = localSyncState.perDeviceActivityTS
+        )
+
         when (instruction) {
-            is SyncInstruction.DoHistorical -> historicalBackfill(instruction, timeZone)
-            is SyncInstruction.DoIncremental -> incrementalBackfill(instruction, timeZone)
+            is SyncInstruction.DoHistorical -> historicalBackfill(instruction, timeZone, processorOptions)
+            is SyncInstruction.DoIncremental -> incrementalBackfill(instruction, timeZone, processorOptions)
         }
 
         // TODO: Report synced vs nothing to sync
@@ -231,19 +235,22 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
     private suspend fun historicalBackfill(
         state: SyncInstruction.DoHistorical,
-        timeZone: TimeZone
+        timeZone: TimeZone,
+        processorOptions: ProcessorOptions,
     ) {
         genericBackfill(
             stage = DataStage.Historical,
             start = state.start,
             end = state.end,
             timeZone = timeZone,
+            processorOptions = processorOptions,
         )
     }
 
     private suspend fun incrementalBackfill(
         state: SyncInstruction.DoIncremental,
-        timeZone: TimeZone
+        timeZone: TimeZone,
+        processorOptions: ProcessorOptions,
     ) {
         val userId = VitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
@@ -262,6 +269,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 start = state.lastSync,
                 end = minOf(Instant.now(), state.end ?: Instant.now()),
                 timeZone = timeZone,
+                processorOptions = processorOptions,
             )
         }
 
@@ -279,6 +287,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                     start = state.lastSync,
                     end = minOf(Instant.now(), state.end ?: Instant.now()),
                     timeZone = timeZone,
+                    processorOptions = processorOptions,
                 )
             }
 
@@ -292,7 +301,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                     currentDevice = Build.MODEL,
                     reader = recordReader,
                     processor = recordProcessor,
-                    end = state.end
+                    processorOptions = processorOptions,
+                    end = state.end,
                 )
 
                 // Skip empty POST requests
@@ -322,7 +332,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         stage: DataStage,
         start: Instant,
         end: Instant,
-        timeZone: TimeZone
+        timeZone: TimeZone,
+        processorOptions: ProcessorOptions,
     ) {
         val userId = VitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
@@ -352,6 +363,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             currentDevice = Build.MODEL,
             reader = recordReader,
             processor = recordProcessor,
+            processorOptions = processorOptions,
         )
 
         var changes: ChangesResponse
@@ -371,6 +383,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 currentDevice = Build.MODEL,
                 reader = recordReader,
                 processor = recordProcessor,
+                processorOptions = processorOptions,
             )
 
         } while (changes.hasMore)

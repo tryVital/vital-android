@@ -49,6 +49,10 @@ import java.util.Date
 import java.util.TimeZone
 import kotlin.math.roundToInt
 
+data class ProcessorOptions(
+    val perDeviceActivityTS: Boolean = false
+)
+
 interface RecordProcessor {
 
     suspend fun processBloodPressureFromRecords(
@@ -107,6 +111,7 @@ interface RecordProcessor {
         distance: List<DistanceRecord>,
         floorsClimbed: List<FloorsClimbedRecord>,
         vo2Max: List<Vo2MaxRecord>,
+        options: ProcessorOptions,
     ): SummaryData.Activities
 }
 
@@ -404,7 +409,8 @@ internal class HealthConnectRecordProcessor(
         steps: List<StepsRecord>,
         distance: List<DistanceRecord>,
         floorsClimbed: List<FloorsClimbedRecord>,
-        vo2Max: List<Vo2MaxRecord>
+        vo2Max: List<Vo2MaxRecord>,
+        options: ProcessorOptions,
     ): SummaryData.Activities = coroutineScope {
         val zoneId = timeZone.toZoneId()
 
@@ -500,14 +506,29 @@ internal class HealthConnectRecordProcessor(
             }
             val daySummariesByDate = awaitAll(*summaryAggregators)
 
+            fun merge(
+                discovered: Map<LocalDate, List<QuantitySample>>,
+                hourlyTotals: Map<LocalDate, List<QuantitySample>>,
+                date: LocalDate,
+                options: ProcessorOptions,
+            ): List<QuantitySample> {
+                return if (options.perDeviceActivityTS) {
+                    (discovered[date] ?: emptyList()) + (hourlyTotals[date] ?: emptyList())
+                } else {
+                    hourlyTotals[date] ?: emptyList()
+                }
+            }
+
+            // TODO: On-device computed hourly totals
+
             val activities = daySummariesByDate.map { (date, summary) ->
                 Activity(
                     daySummary = summary,
-                    activeEnergyBurned = activeEnergyBurnedByDate[date] ?: emptyList(),
-                    basalEnergyBurned = basalMetabolicRateByDate[date] ?: emptyList(),
-                    distanceWalkingRunning = distanceByDate[date] ?: emptyList(),
-                    floorsClimbed = floorsClimbedByDate[date] ?: emptyList(),
-                    steps = stepsByDate[date] ?: emptyList(),
+                    activeEnergyBurned = merge(activeEnergyBurnedByDate, emptyMap(), date, options),
+                    basalEnergyBurned = merge(basalMetabolicRateByDate, emptyMap(), date, options),
+                    distanceWalkingRunning = merge(distanceByDate, emptyMap(), date, options),
+                    floorsClimbed = merge(floorsClimbedByDate, emptyMap(), date, options),
+                    steps = merge(stepsByDate, emptyMap(), date, options),
                     vo2Max = vo2MaxByDate[date] ?: emptyList(),
                 )
             }

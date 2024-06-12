@@ -23,6 +23,7 @@ import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.remapped
+import io.tryvital.vitalhealthconnect.records.ProcessorOptions
 import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import java.time.Instant
@@ -36,6 +37,7 @@ internal suspend fun processChangesResponse(
     currentDevice: String,
     reader: RecordReader,
     processor: RecordProcessor,
+    processorOptions: ProcessorOptions,
     end: Instant? = null,
 ): ProcessedResourceData {
     val records = responses.changes
@@ -66,6 +68,7 @@ internal suspend fun processChangesResponse(
             distance = records.get<DistanceRecord>().filter { it.endTime <= endAdjusted },
             steps = records.get<StepsRecord>().filter { it.endTime <= endAdjusted },
             vo2Max = records.get<Vo2MaxRecord>().filter { it.time <= endAdjusted },
+            options = processorOptions,
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Workout -> processor.processWorkoutsFromRecords(

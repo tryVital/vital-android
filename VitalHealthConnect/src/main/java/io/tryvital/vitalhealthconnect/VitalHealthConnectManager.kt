@@ -371,7 +371,8 @@ class VitalHealthConnectManager private constructor(
     suspend fun read(
         resource: VitalResource,
         startTime: Instant,
-        endTime: Instant
+        endTime: Instant,
+        processorOptions: ProcessorOptions = ProcessorOptions(),
     ): ProcessedResourceData {
         return readResourceByTimeRange(
             resource,
@@ -381,6 +382,7 @@ class VitalHealthConnectManager private constructor(
             currentDevice = Build.MODEL,
             reader = recordReader,
             processor = recordProcessor,
+            processorOptions = processorOptions,
         )
     }
 
