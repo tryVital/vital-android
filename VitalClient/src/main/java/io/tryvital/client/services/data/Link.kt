@@ -2,6 +2,7 @@ package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.adapters.EnumJsonAdapter
 import io.tryvital.client.Region
 
 @JsonClass(generateAdapter = true)
@@ -14,31 +15,28 @@ data class CreateLinkRequest(
 )
 
 @JsonClass(generateAdapter = true)
-data class PasswordProviderRequest(
+data class LinkPasswordProviderInput(
     val username: String,
     val password: String,
-    @Json(name = "redirect_url")
-    val redirectUrl: String,
+    val region: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
-data class EmailProviderRequest(
+data class CompletePasswordProviderMFAInput(
+    @Json(name = "mfa_code")
+    val mfaCode: String,
+)
+
+@JsonClass(generateAdapter = true)
+data class LinkEmailProviderInput(
     val email: String,
-    val region: Region,
-)
-
-@JsonClass(generateAdapter = true)
-data class ManualProviderRequest(
-    @Json(name = "user_id")
-    val userId: String,
-    @Json(name = "provider_id")
-    val providerId: String? = null,
+    val region: String? = null,
 )
 
 @JsonClass(generateAdapter = true)
 data class CreateLinkResponse(
     @Json(name = "link_token")
-    val linkToken: String?,
+    val linkToken: String,
 )
 
 @JsonClass(generateAdapter = true)
@@ -58,14 +56,49 @@ data class OauthLinkResponse(
 )
 
 @JsonClass(generateAdapter = true)
-data class EmailProviderResponse(
-    val success: Boolean,
+data class LinkResponse(
+    val state: State,
     @Json(name = "redirect_url")
-    val redirectUrl: String?,
-)
+    val redirectUrl: String? = null,
+    @Json(name = "error_type")
+    val errorType: String? = null,
+    val error: String? = null,
+    @Json(name = "provider_mfa")
+    val providerMFA: ProviderMFA? = null,
+) {
 
-@JsonClass(generateAdapter = true)
-data class ManualProviderResponse(
-    @Json(name = "success")
-    val success: Boolean,
-)
+    @JsonClass(generateAdapter = false)
+    enum class State {
+        @Json(name = "success")
+        Success,
+        @Json(name = "error")
+        Error,
+        @Json(name = "pending_provider_mfa")
+        PendingProviderMFA;
+
+        companion object {
+            val jsonAdapter: EnumJsonAdapter<State>
+                get() = EnumJsonAdapter.create(State::class.java)
+        }
+    }
+
+    @JsonClass(generateAdapter = true)
+    data class ProviderMFA(
+        val method: Method,
+        val hint: String,
+    ) {
+
+        @JsonClass(generateAdapter = false)
+        enum class Method {
+            @Json(name = "sms")
+            SMS,
+            @Json(name = "email")
+            Email;
+
+            companion object {
+                val jsonAdapter: EnumJsonAdapter<Method>
+                    get() = EnumJsonAdapter.create(Method::class.java)
+            }
+        }
+    }
+}

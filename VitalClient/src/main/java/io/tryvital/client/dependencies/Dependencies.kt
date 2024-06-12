@@ -11,6 +11,7 @@ import io.tryvital.client.Region
 import io.tryvital.client.VitalClientUnconfigured
 import io.tryvital.client.jwt.AbstractVitalJWTAuth
 import io.tryvital.client.jwt.VitalJWTAuth
+import io.tryvital.client.services.data.LinkResponse
 import io.tryvital.client.services.data.UserConnectionStatus
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.ProviderSlug
@@ -108,6 +109,8 @@ internal class Dependencies(
             .add(VitalAPIResource::class.java, VitalAPIResource.jsonAdapter)
             .add(UserConnectionStatus::class.java, UserConnectionStatus.jsonAdapter)
             .add(SourceType::class.java, SourceType.jsonAdapter)
+            .add(LinkResponse.State::class.java, LinkResponse.State.jsonAdapter)
+            .add(LinkResponse.ProviderMFA.Method::class.java, LinkResponse.ProviderMFA.Method.jsonAdapter)
             .build()
 
         internal fun resolveUrl(configurationReader: ConfigurationReader): String {

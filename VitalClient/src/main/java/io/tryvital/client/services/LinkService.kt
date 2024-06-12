@@ -12,31 +12,31 @@ interface LinkService {
     ): CreateLinkResponse
 
     @POST("link/provider/password/{provider}")
-    suspend fun passwordProvider(
+    suspend fun linkPasswordProvider(
         @Path("provider") provider: String,
-        @Body request: PasswordProviderRequest,
-        @Header("LinkToken") linkToken: String,
-    ): EmailProviderResponse
+        @Body request: LinkPasswordProviderInput,
+        @Header("x-vital-link-token") linkToken: String,
+    ): LinkResponse
 
+    @POST("link/provider/password/{provider}/complete_mfa")
+    suspend fun completePasswordProviderMFA(
+        @Path("provider") provider: String,
+        @Body request: CompletePasswordProviderMFAInput,
+        @Header("x-vital-link-token") linkToken: String,
+    ): LinkResponse
 
     @POST("link/provider/email/{provider}")
-    suspend fun emailProvider(
+    suspend fun linkEmailProvider(
         @Path("provider") provider: String,
-        @Body request: EmailProviderRequest,
+        @Body request: LinkEmailProviderInput,
         @Header("x-vital-link-token") linkToken: String,
-    ): EmailProviderResponse
+    ): LinkResponse
 
     @GET("link/provider/oauth/{provider}")
-    suspend fun oauthProvider(
+    suspend fun linkOauthProvider(
         @Path("provider") provider: String,
-        @Header("LinkToken") linkToken: String,
+        @Header("x-vital-link-token") linkToken: String,
     ): OauthLinkResponse
-
-    @POST("link/provider/manual/{provider}")
-    suspend fun manualProvider(
-        @Path("provider") provider: ManualProviderSlug,
-        @Body request: ManualProviderRequest,
-    ): ManualProviderResponse
 
     companion object {
         fun create(retrofit: Retrofit): LinkService {

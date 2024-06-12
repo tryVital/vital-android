@@ -21,9 +21,9 @@ suspend fun VitalClient.linkOAuthProvider(
     val token = linkService
         .createLink(CreateLinkRequest(userId, provider.toString(), callback))
 
-    val oauth = linkService.oauthProvider(
+    val oauth = linkService.linkOauthProvider(
         provider = provider.toString(),
-        linkToken = token.linkToken!!,
+        linkToken = token.linkToken,
     )
 
     withContext(Dispatchers.Main) {
