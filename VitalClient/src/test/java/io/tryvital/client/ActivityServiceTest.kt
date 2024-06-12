@@ -14,6 +14,7 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
 import java.text.SimpleDateFormat
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ActivityServiceTest {
@@ -35,16 +36,15 @@ class ActivityServiceTest {
                 .setResponseCode(200)
                 .setBody(fakeActivityResponse)
         )
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val sut = ActivityService.create(retrofit)
         val response = sut.getActivity(
             userId = userId,
-            startDate = dateFormat.parse("2022-07-01")!!,
-            endDate = dateFormat.parse("2022-07-21"),
+            startDate = Instant.parse("2022-07-01T00:00:00Z")!!,
+            endDate = Instant.parse("2022-07-21T00:00:00Z"),
             provider = null
         )
         assertEquals(
-            "GET /summary/activity/$userId?start_date=2022-07-01&end_date=2022-07-21 HTTP/1.1",
+            "GET /summary/activity/$userId?start_date=2022-07-01T00%3A00%3A00Z&end_date=2022-07-21T00%3A00%3A00Z HTTP/1.1",
             server.takeRequest().requestLine
         )
 

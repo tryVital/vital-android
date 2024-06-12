@@ -2,11 +2,12 @@ package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import java.time.Instant
 import java.util.*
 
 @JsonClass(generateAdapter = true)
 data class ScalarSample(
-    val timestamp: Date,
+    val timestamp: Instant,
     val value: Double,
     val type: String?,
     val unit: String,
@@ -16,8 +17,8 @@ data class ScalarSample(
 
 @JsonClass(generateAdapter = true)
 data class IntervalSample(
-    val start: Date,
-    val end: Date,
+    val start: Instant,
+    val end: Instant,
     val value: Double,
     val type: String?,
     val unit: String,
@@ -27,7 +28,7 @@ data class IntervalSample(
 
 @JsonClass(generateAdapter = true)
 data class BloodPressureSample(
-    val timestamp: Date,
+    val timestamp: Instant,
     val systolic: Double?,
     val diastolic: Double?,
     val type: String?,

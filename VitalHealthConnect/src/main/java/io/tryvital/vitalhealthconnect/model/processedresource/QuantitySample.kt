@@ -1,14 +1,15 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.QuantitySamplePayload
+import java.time.Instant
 import java.util.Date
 
 data class QuantitySample(
     val id: String? = null,
     val value: Double,
     val unit: String,
-    val startDate: Date,
-    val endDate: Date,
+    val startDate: Instant,
+    val endDate: Instant,
     val sourceBundle: String? = null,
     val deviceModel: String? = null,
     val type: String? = null,

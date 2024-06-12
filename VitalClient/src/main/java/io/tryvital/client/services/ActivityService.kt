@@ -3,6 +3,7 @@ package io.tryvital.client.services
 import io.tryvital.client.services.data.*
 import retrofit2.Retrofit
 import retrofit2.http.*
+import java.time.Instant
 import java.util.*
 
 @Suppress("unused")
@@ -13,16 +14,16 @@ interface ActivityService {
     @GET("summary/activity/{user_id}")
     suspend fun getActivity(
         @Path("user_id") userId: String,
-        @Query("start_date") startDate: Date,
-        @Query("end_date") endDate: Date?,
+        @Query("start_date") startDate: Instant,
+        @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,
     ): ActivitiesResponse
 
     @GET("summary/activity/{user_id}/raw")
     suspend fun getActivityRaw(
         @Path("user_id") userId: String,
-        @Query("start_date") startDate: Date,
-        @Query("end_date") endDate: Date?,
+        @Query("start_date") startDate: Instant,
+        @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,
     ): Any
 

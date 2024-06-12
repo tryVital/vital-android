@@ -3,6 +3,7 @@ package io.tryvital.client.services.data
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.adapters.EnumJsonAdapter
+import java.time.Instant
 import java.util.*
 
 @JsonClass(generateAdapter = true)
@@ -14,7 +15,7 @@ data class User(
     @Json(name = "client_user_id")
     val clientUserId: String,
     @Json(name = "created_on")
-    val createdOn: Date,
+    val createdOn: Instant,
 )
 
 @JsonClass(generateAdapter = true)

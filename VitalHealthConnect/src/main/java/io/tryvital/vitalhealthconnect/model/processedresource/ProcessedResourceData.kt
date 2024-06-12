@@ -3,6 +3,7 @@ package io.tryvital.vitalhealthconnect.model.processedresource
 import io.tryvital.client.services.data.BodyPayload
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.ProfilePayload
+import java.time.Instant
 import java.util.Date
 
 sealed class ProcessedResourceData {
@@ -55,9 +56,9 @@ sealed class SummaryData {
     abstract fun isNotEmpty(): Boolean
 
     data class Profile(
-        val biologicalSex: String,
-        val dateOfBirth: Date,
-        val heightInCm: Int,
+        val biologicalSex: String?,
+        val dateOfBirth: Instant?,
+        val heightInCm: Int?,
     ) : SummaryData() {
 
         fun toProfilePayload(): ProfilePayload {

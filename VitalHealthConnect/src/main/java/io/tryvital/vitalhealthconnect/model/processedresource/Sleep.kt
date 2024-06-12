@@ -1,12 +1,13 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.SleepPayload
+import java.time.Instant
 import java.util.Date
 
 data class Sleep(
     val id: String,
-    val startDate: Date,
-    val endDate: Date,
+    val startDate: Instant,
+    val endDate: Instant,
     val sourceBundle: String?,
     val deviceModel: String?,
     val heartRate: List<QuantitySample>,
