@@ -1,17 +1,17 @@
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import io.tryvital.client.services.data.DataStage
+import java.time.Instant
 import java.util.Date
 
 
 @JsonClass(generateAdapter = true)
 data class UserSDKSyncStateBody(
-    val stage: DataStage,
     val tzinfo: String,
     @Json(name = "request_start_date")
-    val requestStartDate: Date?,
+    val requestStartDate: Instant?,
     @Json(name = "request_end_date")
-    val requestEndDate: Date?,
+    val requestEndDate: Instant?,
 )
 
 @JsonClass(generateAdapter = false)
@@ -25,19 +25,23 @@ enum class UserSDKSyncStatus {
 data class UserSDKSyncStateResponse(
     val status: UserSDKSyncStatus,
     @Json(name = "request_start_date")
-    val requestStartDate: Date?,
+    val requestStartDate: Instant?,
     @Json(name = "request_end_date")
-    val requestEndDate: Date?,
+    val requestEndDate: Instant?,
+    @Json(name = "per_device_activity_ts")
+    val perDeviceActivityTS: Boolean = false,
+    @Json(name = "expires_in")
+    val expiresIn: Long = 14400,
 ) {
     override fun toString(): String = buildString {
-        append("(status=${status.name})")
+        append("(status=${status.name}, perDeviceActivityTs=$perDeviceActivityTS, expiresIn=$expiresIn")
         if (requestStartDate != null) {
             append(", start=")
-            append(requestStartDate.toInstant().toString())
+            append(requestStartDate.toString())
         }
         if (requestEndDate != null) {
             append(", end=")
-            append(requestEndDate.toInstant().toString())
+            append(requestEndDate.toString())
         }
         append(")")
     }

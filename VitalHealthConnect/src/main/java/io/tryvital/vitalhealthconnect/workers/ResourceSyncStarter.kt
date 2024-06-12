@@ -134,12 +134,6 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
                 .apply()
         }
 
-        // Before starting the sync, check that a connected source exists.
-        // This mirrors iOS SDK VitalHealthKitClient.syncData behaviour.
-        VitalClient.getOrCreate(applicationContext).run {
-            createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
-        }
-
         for (resource in input.resources) {
             val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>()
                 .setInputData(ResourceSyncWorkerInput(resource = resource).toData())

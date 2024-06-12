@@ -18,8 +18,11 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import io.tryvital.client.VitalClient
+import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.DataStage
+import io.tryvital.client.services.data.ManualProviderSlug
+import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
@@ -35,6 +38,9 @@ import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import io.tryvital.vitalhealthconnect.records.RecordUploader
 import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import java.time.Duration
 import java.time.Instant
 import java.time.ZonedDateTime
@@ -48,6 +54,7 @@ const val VITAL_SYNC_NOTIFICATION_ID = 123
 internal val moshi by lazy {
     Moshi.Builder()
         .add(Date::class.java, Rfc3339DateJsonAdapter())
+        .add(Instant::class.java, InstantJsonAdapter)
         .add(ResourceSyncState.adapterFactory)
         .build()
 }
@@ -72,15 +79,14 @@ internal data class ResourceSyncWorkerInput(
 @JsonClass(generateAdapter = false)
 internal sealed class ResourceSyncState {
     @JsonClass(generateAdapter = true)
-    data class Historical(val start: Date, val end: Date) : ResourceSyncState() {
-        override fun toString(): String = "historical(${start.toInstant()} ..< ${end.toInstant()})"
+    data class Historical(val start: Instant, val end: Instant) : ResourceSyncState() {
+        override fun toString(): String = "historical(${start} ..< ${end})"
     }
 
     @JsonClass(generateAdapter = true)
-    data class Incremental(val changesToken: String, val lastSync: Date, val end: Date? = null) :
-        ResourceSyncState() {
+    data class Incremental(val changesToken: String, val lastSync: Instant) : ResourceSyncState() {
         override fun toString(): String =
-            "incremental($changesToken at ${lastSync.toInstant()}; end = ${end})"
+            "incremental($changesToken; lastSync=${lastSync})"
     }
 
     companion object {
@@ -88,6 +94,18 @@ internal sealed class ResourceSyncState {
             get() = PolymorphicJsonAdapterFactory.of(ResourceSyncState::class.java, "type")
                 .withSubtype(Historical::class.java, "historical")
                 .withSubtype(Incremental::class.java, "incremental")
+    }
+}
+
+internal sealed class SyncInstruction {
+    data class DoHistorical(val start: Instant, val end: Instant) : SyncInstruction() {
+        override fun toString(): String = "doHistorical(${start} ..< ${end})"
+    }
+
+    data class DoIncremental(val changesToken: String?, val lastSync: Instant, val start: Instant, val end: Instant? = null) :
+        SyncInstruction() {
+        override fun toString(): String =
+            "doIncremental($changesToken at ${lastSync}; start = ${start}; end = ${end})"
     }
 }
 
@@ -117,6 +135,10 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
     private val recordUploader: RecordUploader by lazy {
         VitalClientRecordUploader(vitalClient)
+    }
+
+    private val localSyncStateManager: LocalSyncStateManager by lazy {
+        LocalSyncStateManager(vitalClient, vitalLogger, sharedPreferences)
     }
 
     private val vitalLogger = VitalLogger.getOrCreate()
@@ -155,93 +177,72 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
      *     a. Fetch the maximum timestamp of the resource type as `max`.
      *     b. `generic_backfill(stage="daily", start=max(), end=now())`
      */
+    @Suppress("UNUSED_VARIABLE")
     override suspend fun doWork(): Result {
         val timeZone = TimeZone.getDefault()
-        val state = sharedPreferences.getJson(input.resource.syncStateKey)
-            ?: initialState(timeZone)
 
-        val backendState = fetchBackendSyncState(state, timeZone)
-
-        val reconciledState = when (backendState.status) {
-            UserSDKSyncStatus.Paused, UserSDKSyncStatus.Error -> {
-                vitalLogger.logI("${input.resource}: skipped because backend status is ${backendState.status}")
-                return Result.success()
-            }
-
-            UserSDKSyncStatus.Active -> when (state) {
-                // Prefer backend provided pull range if present.
-                is ResourceSyncState.Historical -> state.copy(
-                    start = backendState.requestStartDate ?: state.start,
-                    end = backendState.requestEndDate ?: state.end,
-                )
-
-                is ResourceSyncState.Incremental -> state.copy(
-                    end = backendState.requestEndDate
-                )
-            }
+        val (instruction, localSyncState) = try {
+            computeSyncInstruction()
+        } catch (e: ConnectionPaused) {
+            vitalLogger.logI("${input.resource}: skipped because backend reported connection pause")
+            return Result.success()
         }
 
-        vitalLogger.logI("${input.resource}: begin at $state")
+        vitalLogger.logI("${input.resource}: $instruction")
 
-        when (reconciledState) {
-            is ResourceSyncState.Historical -> historicalBackfill(reconciledState, timeZone)
-            is ResourceSyncState.Incremental -> incrementalBackfill(reconciledState, timeZone)
+        when (instruction) {
+            is SyncInstruction.DoHistorical -> historicalBackfill(instruction, timeZone)
+            is SyncInstruction.DoIncremental -> incrementalBackfill(instruction, timeZone)
         }
 
         // TODO: Report synced vs nothing to sync
         return Result.success()
     }
 
-    private fun initialState(timeZone: TimeZone): ResourceSyncState {
-        val now = ZonedDateTime.now(timeZone.toZoneId())
-        val start = now.minus(30, ChronoUnit.DAYS)
-        return ResourceSyncState.Historical(
-            start = start.toInstant().toDate(),
-            end = now.toInstant().toDate()
-        )
-    }
 
-    @OptIn(VitalPrivateApi::class)
-    private suspend fun fetchBackendSyncState(
-        state: ResourceSyncState,
-        timeZone: TimeZone
-    ): UserSDKSyncStateResponse {
-        val backendState = vitalClient.vitalPrivateService.healthConnectSdkSyncState(
-            VitalClient.checkUserId(),
-            when (state) {
-                is ResourceSyncState.Historical -> UserSDKSyncStateBody(
-                    stage = DataStage.Historical,
-                    tzinfo = timeZone.id,
-                    requestStartDate = state.start,
-                    requestEndDate = state.end,
-                )
+    private suspend fun computeSyncInstruction(): Pair<SyncInstruction, LocalSyncState> {
+        val resourceSyncState = sharedPreferences.getJson<ResourceSyncState>(input.resource.syncStateKey)
 
-                is ResourceSyncState.Incremental -> UserSDKSyncStateBody(
-                    stage = DataStage.Daily,
-                    tzinfo = timeZone.id,
-                    requestStartDate = null,
-                    requestEndDate = null,
-                )
-            },
-        )
-        vitalLogger.info { "BackendSyncState: fetched $backendState" }
-        return backendState
+        val localSyncState = localSyncStateManager.getLocalSyncState()
+
+        val now = Instant.now()
+        val reconciledStart = localSyncState.historicalStartDate(input.resource)
+        val reconciledEnd = localSyncState.ingestionEnd ?: now
+
+        val instruction = when (resourceSyncState) {
+            is ResourceSyncState.Incremental -> SyncInstruction.DoIncremental(
+                changesToken = resourceSyncState.changesToken,
+                lastSync = resourceSyncState.lastSync,
+                start = reconciledStart,
+                end = reconciledEnd,
+            )
+            is ResourceSyncState.Historical -> SyncInstruction.DoHistorical(
+                start = maxOf(reconciledStart, resourceSyncState.start),
+                end = maxOf(resourceSyncState.end, reconciledEnd),
+            )
+            null -> SyncInstruction.DoHistorical(
+                start = reconciledStart,
+                end = reconciledEnd,
+            )
+        }
+
+        return instruction to localSyncState
     }
 
     private suspend fun historicalBackfill(
-        state: ResourceSyncState.Historical,
+        state: SyncInstruction.DoHistorical,
         timeZone: TimeZone
     ) {
         genericBackfill(
             stage = DataStage.Historical,
-            start = state.start.toInstant(),
-            end = state.end.toInstant(),
+            start = state.start,
+            end = state.end,
             timeZone = timeZone,
         )
     }
 
     private suspend fun incrementalBackfill(
-        state: ResourceSyncState.Incremental,
+        state: SyncInstruction.DoIncremental,
         timeZone: TimeZone
     ) {
         val userId = VitalClient.checkUserId()
@@ -253,18 +254,18 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         // The types being monitored by the current `changesToken` no longer match the set
         // we want to monitor, probably due to permission changes.
         // Treat this as if the changesToken has expired.
-        if (recordTypesToMonitor != monitoringTypes) {
+        if (state.changesToken == null || recordTypesToMonitor != monitoringTypes) {
             vitalLogger.info { "${input.resource}: types to monitor have changed from $monitoringTypes to $recordTypesToMonitor" }
 
             return genericBackfill(
                 stage = DataStage.Daily,
-                start = state.lastSync.toInstant(),
-                end = minOf(Instant.now(), state.end?.toInstant() ?: Instant.now()),
+                start = state.lastSync,
+                end = minOf(Instant.now(), state.end ?: Instant.now()),
                 timeZone = timeZone,
             )
         }
 
-        var token = state.changesToken
+        var token = checkNotNull(state.changesToken)
         var changes: ChangesResponse
 
         do {
@@ -275,8 +276,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
                 return genericBackfill(
                     stage = DataStage.Daily,
-                    start = state.lastSync.toInstant(),
-                    end = minOf(Instant.now(), state.end?.toInstant() ?: Instant.now()),
+                    start = state.lastSync,
+                    end = minOf(Instant.now(), state.end ?: Instant.now()),
                     timeZone = timeZone,
                 )
             }
@@ -291,7 +292,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                     currentDevice = Build.MODEL,
                     reader = recordReader,
                     processor = recordProcessor,
-                    end = state.end?.toInstant()
+                    end = state.end
                 )
 
                 // Skip empty POST requests
@@ -416,7 +417,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     }
 
     private fun setIncremental(token: String) {
-        val newState = ResourceSyncState.Incremental(token, lastSync = Date())
+        val newState = ResourceSyncState.Incremental(token, lastSync = Instant.now())
 
         sharedPreferences.edit()
             .putJson<ResourceSyncState>(input.resource.syncStateKey, newState)

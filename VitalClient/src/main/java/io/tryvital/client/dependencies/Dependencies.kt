@@ -19,6 +19,7 @@ import io.tryvital.client.services.data.ResourceAvailability
 import io.tryvital.client.services.data.SourceType
 import io.tryvital.client.services.data.VitalAPIResource
 import io.tryvital.client.utils.ApiKeyInterceptor
+import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalRequestInterceptor
 import io.tryvital.client.utils.LocalDateJsonAdapter
 import io.tryvital.client.utils.VitalLogger
@@ -31,6 +32,7 @@ import retrofit2.converter.moshi.MoshiConverterFactory
 import java.lang.reflect.Type
 import java.text.DateFormat
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.time.LocalDate
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -102,6 +104,7 @@ internal class Dependencies(
 
         internal fun createMoshi(): Moshi = Moshi.Builder()
             .add(Date::class.java, Rfc3339DateJsonAdapter())
+            .add(Instant::class.java, InstantJsonAdapter)
             .add(LocalDate::class.java, LocalDateJsonAdapter)
             .add(ProviderSlug::class.java, ProviderSlug.jsonAdapter)
             .add(ManualProviderSlug::class.java, ManualProviderSlug.jsonAdapter)
