@@ -16,7 +16,8 @@ data class SleepData(
     @Json(name = "user_key")
     val userKey: String?,
     val id: String,
-    val date: Date,
+    @Json(name = "calendar_date")
+    val calendarDate: String,
     @Json(name = "bedtime_start")
     val bedtimeStart: Date?,
     @Json(name = "bedtime_stop")
@@ -43,15 +44,4 @@ data class SleepData(
     @Json(name = "respiratory_rate")
     val respiratoryRate: Double?,
     val source: Source,
-    @Json(name = "sleep_stream")
-    val sleepStream: SleepStreamResponse?,
-)
-
-@JsonClass(generateAdapter = true)
-data class SleepStreamResponse(
-    val hrv: List<Measurement> = emptyList(),
-    val heartrate: List<Measurement> = emptyList(),
-    val hypnogram: List<Measurement> = emptyList(),
-    @Json(name = "respiratory_rate")
-    val respiratoryRate: List<Measurement> = emptyList()
 )

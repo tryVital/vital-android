@@ -1,6 +1,7 @@
 package io.tryvital.client
 
 import io.tryvital.client.dependencies.Dependencies
+import io.tryvital.client.services.ControlPlaneService
 import io.tryvital.client.services.UserService
 import io.tryvital.client.services.data.CreateUserRequest
 import io.tryvital.client.services.data.ManualProviderSlug
@@ -39,15 +40,13 @@ class UserServiceTest {
                 .setBody(fakeUsersResponse)
         )
 
-        val sut = UserService.create(retrofit)
+        val sut = ControlPlaneService.create(retrofit)
         val users = sut.getAll().users
 
         assertEquals("GET /user/ HTTP/1.1", server.takeRequest().requestLine)
         assertEquals(2, users?.size)
         val user = users!![0]
         validateFirstUser(user)
-
-        assert(users[1].connectedSources.isEmpty())
     }
 
     @Test
@@ -74,7 +73,7 @@ class UserServiceTest {
                 .setBody(fakeUserResponse)
         )
 
-        val sut = UserService.create(retrofit)
+        val sut = ControlPlaneService.create(retrofit)
         val response = sut.resolveUser(userName)
         assertEquals("GET /user/resolve/User%20Name HTTP/1.1", server.takeRequest().requestLine)
 
@@ -90,7 +89,7 @@ class UserServiceTest {
         )
 
         val sut = UserService.create(retrofit)
-        val response = sut.getProviders(userId)
+        val response = sut.getUserConnections(userId)
         assertEquals("GET /user/providers/$userId HTTP/1.1", server.takeRequest().requestLine)
 
         val provider = response.providers[0]
@@ -122,7 +121,7 @@ class UserServiceTest {
                 .setBody(fakeCreateUserResponse)
         )
 
-        val sut = UserService.create(retrofit)
+        val sut = ControlPlaneService.create(retrofit)
         val user = sut.createUser(CreateUserRequest(userName))
         assertEquals("POST /user HTTP/1.1", server.takeRequest().requestLine)
 
@@ -139,7 +138,7 @@ class UserServiceTest {
                 .setBody(fakeDeleteUserResponse)
         )
 
-        val sut = UserService.create(retrofit)
+        val sut = ControlPlaneService.create(retrofit)
         val response = sut.deleteUser(userId)
         assertEquals("DELETE /user/$userId HTTP/1.1", server.takeRequest().requestLine)
 
@@ -163,16 +162,8 @@ class UserServiceTest {
 
     private fun validateFirstUser(user: User) {
         assertEquals(userId, user.userId)
-        assertEquals(userKey, user.userKey)
         assertEquals(clientUserId, user.clientUserId)
         assertEquals(teamId, user.teamId)
-
-        assertEquals(2, user.connectedSources.size)
-        assertEquals("Fitbit", user.connectedSources[0].source.name)
-        assertEquals(ProviderSlug.Fitbit, user.connectedSources[0].source.slug)
-
-        assertEquals("Health Connect", user.connectedSources[1].source.name)
-        assertEquals(ProviderSlug.HealthConnect, user.connectedSources[1].source.slug)
     }
 
     private lateinit var server: MockWebServer
@@ -191,33 +182,14 @@ class UserServiceTest {
       "user_key": "user_key_1",
       "team_id": "team_id_1",
       "client_user_id": "Test 1",
-      "created_on": "2021-04-02T16:03:11.847830+00:00",
-      "connected_sources": [
-        {
-          "source": {
-            "name": "Fitbit",
-            "slug": "fitbit",
-            "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
-          },
-          "created_on": "2022-06-15T13:44:34.770879+00:00"
-        },
-        {
-          "source": {
-            "name": "Health Connect",
-            "slug": "health_connect",
-            "logo": ""
-          },
-          "created_on": "2022-03-01T12:25:15.558385+00:00"
-        }
-      ]
+      "created_on": "2021-04-02T16:03:11.847830+00:00"
     },
     {
       "user_id": "user_id_2",
       "user_key": "user_key_2",
       "team_id": "team_id_2",
       "client_user_id": "Test 2",
-      "created_on": "2021-12-01T22:43:32.570793+00:00",
-      "connected_sources": []
+      "created_on": "2021-12-01T22:43:32.570793+00:00"
     }
   ]
 }"""
@@ -228,25 +200,7 @@ class UserServiceTest {
     "user_key": "user_key_1",
     "team_id": "team_id_1",
     "client_user_id": "Test 1",
-    "created_on": "2021-04-02T16:03:11.847830+00:00",
-    "connected_sources": [
-        {
-            "source": {
-                "name": "Fitbit",
-                "slug": "fitbit",
-                "logo": "https://storage.googleapis.com/vital-assets/fitbit.png"
-            },
-            "created_on": "2022-06-15T13:44:34.770879+00:00"
-        },
-        {
-            "source": {
-                "name": "Health Connect",
-                "slug": "health_connect",
-                "logo": ""
-            },
-            "created_on": "2022-03-01T12:25:15.558385+00:00"
-        }
-    ]
+    "created_on": "2021-04-02T16:03:11.847830+00:00"
 }
 """
 
