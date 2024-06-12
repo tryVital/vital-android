@@ -54,7 +54,6 @@ const val VITAL_SYNC_NOTIFICATION_ID = 123
 
 internal val moshi by lazy {
     Moshi.Builder()
-        .add(Date::class.java, Rfc3339DateJsonAdapter())
         .add(Instant::class.java, InstantJsonAdapter)
         .add(ResourceSyncState.adapterFactory)
         .build()
@@ -400,8 +399,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                 mergedData,
                 uploader = recordUploader,
                 stage = stage,
-                start = stageStart?.toDate(),
-                end = stageEnd?.toDate(),
+                start = stageStart,
+                end = stageEnd,
                 timeZoneId = timeZone.id,
                 userId = userId,
             )

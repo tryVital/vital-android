@@ -5,6 +5,7 @@ import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceD
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.records.RecordUploader
+import java.time.Instant
 import java.util.Date
 
 internal suspend fun uploadResources(
@@ -12,8 +13,8 @@ internal suspend fun uploadResources(
     uploader: RecordUploader,
     stage: DataStage,
     userId: String,
-    start: Date? = null,
-    end: Date? = null,
+    start: Instant? = null,
+    end: Instant? = null,
     timeZoneId: String
 ) {
     when (data) {

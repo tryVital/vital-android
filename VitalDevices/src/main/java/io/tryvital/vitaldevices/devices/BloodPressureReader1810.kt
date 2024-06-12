@@ -40,8 +40,8 @@ class BloodPressureReader1810(
 
         // We accept only stored Blood Pressure records with a timestamp (as suggested by BLE Blood
         // Pressure Service specification v1.1.1).
-        val measurementTime = response.timestamp?.time ?: return null
-        val idPrefix = "${measurementTime.time / 1000}-"
+        val measurementTime = response.timestamp?.time?.toInstant() ?: return null
+        val idPrefix = "${measurementTime.epochSecond}-"
 
         return BloodPressureSample(
             systolic = QuantitySamplePayload(

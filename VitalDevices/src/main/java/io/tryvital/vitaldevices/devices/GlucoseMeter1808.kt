@@ -42,7 +42,7 @@ class GlucoseMeter1808(
 
         // A compliant record should have a value and a timestamp.
         val glucoseConcentration = response.glucoseConcentration ?: return null
-        val measurementTime = response.time?.time ?: return null
+        val measurementTime = response.time?.time?.toInstant() ?: return null
 
         val (value, sampleType) = when (response.unit) {
             UNIT_mol_L ->
@@ -55,7 +55,7 @@ class GlucoseMeter1808(
         return QuantitySamplePayload(
             // Prefixed with epoch in seconds to avoid sequence number conflicts
             // (due to new device and/or device reset)
-            id = "${measurementTime.time / 1000}-${response.sequenceNumber}",
+            id = "${measurementTime.epochSecond}-${response.sequenceNumber}",
             value = value,
             unit = sampleType.unit,
             startDate = measurementTime,

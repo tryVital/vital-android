@@ -2,6 +2,7 @@ package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import java.time.Instant
 import java.util.*
 
 @JsonClass(generateAdapter = true)
@@ -11,9 +12,9 @@ data class SummaryPayload<T>(
     @Json(name = "provider")
     val provider: ManualProviderSlug,
     @Json(name = "start_date")
-    val startDate: Date?,
+    val startDate: Instant?,
     @Json(name = "end_date")
-    val endDate: Date?,
+    val endDate: Instant?,
     @Json(name = "time_zone")
     val timeZoneId: String?,
     @Json(name = "data")
@@ -25,9 +26,9 @@ data class WorkoutPayload(
     @Json(name = "id")
     val id: String,
     @Json(name = "start_date")
-    val startDate: Date,
+    val startDate: Instant,
     @Json(name = "end_date")
-    val endDate: Date,
+    val endDate: Instant,
     @Json(name = "source_bundle")
     val sourceBundle: String?,
     @Json(name = "product_type")
@@ -65,11 +66,11 @@ data class ActivityPayload(
 @JsonClass(generateAdapter = true)
 data class ProfilePayload(
     @Json(name = "biological_sex")
-    val biologicalSex: String,
+    val biologicalSex: String?,
     @Json(name = "date_of_birth")
-    val dateOfBirth: Date,
+    val dateOfBirth: Instant?,
     @Json(name = "height")
-    val heightInCm: Int,
+    val heightInCm: Int?,
 )
 
 @JsonClass(generateAdapter = true)
@@ -85,9 +86,9 @@ data class SleepPayload(
     @Json(name = "id")
     val id: String,
     @Json(name = "start_date")
-    val startDate: Date,
+    val startDate: Instant,
     @Json(name = "end_date")
-    val endDate: Date,
+    val endDate: Instant,
     @Json(name = "source_bundle")
     val sourceBundle: String?,
     @Json(name = "product_type")
@@ -113,9 +114,9 @@ data class QuantitySamplePayload(
     @Json(name = "unit")
     val unit: String,
     @Json(name = "start_date")
-    val startDate: Date,
+    val startDate: Instant,
     @Json(name = "end_date")
-    val endDate: Date,
+    val endDate: Instant,
     @Json(name = "source_bundle")
     val sourceBundle: String? = null,
     @Json(name = "product_type")

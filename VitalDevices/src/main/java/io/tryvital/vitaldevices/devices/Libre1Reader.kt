@@ -93,8 +93,8 @@ private fun quantitySampleFromGlucose(glucose: Glucose): QuantitySamplePayload {
     return QuantitySamplePayload(
         id = glucose.id.toString(),
         value = glucose.valueUnit,
-        startDate = Date.from(glucose.date),
-        endDate = Date.from(glucose.date),
+        startDate = glucose.date,
+        endDate = glucose.date,
         type = "manual_scan",
         unit = "mmol/L",
     )

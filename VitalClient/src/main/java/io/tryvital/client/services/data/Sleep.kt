@@ -2,6 +2,7 @@ package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import java.time.Instant
 import java.util.*
 
 @JsonClass(generateAdapter = true)
@@ -19,9 +20,9 @@ data class SleepData(
     @Json(name = "calendar_date")
     val calendarDate: String,
     @Json(name = "bedtime_start")
-    val bedtimeStart: Date?,
+    val bedtimeStart: Instant?,
     @Json(name = "bedtime_stop")
-    val bedtimeStop: Date?,
+    val bedtimeStop: Instant?,
     @Json(name = "timezone_offset")
     val timezoneOffset: Int?,
     val duration: Int?,
