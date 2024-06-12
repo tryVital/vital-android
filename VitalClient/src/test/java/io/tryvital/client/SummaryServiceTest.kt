@@ -48,8 +48,8 @@ class SummaryServiceTest {
                 data = listOf(
                     WorkoutPayload(
                         id = "test raw supersize",
-                        startDate = Date.from(Instant.parse("2007-01-01T00:00:00.00Z")),
-                        endDate = Date.from(Instant.parse("2007-01-05T00:00:00.00Z")),
+                        startDate = Instant.parse("2007-01-01T00:00:00.00Z"),
+                        endDate = Instant.parse("2007-01-05T00:00:00.00Z"),
                         sourceBundle = "fit",
                         deviceModel = "not Iphone",
                         sport = "walking",
@@ -83,7 +83,7 @@ class SummaryServiceTest {
                 timeZoneId = null,
                 data = ProfilePayload(
                     biologicalSex = "not_set",
-                    dateOfBirth = Date(0),
+                    dateOfBirth = null,
                     heightInCm = 188,
                 )
             )

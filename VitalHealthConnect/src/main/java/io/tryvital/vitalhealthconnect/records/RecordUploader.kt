@@ -13,6 +13,7 @@ import io.tryvital.client.services.data.SleepPayload
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
 import io.tryvital.client.services.data.WorkoutPayload
+import java.time.Instant
 import java.util.Date
 
 
@@ -20,8 +21,8 @@ interface RecordUploader {
 
     suspend fun uploadSleeps(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         sleepPayloads: List<SleepPayload>,
         stage: DataStage = DataStage.Daily,
@@ -29,8 +30,8 @@ interface RecordUploader {
 
     suspend fun uploadBody(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         bodyPayload: BodyPayload,
         stage: DataStage = DataStage.Daily,
@@ -38,8 +39,8 @@ interface RecordUploader {
 
     suspend fun uploadProfile(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         profilePayload: ProfilePayload,
         stage: DataStage = DataStage.Daily,
@@ -47,8 +48,8 @@ interface RecordUploader {
 
     suspend fun uploadActivities(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         activityPayloads: List<ActivityPayload>,
         stage: DataStage = DataStage.Daily,
@@ -56,8 +57,8 @@ interface RecordUploader {
 
     suspend fun uploadWorkouts(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         workoutPayloads: List<WorkoutPayload>,
         stage: DataStage = DataStage.Daily,
@@ -65,8 +66,8 @@ interface RecordUploader {
 
     suspend fun uploadBloodPressure(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         bloodPressurePayloads: List<BloodPressureSamplePayload>,
         stage: DataStage = DataStage.Daily,
@@ -75,8 +76,8 @@ interface RecordUploader {
     suspend fun uploadQuantitySamples(
         resource: IngestibleTimeseriesResource,
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         quantitySamples: List<QuantitySamplePayload>,
         stage: DataStage = DataStage.Daily,
@@ -86,8 +87,8 @@ interface RecordUploader {
 class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUploader {
     override suspend fun uploadSleeps(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         sleepPayloads: List<SleepPayload>,
         stage: DataStage,
@@ -106,8 +107,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
 
     override suspend fun uploadBody(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         bodyPayload: BodyPayload,
         stage: DataStage,
@@ -126,8 +127,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
 
     override suspend fun uploadProfile(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         profilePayload: ProfilePayload,
         stage: DataStage,
@@ -146,8 +147,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
 
     override suspend fun uploadActivities(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         activityPayloads: List<ActivityPayload>,
         stage: DataStage,
@@ -166,8 +167,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
 
     override suspend fun uploadWorkouts(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         workoutPayloads: List<WorkoutPayload>,
         stage: DataStage,
@@ -187,8 +188,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
     override suspend fun uploadQuantitySamples(
         resource: IngestibleTimeseriesResource,
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         quantitySamples: List<QuantitySamplePayload>,
         stage: DataStage,
@@ -207,8 +208,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
 
     override suspend fun uploadBloodPressure(
         userId: String,
-        startDate: Date?,
-        endDate: Date?,
+        startDate: Instant?,
+        endDate: Instant?,
         timeZoneId: String?,
         bloodPressurePayloads: List<BloodPressureSamplePayload>,
         stage: DataStage,

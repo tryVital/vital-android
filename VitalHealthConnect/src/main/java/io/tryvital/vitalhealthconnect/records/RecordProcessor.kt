@@ -130,15 +130,15 @@ internal class HealthConnectRecordProcessor(
                     systolic = HCQuantitySample(
                         value = it.systolic.inMillimetersOfMercury,
                         unit = SampleType.BloodPressureSystolic.unit,
-                        startDate = Date.from(it.time),
-                        endDate = Date.from(it.time),
+                        startDate = it.time,
+                        endDate = it.time,
                         metadata = it.metadata,
                     ).toQuantitySample(currentDevice),
                     diastolic = HCQuantitySample(
                         value = it.diastolic.inMillimetersOfMercury,
                         unit = SampleType.BloodPressureDiastolic.unit,
-                        startDate = Date.from(it.time),
-                        endDate = Date.from(it.time),
+                        startDate = it.time,
+                        endDate = it.time,
                         metadata = it.metadata,
                     ).toQuantitySample(currentDevice),
                     pulse = null,
@@ -157,8 +157,8 @@ internal class HealthConnectRecordProcessor(
                 HCQuantitySample(
                     value = it.level.inMilligramsPerDeciliter,
                     unit = SampleType.GlucoseConcentrationMilligramPerDecilitre.unit,
-                    startDate = Date.from(it.time),
-                    endDate = Date.from(it.time),
+                    startDate = it.time,
+                    endDate = it.time,
                     metadata = it.metadata,
                 ).toQuantitySample(currentDevice)
             })
@@ -184,8 +184,8 @@ internal class HealthConnectRecordProcessor(
                 HCQuantitySample(
                     value = it.heartRateVariabilityMillis,
                     unit = SampleType.HeartRateVariabilityRmssd.unit,
-                    startDate = Date.from(it.time),
-                    endDate = Date.from(it.time),
+                    startDate = it.time,
+                    endDate = it.time,
                     metadata = it.metadata,
                 ).toQuantitySample(currentDevice)
             }
@@ -203,8 +203,8 @@ internal class HealthConnectRecordProcessor(
                 HCQuantitySample(
                     value = it.volume.inMilliliters,
                     unit = SampleType.Water.unit,
-                    startDate = Date.from(it.startTime),
-                    endDate = Date.from(it.endTime),
+                    startDate = it.startTime,
+                    endDate = it.endTime,
                     metadata = it.metadata,
                 ).toQuantitySample(currentDevice)
             }
@@ -226,8 +226,8 @@ internal class HealthConnectRecordProcessor(
 
                 Workout(
                     id = exercise.metadata.id,
-                    startDate = Date.from(exercise.startTime),
-                    endDate = Date.from(exercise.endTime),
+                    startDate = exercise.startTime,
+                    endDate = exercise.endTime,
                     sourceBundle = exercise.metadata.dataOrigin.packageName,
                     sport = EXERCISE_TYPE_INT_TO_STRING_MAP[exercise.exerciseType] ?: "workout",
                     caloriesInKiloJules = summary.caloriesBurned,
@@ -251,7 +251,7 @@ internal class HealthConnectRecordProcessor(
     ) =
         SummaryData.Profile(
             biologicalSex = "not_set", // this is not available in Health Connect
-            dateOfBirth = Date(0), // this is not available in Health Connect
+            dateOfBirth = null, // this is not available in Health Connect
             heightInCm = (heightRecords.lastOrNull()?.height?.inMeters?.times(100))?.roundToInt()
                 ?: 0,
         )
@@ -265,8 +265,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.weight.inKilograms,
                 unit = SampleType.Weight.unit,
-                startDate = Date.from(it.time),
-                endDate = Date.from(it.time),
+                startDate = it.time,
+                endDate = it.time,
                 metadata = it.metadata,
             ).toQuantitySample(fallbackDeviceModel)
         },
@@ -274,8 +274,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.percentage.value,
                 unit = SampleType.BodyFat.unit,
-                startDate = Date.from(it.time),
-                endDate = Date.from(it.time),
+                startDate = it.time,
+                endDate = it.time,
                 metadata = it.metadata,
             ).toQuantitySample(fallbackDeviceModel)
         }
@@ -311,8 +311,8 @@ internal class HealthConnectRecordProcessor(
 
             Sleep(
                 id = sleepSession.metadata.id,
-                startDate = Date.from(sleepSession.startTime),
-                endDate = Date.from(sleepSession.endTime),
+                startDate = sleepSession.startTime,
+                endDate = sleepSession.endTime,
                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                 deviceModel = fallbackDeviceModel,
                 heartRate = mapHearthRate(heartRateRecord, fallbackDeviceModel),
@@ -335,8 +335,8 @@ internal class HealthConnectRecordProcessor(
                             QuantitySample(
                                 value = SleepStage.Awake.id.toDouble(),
                                 unit = "stage",
-                                startDate = Date.from(sleepStage.startTime),
-                                endDate = Date.from(sleepStage.endTime),
+                                startDate = sleepStage.startTime,
+                                endDate = sleepStage.endTime,
                                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                                 deviceModel = fallbackDeviceModel,
                             )
@@ -346,8 +346,8 @@ internal class HealthConnectRecordProcessor(
                             QuantitySample(
                                 value = SleepStage.Deep.id.toDouble(),
                                 unit = "stage",
-                                startDate = Date.from(sleepStage.startTime),
-                                endDate = Date.from(sleepStage.endTime),
+                                startDate = sleepStage.startTime,
+                                endDate = sleepStage.endTime,
                                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                                 deviceModel = fallbackDeviceModel,
                             )
@@ -357,8 +357,8 @@ internal class HealthConnectRecordProcessor(
                             QuantitySample(
                                 value = SleepStage.Light.id.toDouble(),
                                 unit = "stage",
-                                startDate = Date.from(sleepStage.startTime),
-                                endDate = Date.from(sleepStage.endTime),
+                                startDate = sleepStage.startTime,
+                                endDate = sleepStage.endTime,
                                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                                 deviceModel = fallbackDeviceModel,
                             )
@@ -368,8 +368,8 @@ internal class HealthConnectRecordProcessor(
                             QuantitySample(
                                 value = SleepStage.Rem.id.toDouble(),
                                 unit = "stage",
-                                startDate = Date.from(sleepStage.startTime),
-                                endDate = Date.from(sleepStage.endTime),
+                                startDate = sleepStage.startTime,
+                                endDate = sleepStage.endTime,
                                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                                 deviceModel = fallbackDeviceModel,
                             )
@@ -379,8 +379,8 @@ internal class HealthConnectRecordProcessor(
                             QuantitySample(
                                 value = SleepStage.Unknown.id.toDouble(),
                                 unit = "stage",
-                                startDate = Date.from(sleepStage.startTime),
-                                endDate = Date.from(sleepStage.endTime),
+                                startDate = sleepStage.startTime,
+                                endDate = sleepStage.endTime,
                                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                                 deviceModel = fallbackDeviceModel,
                             )
@@ -390,8 +390,8 @@ internal class HealthConnectRecordProcessor(
                             QuantitySample(
                                 value = SleepStage.OutOfBed.id.toDouble(),
                                 unit = "stage",
-                                startDate = Date.from(sleepStage.startTime),
-                                endDate = Date.from(sleepStage.endTime),
+                                startDate = sleepStage.startTime,
+                                endDate = sleepStage.endTime,
                                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                                 deviceModel = fallbackDeviceModel,
                             )
@@ -418,8 +418,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.energy.inKilocalories,
                 unit = SampleType.ActiveCaloriesBurned.unit,
-                startDate = it.startTime.toDate(),
-                endDate = it.endTime.toDate(),
+                startDate = it.startTime,
+                endDate = it.endTime,
                 metadata = it.metadata,
             ).toQuantitySample(currentDevice)
         }
@@ -427,8 +427,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.basalMetabolicRate.inKilocaloriesPerDay,
                 unit = SampleType.BasalMetabolicRate.unit,
-                startDate = it.time.toDate(),
-                endDate = it.time.toDate(),
+                startDate = it.time,
+                endDate = it.time,
                 metadata = it.metadata,
             ).toQuantitySample(currentDevice)
         }
@@ -436,8 +436,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.distance.inMeters,
                 unit = SampleType.Distance.unit,
-                startDate = it.startTime.toDate(),
-                endDate = it.endTime.toDate(),
+                startDate = it.startTime,
+                endDate = it.endTime,
                 metadata = it.metadata,
             ).toQuantitySample(currentDevice)
         }
@@ -445,8 +445,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.floors,
                 unit = SampleType.FloorsClimbed.unit,
-                startDate = it.startTime.toDate(),
-                endDate = it.endTime.toDate(),
+                startDate = it.startTime,
+                endDate = it.endTime,
                 metadata = it.metadata,
             ).toQuantitySample(currentDevice)
         }
@@ -454,8 +454,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.count.toDouble(),
                 unit = SampleType.Steps.unit,
-                startDate = it.startTime.toDate(),
-                endDate = it.endTime.toDate(),
+                startDate = it.startTime,
+                endDate = it.endTime,
                 metadata = it.metadata,
             ).toQuantitySample(currentDevice)
 
@@ -464,8 +464,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.vo2MillilitersPerMinuteKilogram,
                 unit = SampleType.Vo2Max.unit,
-                startDate = it.time.toDate(),
-                endDate = it.time.toDate(),
+                startDate = it.time,
+                endDate = it.time,
                 metadata = it.metadata,
             ).toQuantitySample(currentDevice)
         }
@@ -548,8 +548,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.percentage.value,
                 unit = SampleType.OxygenSaturation.unit,
-                startDate = Date.from(it.time),
-                endDate = Date.from(it.time),
+                startDate = it.time,
+                endDate = it.time,
                 metadata = it.metadata,
             ).toQuantitySample(fallbackDeviceModel)
         }
@@ -563,8 +563,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.heartRateVariabilityMillis,
                 unit = SampleType.HeartRateVariabilityRmssd.unit,
-                startDate = it.time.toDate(),
-                endDate = it.time.toDate(),
+                startDate = it.time,
+                endDate = it.time,
                 metadata = it.metadata,
             ).toQuantitySample(fallbackDeviceModel)
         }
@@ -578,8 +578,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.rate,
                 unit = SampleType.RespiratoryRate.unit,
-                startDate = it.time.toDate(),
-                endDate = it.time.toDate(),
+                startDate = it.time,
+                endDate = it.time,
                 metadata = it.metadata,
             ).toQuantitySample(fallbackDeviceModel)
 
@@ -599,8 +599,8 @@ internal class HealthConnectRecordProcessor(
                     HCQuantitySample(
                         value = averagedSample.toDouble(),
                         unit = SampleType.HeartRate.unit,
-                        startDate = it.first().time.toDate(),
-                        endDate = it.last().time.toDate(),
+                        startDate = it.first().time,
+                        endDate = it.last().time,
                         metadata = heartRateRecord.metadata,
                     ).toQuantitySample(fallbackDeviceModel)
                 }
@@ -615,8 +615,8 @@ internal class HealthConnectRecordProcessor(
             HCQuantitySample(
                 value = it.beatsPerMinute.toDouble(),
                 unit = SampleType.HeartRate.unit,
-                startDate = it.time.toDate(),
-                endDate = it.time.toDate(),
+                startDate = it.time,
+                endDate = it.time,
                 metadata = it.metadata,
             ).toQuantitySample(fallbackDeviceModel)
         }

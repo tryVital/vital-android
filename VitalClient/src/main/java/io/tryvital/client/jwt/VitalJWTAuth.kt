@@ -10,6 +10,7 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VITAL_ENCRYPTED_PERFS_FILE_NAME
 import io.tryvital.client.createEncryptedSharedPreferences
+import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
@@ -39,7 +40,7 @@ const val AUTH_RECORD_KEY = "auth_record"
 
 private val moshi by lazy {
     Moshi.Builder()
-        .add(Date::class.java, Rfc3339DateJsonAdapter())
+        .add(Instant::class.java, InstantJsonAdapter)
         .build()
 }
 
@@ -168,7 +169,7 @@ internal class VitalJWTAuth(
                         publicApiKey = signInToken.publicKey,
                         accessToken = exchangeResponse.idToken,
                         refreshToken = exchangeResponse.refreshToken,
-                        expiry = Date.from(Instant.now().plusSeconds(exchangeResponse.expiresIn.toLong()))
+                        expiry = Instant.now().plusSeconds(exchangeResponse.expiresIn.toLong())
                     )
 
                     setRecord(newRecord, VitalJWTAuthChangeReason.SignedIn)
@@ -266,9 +267,7 @@ internal class VitalJWTAuth(
                         val newRecord = record.copy(
                             refreshToken = refreshResponse.refreshToken,
                             accessToken = refreshResponse.idToken,
-                            expiry = Date.from(
-                                Instant.now().plusSeconds(refreshResponse.expiresIn.toLong())
-                            ),
+                            expiry = Instant.now().plusSeconds(refreshResponse.expiresIn.toLong()),
                         )
 
                         setRecord(newRecord, VitalJWTAuthChangeReason.Update)
@@ -360,10 +359,10 @@ internal data class VitalJWTAuthRecord(
     val publicApiKey: String,
     val accessToken: String,
     val refreshToken: String,
-    val expiry: Date,
+    val expiry: Instant,
     val pendingReauthentication: Boolean = false,
 ) {
-    fun isExpired(now: Date = Date.from(Instant.now())) = expiry.before(now)
+    fun isExpired(now: Instant = Instant.now()) = expiry.isBefore(now)
 }
 
 @JsonClass(generateAdapter = true)

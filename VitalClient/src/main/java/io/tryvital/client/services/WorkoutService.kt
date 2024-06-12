@@ -6,6 +6,7 @@ import retrofit2.Retrofit
 import retrofit2.http.GET
 import retrofit2.http.Path
 import retrofit2.http.Query
+import java.time.Instant
 import java.util.*
 
 @Suppress("unused")
@@ -13,16 +14,16 @@ interface WorkoutService {
     @GET("summary/workouts/{user_id}")
     suspend fun getWorkouts(
         @Path("user_id") userId: String,
-        @Query("start_date") startDate: Date,
-        @Query("end_date") endDate: Date?,
+        @Query("start_date") startDate: Instant,
+        @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,
     ): WorkoutsResponse
 
     @GET("summary/workouts/{user_id}/raw")
     suspend fun getWorkoutsRaw(
         @Path("user_id") userId: String,
-        @Query("start_date") startDate: Date,
-        @Query("end_date") endDate: Date?,
+        @Query("start_date") startDate: Instant,
+        @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,
     ): Any
 

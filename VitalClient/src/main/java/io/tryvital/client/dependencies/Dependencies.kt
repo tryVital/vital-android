@@ -103,7 +103,6 @@ internal class Dependencies(
                 .build()
 
         internal fun createMoshi(): Moshi = Moshi.Builder()
-            .add(Date::class.java, Rfc3339DateJsonAdapter())
             .add(Instant::class.java, InstantJsonAdapter)
             .add(LocalDate::class.java, LocalDateJsonAdapter)
             .add(ProviderSlug::class.java, ProviderSlug.jsonAdapter)
@@ -141,25 +140,20 @@ internal class Dependencies(
             annotations: Array<out Annotation>,
             retrofit: Retrofit
         ): Converter<*, String>? {
-            return if (type === Date::class.java) {
-                DateQueryConverter.INSTANCE
+            return if (type === Instant::class.java) {
+                InstantQueryConverter.INSTANCE
             } else {
                 null
             }
         }
 
-        private class DateQueryConverter : Converter<Date, String> {
-            override fun convert(date: Date): String {
-                return DF.get()?.format(date) ?: "Error"
+        private class InstantQueryConverter : Converter<Instant, String> {
+            override fun convert(date: Instant): String {
+                return date.toString()
             }
 
             companion object {
-                val INSTANCE = DateQueryConverter()
-                private val DF: ThreadLocal<DateFormat> = object : ThreadLocal<DateFormat>() {
-                    public override fun initialValue(): DateFormat {
-                        return SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
-                    }
-                }
+                val INSTANCE = InstantQueryConverter()
             }
         }
 

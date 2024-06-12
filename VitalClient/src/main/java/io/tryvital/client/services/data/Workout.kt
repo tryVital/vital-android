@@ -2,6 +2,7 @@ package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import java.time.Instant
 import java.util.*
 
 @JsonClass(generateAdapter = true)
@@ -27,9 +28,9 @@ data class Workout(
     val maxHr: Double?,
     val distance: Double?,
     @Json(name = "time_start")
-    val timeStart: Date?,
+    val timeStart: Instant?,
     @Json(name = "time_end")
-    val timeEnd: Date?,
+    val timeEnd: Instant?,
     val calories: Double?,
     val sport: Sport?,
     @Json(name = "hr_zones")

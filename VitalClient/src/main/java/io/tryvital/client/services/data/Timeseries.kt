@@ -3,6 +3,7 @@ package io.tryvital.client.services.data
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import io.tryvital.client.utils.getJsonName
+import java.time.Instant
 import java.util.*
 
 @JsonClass(generateAdapter = true)
@@ -12,9 +13,9 @@ data class TimeseriesPayload<T> (
     @Json(name = "provider")
     val provider: ManualProviderSlug,
     @Json(name = "start_date")
-    val startDate: Date?,
+    val startDate: Instant?,
     @Json(name = "end_date")
-    val endDate: Date?,
+    val endDate: Instant?,
     @Json(name = "time_zone")
     val timeZoneId: String?,
     @Json(name = "data")

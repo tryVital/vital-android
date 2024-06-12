@@ -37,7 +37,6 @@ class VitalsServiceTest {
     @Test
     fun `Get cholesterol`() = runTest {
 
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val sut = VitalsService.create(retrofit)
         for (type in CholesterolType.values()) {
             server.enqueue(
@@ -46,12 +45,12 @@ class VitalsServiceTest {
             val response = sut.getCholesterol(
                 cholesterolType = type,
                 userId = userId,
-                startDate = dateFormat.parse("2022-07-01")!!,
-                endDate = dateFormat.parse("2022-07-21"),
+                startDate = Instant.parse("2022-07-01T00:00:00Z")!!,
+                endDate = Instant.parse("2022-07-21T00:00:00Z"),
                 provider = null
             )
             assertEquals(
-                "GET /timeseries/$userId/cholesterol/${type.name}?start_date=2022-07-01&end_date=2022-07-21 HTTP/1.1",
+                "GET /timeseries/$userId/cholesterol/${type.name}?start_date=2022-07-01T00%3A00%3A00Z&end_date=2022-07-21T00%3A00%3A00Z HTTP/1.1",
                 server.takeRequest().requestLine
             )
             checkMeasurements(response)
@@ -63,16 +62,15 @@ class VitalsServiceTest {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(fakeScalarSampleResponse)
         )
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val sut = VitalsService.create(retrofit)
         val response = sut.getGlucose(
             userId = userId,
-            startDate = dateFormat.parse("2022-07-01")!!,
-            endDate = dateFormat.parse("2022-07-21"),
+            startDate = Instant.parse("2022-07-01T00:00:00Z")!!,
+            endDate = Instant.parse("2022-07-21T00:00:00Z"),
             provider = null
         )
         assertEquals(
-            "GET /timeseries/$userId/glucose?start_date=2022-07-01&end_date=2022-07-21 HTTP/1.1",
+            "GET /timeseries/$userId/glucose?start_date=2022-07-01T00%3A00%3A00Z&end_date=2022-07-21T00%3A00%3A00Z HTTP/1.1",
             server.takeRequest().requestLine
         )
         checkMeasurements(response)
@@ -84,13 +82,13 @@ class VitalsServiceTest {
                 GroupedSamples(
                     data = listOf(
                         ScalarSample(
-                            timestamp = Date.from(Instant.parse("2022-01-01T03:16:31+00:00")),
+                            timestamp = Instant.parse("2022-01-01T03:16:31+00:00"),
                             value = 5.7,
                             type = null,
                             unit = "count",
                         ),
                         ScalarSample(
-                            timestamp = Date.from(Instant.parse("2022-01-02T03:16:32+00:00")),
+                            timestamp = Instant.parse("2022-01-02T03:16:32+00:00"),
                             value = 10.2,
                             type = null,
                             unit = "count",

@@ -4,6 +4,7 @@ import io.tryvital.client.services.data.*
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.*
+import java.time.Instant
 import java.util.*
 
 @Suppress("unused")
@@ -11,8 +12,8 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun getGlucose(
         userId: String,
-        startDate: Date,
-        endDate: Date? = null,
+        startDate: Instant,
+        endDate: Instant? = null,
         provider: String? = null,
         cursor: String? = null,
     ): GroupedSamplesResponse<ScalarSample> {
@@ -25,8 +26,8 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
     suspend fun getCholesterol(
         cholesterolType: CholesterolType,
         userId: String,
-        startDate: Date,
-        endDate: Date? = null,
+        startDate: Instant,
+        endDate: Instant? = null,
         provider: String? = null,
         cursor: String? = null,
     ): GroupedSamplesResponse<ScalarSample> {
@@ -42,8 +43,8 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun getIge(
         userId: String,
-        startDate: Date,
-        endDate: Date? = null,
+        startDate: Instant,
+        endDate: Instant? = null,
         provider: String? = null,
         cursor: String? = null,
     ): GroupedSamplesResponse<ScalarSample> {
@@ -59,8 +60,8 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun getIgg(
         userId: String,
-        startDate: Date,
-        endDate: Date? = null,
+        startDate: Instant,
+        endDate: Instant? = null,
         provider: String? = null,
         cursor: String? = null,
     ): GroupedSamplesResponse<ScalarSample> {
@@ -76,8 +77,8 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun getHeartrate(
         userId: String,
-        startDate: Date,
-        endDate: Date? = null,
+        startDate: Instant,
+        endDate: Instant? = null,
         provider: String? = null,
         cursor: String? = null,
     ): GroupedSamplesResponse<ScalarSample> {
@@ -126,8 +127,8 @@ private interface TimeSeries {
     suspend fun scalarSampleTimeseriesRequest(
         @Path("user_id") userId: String,
         @Path("resource", encoded = true) resource: String,
-        @Query("start_date") startDate: Date,
-        @Query("end_date") endDate: Date? = null,
+        @Query("start_date") startDate: Instant,
+        @Query("end_date") endDate: Instant? = null,
         @Query("provider") provider: String? = null,
         @Query("cursor") cursor: String? = null,
     ): GroupedSamplesResponse<ScalarSample>

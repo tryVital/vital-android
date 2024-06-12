@@ -15,6 +15,7 @@ import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
 import java.text.SimpleDateFormat
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BodyServiceTest {
@@ -36,16 +37,15 @@ class BodyServiceTest {
                 .setResponseCode(200)
                 .setBody(fakeBodyResponse)
         )
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val sut = BodyService.create(retrofit)
         val response = sut.getBodyData(
             userId = userId,
-            startDate = dateFormat.parse("2022-07-01")!!,
-            endDate = dateFormat.parse("2022-07-21"),
+            startDate = Instant.parse("2022-07-01T00:00:00Z")!!,
+            endDate = Instant.parse("2022-07-21T00:00:00Z"),
             provider = null
         )
         assertEquals(
-            "GET /summary/body/$userId?start_date=2022-07-01&end_date=2022-07-21 HTTP/1.1",
+            "GET /summary/body/$userId?start_date=2022-07-01T00%3A00%3A00Z&end_date=2022-07-21T00%3A00%3A00Z HTTP/1.1",
             server.takeRequest().requestLine
         )
 
