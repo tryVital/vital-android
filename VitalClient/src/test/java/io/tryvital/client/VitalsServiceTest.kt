@@ -1,20 +1,25 @@
 package io.tryvital.client
 
-import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.services.VitalsService
 import io.tryvital.client.services.data.CholesterolType
-import io.tryvital.client.services.data.Measurement
+import io.tryvital.client.services.data.GroupedSamples
+import io.tryvital.client.services.data.GroupedSamplesResponse
+import io.tryvital.client.services.data.ProviderSlug
+import io.tryvital.client.services.data.ScalarSample
+import io.tryvital.client.services.data.Source
+import io.tryvital.client.services.data.SourceType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class VitalsServiceTest {
@@ -36,7 +41,7 @@ class VitalsServiceTest {
         val sut = VitalsService.create(retrofit)
         for (type in CholesterolType.values()) {
             server.enqueue(
-                MockResponse().setResponseCode(200).setBody(fakeVitalsResponse)
+                MockResponse().setResponseCode(200).setBody(fakeScalarSampleResponse)
             )
             val response = sut.getCholesterol(
                 cholesterolType = type,
@@ -56,7 +61,7 @@ class VitalsServiceTest {
     @Test
     fun `Get glucose`() = runTest {
         server.enqueue(
-            MockResponse().setResponseCode(200).setBody(fakeVitalsResponse)
+            MockResponse().setResponseCode(200).setBody(fakeScalarSampleResponse)
         )
         val dateFormat = SimpleDateFormat("yyyy-MM-dd")
         val sut = VitalsService.create(retrofit)
@@ -73,20 +78,32 @@ class VitalsServiceTest {
         checkMeasurements(response)
     }
 
-    private fun checkMeasurements(measurements: List<Measurement>) {
-        assertEquals(3, measurements.size)
-        assertEquals(1, measurements[0].id)
-        assertEquals(5.7, measurements[0].value)
-        assertEquals("automatic", measurements[0].type)
-        assertEquals("mmol/L", measurements[0].unit)
-        assertEquals(2, measurements[1].id)
-        assertNull(measurements[1].value)
-        assertNull(measurements[1].type)
-        assertNull(measurements[1].unit)
-        assertEquals(3, measurements[2].id)
-        assertNull(measurements[2].value)
-        assertNull(measurements[2].type)
-        assertNull(measurements[2].unit)
+    private fun checkMeasurements(measurements: GroupedSamplesResponse<ScalarSample>) {
+        assertEquals(
+            listOf(
+                GroupedSamples(
+                    data = listOf(
+                        ScalarSample(
+                            timestamp = Date.from(Instant.parse("2022-01-01T03:16:31+00:00")),
+                            value = 5.7,
+                            type = null,
+                            unit = "count",
+                        ),
+                        ScalarSample(
+                            timestamp = Date.from(Instant.parse("2022-01-02T03:16:32+00:00")),
+                            value = 10.2,
+                            type = null,
+                            unit = "count",
+                        )
+                    ),
+                    source = Source(
+                        type = SourceType.Watch,
+                        provider = ProviderSlug.Fitbit,
+                    )
+                )
+            ),
+            measurements.groups
+        )
     }
 
 }
@@ -94,27 +111,33 @@ class VitalsServiceTest {
 private lateinit var server: MockWebServer
 private lateinit var retrofit: Retrofit
 
-private const val apiKey = "API_KEY"
 private const val userId = "user_id_1"
 
 
-private const val fakeVitalsResponse = """[
-    {
-        "id": 1,
-        "timestamp": "2022-01-01T03:16:31+00:00",
-        "value": 5.7,
-        "type": "automatic",
-        "unit": "mmol/L"
-    },
-    {
-        "id": 2,
-        "timestamp": "2022-01-02T03:16:31+00:00",
-        "value": null,
-        "type": null,
-        "unit": null
-    },
-    {
-      "id": 3,
-      "timestamp": "2022-01-03T03:16:31+00:00"  
-    }
-]"""
+private const val fakeScalarSampleResponse = """
+{
+    "groups": [
+        {
+            "data": [
+                {
+                    "timestamp": "2022-01-01T03:16:31+00:00",
+                    "value": 5.7,
+                    "type": null,
+                    "unit": "count"
+                },
+                {
+                    "timestamp": "2022-01-02T03:16:32+00:00",
+                    "value": 10.2,
+                    "type": null,
+                    "unit": "count"
+                }
+            ],
+            "source": {
+                "provider": "fitbit",
+                "type": "watch"
+            }
+        }
+    ],
+    "next": null
+}
+"""

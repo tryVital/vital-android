@@ -14,10 +14,11 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null,
-    ): List<Measurement> {
-        return timeSeries.timeseriesRequest(
+        cursor: String? = null,
+    ): GroupedSamplesResponse<ScalarSample> {
+        return timeSeries.scalarSampleTimeseriesRequest(
             userId = userId, resource = "glucose", startDate = startDate,
-            endDate = endDate, provider = provider
+            endDate = endDate, provider = provider, cursor = cursor,
         )
     }
 
@@ -27,13 +28,15 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null,
-    ): List<Measurement> {
-        return timeSeries.timeseriesRequest(
+        cursor: String? = null,
+    ): GroupedSamplesResponse<ScalarSample> {
+        return timeSeries.scalarSampleTimeseriesRequest(
             userId = userId,
             resource = "cholesterol/${cholesterolType.name}",
             startDate = startDate,
             endDate = endDate,
             provider = provider,
+            cursor = cursor,
         )
     }
 
@@ -42,13 +45,15 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null,
-    ): List<Measurement> {
-        return timeSeries.timeseriesRequest(
+        cursor: String? = null,
+    ): GroupedSamplesResponse<ScalarSample> {
+        return timeSeries.scalarSampleTimeseriesRequest(
             userId = userId,
             resource = "ige",
             startDate = startDate,
             endDate = endDate,
             provider = provider,
+            cursor = cursor,
         )
     }
 
@@ -56,14 +61,16 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         userId: String,
         startDate: Date,
         endDate: Date? = null,
-        provider: String? = null
-    ): List<Measurement> {
-        return timeSeries.timeseriesRequest(
+        provider: String? = null,
+        cursor: String? = null,
+    ): GroupedSamplesResponse<ScalarSample> {
+        return timeSeries.scalarSampleTimeseriesRequest(
             userId = userId,
             resource = "igg",
             startDate = startDate,
             endDate = endDate,
             provider = provider,
+            cursor = cursor,
         )
     }
 
@@ -72,13 +79,15 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
         startDate: Date,
         endDate: Date? = null,
         provider: String? = null,
-    ): List<Measurement> {
-        return timeSeries.timeseriesRequest(
+        cursor: String? = null,
+    ): GroupedSamplesResponse<ScalarSample> {
+        return timeSeries.scalarSampleTimeseriesRequest(
             userId = userId,
             resource = "heartrate",
             startDate = startDate,
             endDate = endDate,
-            provider = provider
+            provider = provider,
+            cursor = cursor,
         )
     }
 
@@ -114,13 +123,14 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
 
 private interface TimeSeries {
     @GET("timeseries/{user_id}/{resource}")
-    suspend fun timeseriesRequest(
+    suspend fun scalarSampleTimeseriesRequest(
         @Path("user_id") userId: String,
         @Path("resource", encoded = true) resource: String,
         @Query("start_date") startDate: Date,
         @Query("end_date") endDate: Date? = null,
         @Query("provider") provider: String? = null,
-    ): List<Measurement>
+        @Query("cursor") cursor: String? = null,
+    ): GroupedSamplesResponse<ScalarSample>
 
     @POST("timeseries/{user_id}/{resource}")
     suspend fun timeseriesPost(
