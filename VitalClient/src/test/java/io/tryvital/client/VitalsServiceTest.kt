@@ -1,6 +1,7 @@
 package io.tryvital.client
 
-import io.tryvital.client.services.VitalsService
+import io.tryvital.client.services.ScalarTimeseriesResource
+import io.tryvital.client.services.TimeSeriesService
 import io.tryvital.client.services.data.CholesterolType
 import io.tryvital.client.services.data.GroupedSamples
 import io.tryvital.client.services.data.GroupedSamplesResponse
@@ -17,9 +18,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
-import java.text.SimpleDateFormat
 import java.time.Instant
-import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class VitalsServiceTest {
@@ -35,36 +34,14 @@ class VitalsServiceTest {
     }
 
     @Test
-    fun `Get cholesterol`() = runTest {
-
-        val sut = VitalsService.create(retrofit)
-        for (type in CholesterolType.values()) {
-            server.enqueue(
-                MockResponse().setResponseCode(200).setBody(fakeScalarSampleResponse)
-            )
-            val response = sut.getCholesterol(
-                cholesterolType = type,
-                userId = userId,
-                startDate = Instant.parse("2022-07-01T00:00:00Z")!!,
-                endDate = Instant.parse("2022-07-21T00:00:00Z"),
-                provider = null
-            )
-            assertEquals(
-                "GET /timeseries/$userId/cholesterol/${type.name}?start_date=2022-07-01T00%3A00%3A00Z&end_date=2022-07-21T00%3A00%3A00Z HTTP/1.1",
-                server.takeRequest().requestLine
-            )
-            checkMeasurements(response)
-        }
-    }
-
-    @Test
     fun `Get glucose`() = runTest {
         server.enqueue(
             MockResponse().setResponseCode(200).setBody(fakeScalarSampleResponse)
         )
-        val sut = VitalsService.create(retrofit)
+        val sut = TimeSeriesService.create(retrofit)
         val response = sut.getGlucose(
             userId = userId,
+            resource = ScalarTimeseriesResource.Glucose,
             startDate = Instant.parse("2022-07-01T00:00:00Z")!!,
             endDate = Instant.parse("2022-07-21T00:00:00Z"),
             provider = null

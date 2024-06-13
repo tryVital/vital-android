@@ -2,7 +2,6 @@ package io.tryvital.client
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.provider.Settings.Global
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import io.tryvital.client.dependencies.Dependencies
@@ -11,22 +10,16 @@ import io.tryvital.client.jwt.VitalJWTAuthChangeReason
 import io.tryvital.client.jwt.VitalSignInToken
 import io.tryvital.client.services.*
 import io.tryvital.client.utils.VitalLogger
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.launch
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
@@ -88,7 +81,7 @@ class VitalClient internal constructor(context: Context) {
     }
 
     val vitalsService by lazy {
-        VitalsService.create(dependencies.retrofit)
+        TimeSeriesService.create(dependencies.retrofit)
     }
 
     @VitalPrivateApi

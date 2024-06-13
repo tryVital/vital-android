@@ -7,88 +7,39 @@ import retrofit2.http.*
 import java.time.Instant
 import java.util.*
 
+enum class ScalarTimeseriesResource(val rawValue: String) {
+    Glucose("glucose"),
+    HeartRate("heartrate"),
+    BloodOxygen("blood_oxygen");
+}
+
 @Suppress("unused")
-class VitalsService private constructor(private val timeSeries: TimeSeries) {
+class TimeSeriesService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun getGlucose(
         userId: String,
+        resource: ScalarTimeseriesResource,
         startDate: Instant,
         endDate: Instant? = null,
         provider: String? = null,
-        cursor: String? = null,
+        nextCursor: String? = null,
     ): GroupedSamplesResponse<ScalarSample> {
         return timeSeries.scalarSampleTimeseriesRequest(
-            userId = userId, resource = "glucose", startDate = startDate,
-            endDate = endDate, provider = provider, cursor = cursor,
+            userId = userId, resource = resource.rawValue, startDate = startDate,
+            endDate = endDate, provider = provider, nextCursor = nextCursor,
         )
     }
 
-    suspend fun getCholesterol(
-        cholesterolType: CholesterolType,
+    suspend fun getBloodPressure(
         userId: String,
         startDate: Instant,
         endDate: Instant? = null,
         provider: String? = null,
-        cursor: String? = null,
-    ): GroupedSamplesResponse<ScalarSample> {
-        return timeSeries.scalarSampleTimeseriesRequest(
-            userId = userId,
-            resource = "cholesterol/${cholesterolType.name}",
-            startDate = startDate,
-            endDate = endDate,
-            provider = provider,
-            cursor = cursor,
-        )
-    }
-
-    suspend fun getIge(
-        userId: String,
-        startDate: Instant,
-        endDate: Instant? = null,
-        provider: String? = null,
-        cursor: String? = null,
-    ): GroupedSamplesResponse<ScalarSample> {
-        return timeSeries.scalarSampleTimeseriesRequest(
-            userId = userId,
-            resource = "ige",
-            startDate = startDate,
-            endDate = endDate,
-            provider = provider,
-            cursor = cursor,
-        )
-    }
-
-    suspend fun getIgg(
-        userId: String,
-        startDate: Instant,
-        endDate: Instant? = null,
-        provider: String? = null,
-        cursor: String? = null,
-    ): GroupedSamplesResponse<ScalarSample> {
-        return timeSeries.scalarSampleTimeseriesRequest(
-            userId = userId,
-            resource = "igg",
-            startDate = startDate,
-            endDate = endDate,
-            provider = provider,
-            cursor = cursor,
-        )
-    }
-
-    suspend fun getHeartrate(
-        userId: String,
-        startDate: Instant,
-        endDate: Instant? = null,
-        provider: String? = null,
-        cursor: String? = null,
-    ): GroupedSamplesResponse<ScalarSample> {
-        return timeSeries.scalarSampleTimeseriesRequest(
-            userId = userId,
-            resource = "heartrate",
-            startDate = startDate,
-            endDate = endDate,
-            provider = provider,
-            cursor = cursor,
+        nextCursor: String? = null,
+    ): GroupedSamplesResponse<BloodPressureSample> {
+        return timeSeries.bloodPressureTimeseriesRequest(
+            userId = userId, startDate = startDate,
+            endDate = endDate, provider = provider, nextCursor = nextCursor,
         )
     }
 
@@ -116,8 +67,8 @@ class VitalsService private constructor(private val timeSeries: TimeSeries) {
     }
 
     companion object {
-        fun create(retrofit: Retrofit): VitalsService {
-            return VitalsService(retrofit.create(TimeSeries::class.java))
+        fun create(retrofit: Retrofit): TimeSeriesService {
+            return TimeSeriesService(retrofit.create(TimeSeries::class.java))
         }
     }
 }
@@ -130,8 +81,17 @@ private interface TimeSeries {
         @Query("start_date") startDate: Instant,
         @Query("end_date") endDate: Instant? = null,
         @Query("provider") provider: String? = null,
-        @Query("cursor") cursor: String? = null,
+        @Query("next_cursor") nextCursor: String? = null,
     ): GroupedSamplesResponse<ScalarSample>
+
+    @GET("timeseries/{user_id}/blood_pressure")
+    suspend fun bloodPressureTimeseriesRequest(
+        @Path("user_id") userId: String,
+        @Query("start_date") startDate: Instant,
+        @Query("end_date") endDate: Instant? = null,
+        @Query("provider") provider: String? = null,
+        @Query("next_cursor") nextCursor: String? = null,
+    ): GroupedSamplesResponse<BloodPressureSample>
 
     @POST("timeseries/{user_id}/{resource}")
     suspend fun timeseriesPost(
