@@ -2,6 +2,7 @@ package io.tryvital.vitaldevices.devices
 
 import android.bluetooth.BluetoothDevice
 import android.content.Context
+import io.tryvital.client.services.data.BloodPressureSamplePayload
 import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.vitaldevices.ScannedDevice
@@ -17,23 +18,27 @@ private val bloodPressureMeasurementCharacteristicUUID =
 
 interface BloodPressureReader {
     suspend fun pair()
-    suspend fun read(): List<BloodPressureSample>
+    suspend fun read(): List<BloodPressureSamplePayload>
 }
 
 class BloodPressureReader1810(
     context: Context,
     scannedBluetoothDevice: BluetoothDevice,
     scannedDevice: ScannedDevice,
-) : GATTMeterWithNoRACP<BloodPressureSample>(
+) : GATTMeterWithNoRACP<BloodPressureSamplePayload>(
     context,
     serviceID = bpsServiceUUID,
     measurementCharacteristicID = bloodPressureMeasurementCharacteristicUUID,
     scannedBluetoothDevice = scannedBluetoothDevice,
     scannedDevice = scannedDevice
 ), BloodPressureReader {
+    override fun onReceivedAll(samples: List<BloodPressureSamplePayload>) {
+        postBloodPressureSamples(context, scannedDevice.deviceModel.brand.toManualProviderSlug(), samples)
+    }
+
     override fun mapRawData(
         device: BluetoothDevice, data: Data
-    ): BloodPressureSample? {
+    ): BloodPressureSamplePayload? {
         val response = BloodPressureMeasurementResponse().apply {
             onDataReceived(device, data)
         }
@@ -43,7 +48,7 @@ class BloodPressureReader1810(
         val measurementTime = response.timestamp?.time?.toInstant() ?: return null
         val idPrefix = "${measurementTime.epochSecond}-"
 
-        return BloodPressureSample(
+        return BloodPressureSamplePayload(
             systolic = QuantitySamplePayload(
                 id = idPrefix + "systolic",
                 value = response.systolic.toDouble(),

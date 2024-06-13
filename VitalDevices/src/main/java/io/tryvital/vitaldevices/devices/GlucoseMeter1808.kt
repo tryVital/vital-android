@@ -33,6 +33,10 @@ class GlucoseMeter1808(
     scannedBluetoothDevice = scannedBluetoothDevice,
     scannedDevice = scannedDevice
 ), GlucoseMeter {
+    override fun onReceivedAll(samples: List<QuantitySamplePayload>) {
+        postGlucoseSamples(context, scannedDevice.deviceModel.brand.toManualProviderSlug(), samples)
+    }
+
     override fun mapRawData(
         device: BluetoothDevice, data: Data
     ): QuantitySamplePayload? {

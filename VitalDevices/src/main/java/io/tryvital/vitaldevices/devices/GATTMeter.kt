@@ -29,7 +29,7 @@ abstract class GATTMeter<Sample>(
     private val serviceID: UUID,
     private val measurementCharacteristicID: UUID,
     private val scannedBluetoothDevice: BluetoothDevice,
-    private val scannedDevice: ScannedDevice,
+    protected val scannedDevice: ScannedDevice,
 ) : BleManager(context) {
     private val vitalLogger = VitalLogger.getOrCreate()
 
@@ -47,6 +47,7 @@ abstract class GATTMeter<Sample>(
     private var deviceReady = MutableStateFlow(false)
 
     abstract fun mapRawData(device: BluetoothDevice, data: Data): Sample?
+    abstract fun onReceivedAll(samples: List<Sample>)
 
     @Suppress("MemberVisibilityCanBePrivate")
     suspend fun pair(): Unit = suspendCancellableCoroutine { continuation ->
@@ -130,8 +131,11 @@ abstract class GATTMeter<Sample>(
                         assert(!this@channelFlow.isClosedForSend)
                         vitalLogger.logI("Emitting ${samples.count()} samples from ${scannedDevice.name}.")
 
+                        val sampleList = samples.toList()
+                        onReceivedAll(sampleList)
+
                         // Send out the samples, and close the channel normally.
-                        this@channelFlow.send(samples.toList())
+                        this@channelFlow.send(sampleList)
                         close()
                     } else {
                         vitalLogger.logE("Unexpected sample collector completion from ${scannedDevice.name}.", e)

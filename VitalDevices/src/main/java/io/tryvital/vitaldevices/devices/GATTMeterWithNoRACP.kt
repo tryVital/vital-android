@@ -32,7 +32,7 @@ abstract class GATTMeterWithNoRACP<Sample>(
     private val serviceID: UUID,
     private val measurementCharacteristicID: UUID,
     private val scannedBluetoothDevice: BluetoothDevice,
-    private val scannedDevice: ScannedDevice,
+    protected val scannedDevice: ScannedDevice,
     private val waitForNextValueTimeout: Duration = 2.seconds,
     private val listenTimeout: Duration = 30.seconds,
 ) : BleManager(context) {
@@ -47,6 +47,7 @@ abstract class GATTMeterWithNoRACP<Sample>(
     private var deviceReady = MutableStateFlow(false)
 
     abstract fun mapRawData(device: BluetoothDevice, data: Data): Sample?
+    abstract fun onReceivedAll(samples: List<Sample>)
 
     @Suppress("MemberVisibilityCanBePrivate")
     suspend fun pair() {
@@ -170,8 +171,11 @@ abstract class GATTMeterWithNoRACP<Sample>(
                         assert(!this@channelFlow.isClosedForSend)
                         vitalLogger.logI("Emitting ${samples.count()} samples from ${scannedDevice.name}.")
 
+                        val sampleList = samples.toList()
+                        onReceivedAll(sampleList)
+
                         // Send out the samples, and close the channel normally.
-                        this@channelFlow.send(samples.toList())
+                        this@channelFlow.send(sampleList)
                         close()
                     } else {
                         vitalLogger.logE("Unexpected sample collector completion from ${scannedDevice.name}.", e)
