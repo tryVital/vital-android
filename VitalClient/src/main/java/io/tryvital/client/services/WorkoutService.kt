@@ -1,5 +1,6 @@
 package io.tryvital.client.services
 
+import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.WorkoutStreamResponse
 import io.tryvital.client.services.data.WorkoutsResponse
 import retrofit2.Retrofit
@@ -13,7 +14,7 @@ import java.util.*
 interface WorkoutService {
     @GET("summary/workouts/{user_id}")
     suspend fun getWorkouts(
-        @Path("user_id") userId: String,
+        @Path("user_id") userId: String = VitalClient.checkUserId(),
         @Query("start_date") startDate: Instant,
         @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,
@@ -21,7 +22,7 @@ interface WorkoutService {
 
     @GET("summary/workouts/{user_id}/raw")
     suspend fun getWorkoutsRaw(
-        @Path("user_id") userId: String,
+        @Path("user_id") userId: String = VitalClient.checkUserId(),
         @Query("start_date") startDate: Instant,
         @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,

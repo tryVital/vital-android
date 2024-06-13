@@ -1,5 +1,6 @@
 package io.tryvital.client.services
 
+import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.SleepResponse
 import retrofit2.Retrofit
 import retrofit2.http.GET
@@ -13,7 +14,7 @@ interface SleepService {
 
     @GET("summary/sleep/{user_id}")
     suspend fun getSleepData(
-        @Path("user_id") userId: String,
+        @Path("user_id") userId: String = VitalClient.checkUserId(),
         @Query("start_date") startDate: Instant,
         @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,
@@ -22,7 +23,7 @@ interface SleepService {
 
     @GET("summary/sleep/{user_id}/stream")
     suspend fun getSleepStreamSeries(
-        @Path("user_id") userId: String,
+        @Path("user_id") userId: String = VitalClient.checkUserId(),
         @Query("start_date") startDate: Instant,
         @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,
@@ -30,7 +31,7 @@ interface SleepService {
 
     @GET("summary/sleep/{user_id}/raw")
     suspend fun getSleepDataRaw(
-        @Path("user_id") userId: String,
+        @Path("user_id") userId: String = VitalClient.checkUserId(),
         @Query("start_date") startDate: Instant,
         @Query("end_date") endDate: Instant?,
         @Query("provider") provider: String?,

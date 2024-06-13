@@ -1,5 +1,6 @@
 package io.tryvital.client.services
 
+import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.*
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -17,7 +18,7 @@ enum class ScalarTimeseriesResource(val rawValue: String) {
 class TimeSeriesService private constructor(private val timeSeries: TimeSeries) {
 
     suspend fun getGlucose(
-        userId: String,
+        userId: String = VitalClient.checkUserId(),
         resource: ScalarTimeseriesResource,
         startDate: Instant,
         endDate: Instant? = null,
@@ -31,7 +32,7 @@ class TimeSeriesService private constructor(private val timeSeries: TimeSeries) 
     }
 
     suspend fun getBloodPressure(
-        userId: String,
+        userId: String = VitalClient.checkUserId(),
         startDate: Instant,
         endDate: Instant? = null,
         provider: String? = null,
