@@ -76,10 +76,6 @@ class VitalClient internal constructor(context: Context) {
         UserService.create(dependencies.retrofit)
     }
 
-    val summaryService by lazy {
-        SummaryService.create(dependencies.retrofit)
-    }
-
     val vitalsService by lazy {
         TimeSeriesService.create(dependencies.retrofit)
     }
