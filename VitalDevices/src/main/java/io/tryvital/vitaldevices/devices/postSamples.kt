@@ -18,6 +18,10 @@ import kotlinx.coroutines.launch
 import java.util.TimeZone
 
 internal fun postGlucoseSamples(context: Context, provider: ManualProviderSlug, samples: List<QuantitySamplePayload>) {
+    if (samples.isEmpty()) {
+        return
+    }
+
     GlobalScope.launch {
         try {
             postGlucoseSamplesImpl(context, provider, samples)
@@ -30,6 +34,10 @@ internal fun postGlucoseSamples(context: Context, provider: ManualProviderSlug, 
 }
 
 internal fun postBloodPressureSamples(context: Context, provider: ManualProviderSlug, samples: List<BloodPressureSamplePayload>) {
+    if (samples.isEmpty()) {
+        return
+    }
+
     GlobalScope.launch {
         try {
             postBloodPressureSamplesImpl(context, provider, samples)
