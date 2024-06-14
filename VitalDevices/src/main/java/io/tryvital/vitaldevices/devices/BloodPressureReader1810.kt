@@ -5,6 +5,7 @@ import android.content.Context
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SampleType
+import io.tryvital.client.services.data.SourceType
 import io.tryvital.vitaldevices.ScannedDevice
 import no.nordicsemi.android.ble.common.callback.bps.BloodPressureMeasurementResponse
 import no.nordicsemi.android.ble.data.Data
@@ -54,7 +55,7 @@ class BloodPressureReader1810(
                 unit = SampleType.BloodPressureSystolic.unit,
                 startDate = measurementTime,
                 endDate = measurementTime,
-                type = "cuff",
+                type = SourceType.Cuff,
             ),
             diastolic = LocalQuantitySample(
                 id = idPrefix + "diastolic",
@@ -62,7 +63,7 @@ class BloodPressureReader1810(
                 unit = SampleType.BloodPressureDiastolic.unit,
                 startDate = measurementTime,
                 endDate = measurementTime,
-                type = "cuff",
+                type = SourceType.Cuff,
             ),
             pulse = response.pulseRate?.let { value ->
                 LocalQuantitySample(
@@ -71,7 +72,7 @@ class BloodPressureReader1810(
                     unit = SampleType.HeartRate.unit,
                     startDate = measurementTime,
                     endDate = measurementTime,
-                    type = "cuff",
+                    type = SourceType.Cuff,
                 )
             }
         )

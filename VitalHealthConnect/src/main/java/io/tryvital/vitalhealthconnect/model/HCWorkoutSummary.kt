@@ -1,6 +1,6 @@
 package io.tryvital.vitalhealthconnect.model
 
-data class HCWorkoutSummary(
+internal data class HCWorkoutSummary(
     /**
      * Unit: bpm
      */

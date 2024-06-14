@@ -2,25 +2,26 @@ package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.ActivityDaySummary
 import io.tryvital.client.services.data.LocalActivity
+import io.tryvital.client.services.data.LocalQuantitySample
 
 data class Activity(
     val daySummary: ActivityDaySummary?,
-    val activeEnergyBurned: List<QuantitySample>,
-    val basalEnergyBurned: List<QuantitySample>,
-    val steps: List<QuantitySample>,
-    val distanceWalkingRunning: List<QuantitySample>,
-    val vo2Max: List<QuantitySample>,
-    val floorsClimbed: List<QuantitySample>,
+    val activeEnergyBurned: List<LocalQuantitySample>,
+    val basalEnergyBurned: List<LocalQuantitySample>,
+    val steps: List<LocalQuantitySample>,
+    val distanceWalkingRunning: List<LocalQuantitySample>,
+    val vo2Max: List<LocalQuantitySample>,
+    val floorsClimbed: List<LocalQuantitySample>,
 ) {
     fun toActivityPayload(): LocalActivity {
         return LocalActivity(
             daySummary = daySummary,
-            activeEnergyBurned = activeEnergyBurned.map { it.toQuantitySamplePayload() },
-            basalEnergyBurned = basalEnergyBurned.map { it.toQuantitySamplePayload() },
-            steps = steps.map { it.toQuantitySamplePayload() },
-            distanceWalkingRunning = distanceWalkingRunning.map { it.toQuantitySamplePayload() },
-            vo2Max = vo2Max.map { it.toQuantitySamplePayload() },
-            floorsClimbed = floorsClimbed.map { it.toQuantitySamplePayload() },
+            activeEnergyBurned = activeEnergyBurned,
+            basalEnergyBurned = basalEnergyBurned,
+            steps = steps,
+            distanceWalkingRunning = distanceWalkingRunning,
+            vo2Max = vo2Max,
+            floorsClimbed = floorsClimbed,
         )
     }
 }

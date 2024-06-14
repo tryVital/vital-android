@@ -1,5 +1,6 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
+import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
 import java.time.Instant
 
@@ -9,11 +10,11 @@ data class Sleep(
     val endDate: Instant,
     val sourceBundle: String?,
     val deviceModel: String?,
-    val heartRate: List<QuantitySample>,
-    val restingHeartRate: List<QuantitySample>,
-    val heartRateVariability: List<QuantitySample>,
-    val oxygenSaturation: List<QuantitySample>,
-    val respiratoryRate: List<QuantitySample>,
+    val heartRate: List<LocalQuantitySample>,
+    val restingHeartRate: List<LocalQuantitySample>,
+    val heartRateVariability: List<LocalQuantitySample>,
+    val oxygenSaturation: List<LocalQuantitySample>,
+    val respiratoryRate: List<LocalQuantitySample>,
     val stages: SleepStages,
 ) {
     fun toSleepPayload(): LocalSleep {
@@ -23,22 +24,22 @@ data class Sleep(
             endDate = endDate,
             sourceBundle = sourceBundle,
             deviceModel = deviceModel,
-            heartRate = heartRate.map { it.toQuantitySamplePayload() },
-            restingHeartRate = restingHeartRate.map { it.toQuantitySamplePayload() },
-            heartRateVariability = heartRateVariability.map { it.toQuantitySamplePayload() },
-            oxygenSaturation = oxygenSaturation.map { it.toQuantitySamplePayload() },
-            respiratoryRate = respiratoryRate.map { it.toQuantitySamplePayload() },
+            heartRate = heartRate,
+            restingHeartRate = restingHeartRate,
+            heartRateVariability = heartRateVariability,
+            oxygenSaturation = oxygenSaturation,
+            respiratoryRate = respiratoryRate,
         )
     }
 }
 
 data class SleepStages(
-    val awakeSleepSamples: List<QuantitySample>,
-    val deepSleepSamples: List<QuantitySample>,
-    val lightSleepSamples: List<QuantitySample>,
-    val remSleepSamples: List<QuantitySample>,
-    val outOfBedSleepSamples: List<QuantitySample>,
-    val unknownSleepSamples: List<QuantitySample>,
+    val awakeSleepSamples: List<LocalQuantitySample>,
+    val deepSleepSamples: List<LocalQuantitySample>,
+    val lightSleepSamples: List<LocalQuantitySample>,
+    val remSleepSamples: List<LocalQuantitySample>,
+    val outOfBedSleepSamples: List<LocalQuantitySample>,
+    val unknownSleepSamples: List<LocalQuantitySample>,
 )
 
 enum class SleepStage(val id: Int) {

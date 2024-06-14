@@ -1,5 +1,6 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
+import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.WorkoutPayload
 import java.time.Instant
 import java.util.Date
@@ -13,8 +14,8 @@ data class Workout(
     val sport: String,
     val caloriesInKiloJules: Double?,
     val distanceInMeter: Double?,
-    val heartRate: List<QuantitySample>,
-    val respiratoryRate: List<QuantitySample>
+    val heartRate: List<LocalQuantitySample>,
+    val respiratoryRate: List<LocalQuantitySample>
 
 ) {
     fun toWorkoutPayload(): WorkoutPayload {
@@ -28,8 +29,8 @@ data class Workout(
             // TODO: ManualWorkoutCreation should have had these two nullable.
             caloriesInKiloJules = caloriesInKiloJules ?: 0.0,
             distanceInMeter = distanceInMeter ?: 0.0,
-            heartRate = heartRate.map { it.toQuantitySamplePayload() },
-            respiratoryRate = respiratoryRate.map { it.toQuantitySamplePayload() },
+            heartRate = heartRate,
+            respiratoryRate = respiratoryRate,
         )
     }
 }

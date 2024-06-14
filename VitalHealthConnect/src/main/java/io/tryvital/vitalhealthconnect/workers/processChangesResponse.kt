@@ -35,8 +35,6 @@ internal suspend fun processChangesResponse(
     resource: RemappedVitalResource,
     responses: ChangesResponse,
     timeZone: TimeZone,
-    currentDevice: String,
-    reader: RecordReader,
     processor: RecordProcessor,
     processorOptions: ProcessorOptions,
     end: Instant? = null,
@@ -50,8 +48,8 @@ internal suspend fun processChangesResponse(
 
     suspend fun <Record, T : TimeSeriesData> readTimeseries(
         records: List<Record>,
-        process: suspend (String, List<Record>) -> T
-    ): ProcessedResourceData = process(currentDevice, records)
+        process: suspend (List<Record>) -> T
+    ): ProcessedResourceData = process(records)
         .let(ProcessedResourceData::TimeSeries)
 
     return when (resource.wrapped) {
@@ -60,7 +58,6 @@ internal suspend fun processChangesResponse(
 
         VitalResource.Activity -> processor.processActivitiesFromRecords(
             timeZone = timeZone,
-            currentDevice = currentDevice,
             activeEnergyBurned = records.get<ActiveCaloriesBurnedRecord>()
                 .filter { it.endTime <= endAdjusted },
             basalMetabolicRate = records.get<BasalMetabolicRateRecord>()
@@ -73,7 +70,6 @@ internal suspend fun processChangesResponse(
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Workout -> processor.processWorkoutsFromRecords(
-            fallbackDeviceModel = currentDevice,
             exerciseRecords = records.get<ExerciseSessionRecord>()
                 .filter { it.endTime <= endAdjusted }
         ).let(ProcessedResourceData::Summary)
@@ -81,13 +77,11 @@ internal suspend fun processChangesResponse(
         VitalResource.Sleep -> records.get<SleepSessionRecord>()
             .filter { it.endTime <= endAdjusted }.let { sessions ->
             processor.processSleepFromRecords(
-                fallbackDeviceModel = currentDevice,
                 sleepSessionRecords = sessions,
             ).let(ProcessedResourceData::Summary)
         }
 
         VitalResource.Body -> processor.processBodyFromRecords(
-            fallbackDeviceModel = currentDevice,
             weightRecords = records.get<WeightRecord>().filter { it.time <= endAdjusted },
             bodyFatRecords = records.get<BodyFatRecord>().filter { it.time <= endAdjusted },
         ).let(ProcessedResourceData::Summary)

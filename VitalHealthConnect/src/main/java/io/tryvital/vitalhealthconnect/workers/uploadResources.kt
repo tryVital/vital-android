@@ -49,13 +49,13 @@ internal suspend fun uploadResources(
         is ProcessedResourceData.TimeSeries -> when (data.timeSeriesData) {
             is TimeSeriesData.BloodPressure -> uploader.uploadBloodPressure(
                 userId, start, end, timeZoneId,
-                data.timeSeriesData.samples.map { it.toBloodPressurePayload() },
+                data.timeSeriesData.samples,
                 stage,
             )
             is TimeSeriesData.QuantitySamples -> uploader.uploadQuantitySamples(
                 data.timeSeriesData.resource,
                 userId, start, end, timeZoneId,
-                data.timeSeriesData.samples.map { it.toQuantitySamplePayload() },
+                data.timeSeriesData.samples,
                 stage,
             )
         }

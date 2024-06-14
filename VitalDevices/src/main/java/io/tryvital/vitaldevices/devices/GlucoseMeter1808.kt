@@ -4,6 +4,7 @@ import android.bluetooth.BluetoothDevice
 import android.content.Context
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SampleType
+import io.tryvital.client.services.data.SourceType
 import io.tryvital.vitaldevices.ScannedDevice
 import no.nordicsemi.android.ble.common.callback.glucose.GlucoseMeasurementResponse
 import no.nordicsemi.android.ble.common.profile.glucose.GlucoseMeasurementCallback.UNIT_kg_L
@@ -63,7 +64,7 @@ class GlucoseMeter1808(
             unit = sampleType.unit,
             startDate = measurementTime,
             endDate = measurementTime,
-            type = "fingerprick",
+            type = SourceType.Fingerprick,
         )
     }
 }

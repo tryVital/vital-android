@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.LocalQuantitySample
+import io.tryvital.client.services.data.SourceType
 import io.tryvital.vitaldevices.PermissionMissing
 import io.tryvital.vitaldevices.devices.nfc.Glucose
 import io.tryvital.vitaldevices.devices.nfc.NFC
@@ -97,7 +98,7 @@ private fun quantitySampleFromGlucose(glucose: Glucose): LocalQuantitySample {
         value = glucose.valueUnit,
         startDate = glucose.date,
         endDate = glucose.date,
-        type = "manual_scan",
+        type = SourceType.ManualScan,
         unit = "mmol/L",
     )
 }
