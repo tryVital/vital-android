@@ -126,7 +126,9 @@ internal data class RecordTypeRequirements(
 }
 
 @JvmInline
-value class RemappedVitalResource(val wrapped: VitalResource)
+value class RemappedVitalResource(val wrapped: VitalResource) {
+    override fun toString() = wrapped.toString()
+}
 
 /**
  * VitalResource remapping.

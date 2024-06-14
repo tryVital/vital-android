@@ -48,7 +48,7 @@ internal data class ResourceSyncStarterInput(
     val startForeground: Boolean,
 ) {
     fun toData(): Data = Data.Builder().run {
-        putStringArray("resources", resources.map { it.toString() }.toTypedArray())
+        putStringArray("resources", resources.map { it.wrapped.toString() }.toTypedArray())
         putBoolean("startForeground", startForeground)
         build()
     }
