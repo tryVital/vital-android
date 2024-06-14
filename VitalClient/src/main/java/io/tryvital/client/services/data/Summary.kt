@@ -24,7 +24,7 @@ data class SummaryPayload<T>(
 
 // @VitalPrivateApi
 @JsonClass(generateAdapter = true)
-data class WorkoutPayload(
+data class LocalWorkout(
     @Json(name = "id")
     val id: String,
     @Json(name = "start_date")
