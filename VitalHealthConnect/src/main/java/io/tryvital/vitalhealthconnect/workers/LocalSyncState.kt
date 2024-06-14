@@ -1,6 +1,7 @@
 package io.tryvital.vitalhealthconnect.workers
 
 import com.squareup.moshi.JsonClass
+import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -14,7 +15,7 @@ data class LocalSyncState(
     val expiresAt: Instant,
 ) {
 
-    fun historicalStartDate(@Suppress("UNUSED_PARAMETER") resource: VitalResource): Instant {
+    fun historicalStartDate(@Suppress("UNUSED_PARAMETER") resource: RemappedVitalResource): Instant {
         return historicalStageAnchor.minus(defaultDaysToBackfill, ChronoUnit.DAYS)
     }
 }

@@ -81,7 +81,7 @@ class VitalPermissionRequestContract(
 
     private fun processGrantedPermissionsAsync(requested: Set<String>, granted: Set<String>): Deferred<PermissionOutcome> {
         val readGrants = readResources
-            .filter { granted.containsAll(manager.permissionsRequiredToSyncResources(setOf(it))) }
+            .filter { granted.containsAll(manager.readPermissionsRequiredByResources(setOf(it))) }
             .toSet()
 
         val writeGrants = writeResources
@@ -135,6 +135,6 @@ class VitalPermissionRequestContract(
 
     private fun permissionsToRequest(): Set<String> {
         return manager.permissionsRequiredToWriteResources(this.writeResources) +
-                manager.permissionsRequiredToSyncResources(this.readResources)
+                manager.readPermissionsToRequestForResources(this.readResources)
     }
 }

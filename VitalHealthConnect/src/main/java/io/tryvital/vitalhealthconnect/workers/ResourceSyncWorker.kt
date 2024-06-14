@@ -27,6 +27,7 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.ext.toDate
+import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.merged
@@ -60,7 +61,7 @@ internal val moshi by lazy {
 }
 
 internal data class ResourceSyncWorkerInput(
-    val resource: VitalResource,
+    val resource: RemappedVitalResource,
 ) {
     fun toData(): Data = Data.Builder().run {
         putString("resource", resource.toString())
@@ -69,8 +70,10 @@ internal data class ResourceSyncWorkerInput(
 
     companion object {
         fun fromData(data: Data) = ResourceSyncWorkerInput(
-            resource = VitalResource.valueOf(
-                data.getString("resource") ?: throw IllegalArgumentException("Missing resource")
+            resource = RemappedVitalResource(
+                VitalResource.valueOf(
+                    data.getString("resource") ?: throw IllegalArgumentException("Missing resource")
+                )
             ),
         )
     }
@@ -204,7 +207,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
 
     private suspend fun computeSyncInstruction(): Pair<SyncInstruction, LocalSyncState> {
-        val resourceSyncState = sharedPreferences.getJson<ResourceSyncState>(input.resource.syncStateKey)
+        val resourceSyncState = sharedPreferences.getJson<ResourceSyncState>(input.resource.wrapped.syncStateKey)
 
         val localSyncState = localSyncStateManager.getLocalSyncState()
 
@@ -341,7 +344,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         var token = client.getChangesToken(ChangesTokenRequest(recordTypes = recordTypesToMonitor))
 
         sharedPreferences.edit()
-            .putStringSet(input.resource.monitoringTypesKey, recordTypesToMonitor.toSimpleNameSet())
+            .putStringSet(input.resource.wrapped.monitoringTypesKey, recordTypesToMonitor.toSimpleNameSet())
             .apply()
 
         val (stageStart, stageEnd) = when (stage) {
@@ -410,7 +413,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     }
 
     private fun monitoringRecordTypes(): Set<String> {
-        return sharedPreferences.getStringSet(input.resource.monitoringTypesKey, null) ?: setOf()
+        return sharedPreferences.getStringSet(input.resource.wrapped.monitoringTypesKey, null) ?: setOf()
     }
 
     /**
@@ -422,7 +425,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
         val grantedPermissions = client.permissionController.getGrantedPermissions()
 
-        return input.resource.recordTypeChangesToTriggerSync()
+        return input.resource.wrapped.recordTypeChangesToTriggerSync()
             .filterTo(mutableSetOf()) { recordType ->
                 HealthPermission.getReadPermission(recordType) in grantedPermissions
             }
@@ -432,7 +435,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val newState = ResourceSyncState.Incremental(token, lastSync = Instant.now())
 
         sharedPreferences.edit()
-            .putJson<ResourceSyncState>(input.resource.syncStateKey, newState)
+            .putJson<ResourceSyncState>(input.resource.wrapped.syncStateKey, newState)
             .apply()
 
         vitalLogger.info { "${input.resource}: updated to $newState" }
