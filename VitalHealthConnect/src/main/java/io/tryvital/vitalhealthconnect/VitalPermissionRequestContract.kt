@@ -4,6 +4,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.PermissionController
+import io.tryvital.client.VitalClient
+import io.tryvital.client.createConnectedSourceIfNotExist
+import io.tryvital.client.services.VitalPrivateApi
+import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
 import kotlinx.coroutines.CancellationException
@@ -79,6 +83,7 @@ class VitalPermissionRequestContract(
         return processGrantedPermissionsAsync(requested = currentAskRequest, granted = grantedPermissions)
     }
 
+    @OptIn(VitalPrivateApi::class)
     private fun processGrantedPermissionsAsync(requested: Set<String>, granted: Set<String>): Deferred<PermissionOutcome> {
         val readGrants = readResources
             .filter { granted.containsAll(manager.readPermissionsRequiredByResources(setOf(it))) }
@@ -95,6 +100,19 @@ class VitalPermissionRequestContract(
         }
 
         VitalLogger.getOrCreate().logI("[processGrantedPermissions] Saved read grants: ${readGrants.joinToString(", ")}; write grants = ${writeGrants.joinToString(", ")}")
+
+        // User has gone through the Ask flow successfully.
+        // Irrespective of the permission state, we proactively create the CS here (if not already
+        // exists).
+        taskScope.launch {
+            try {
+                manager.vitalClient
+                    .createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
+
+            } catch (e: Throwable) {
+                VitalLogger.getOrCreate().logE("[Ask] proactive CS creation failed", e)
+            }
+        }
 
         return taskScope.async {
             // The activity result reports only permissions granted in this UI interaction.
