@@ -197,8 +197,8 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         quantitySamples: List<QuantitySamplePayload>,
         stage: DataStage,
     ) {
-        vitalClient.vitalsService.sendQuantitySamples(
-            resource, userId, TimeseriesPayload(
+        vitalClient.vitalPrivateService.timeseriesPost(
+            userId, resource.toString(), TimeseriesPayload(
                 stage = stage,
                 provider = ManualProviderSlug.HealthConnect,
                 startDate = startDate,
@@ -217,7 +217,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         bloodPressurePayloads: List<BloodPressureSamplePayload>,
         stage: DataStage,
     ) {
-        vitalClient.vitalsService.sendBloodPressure(
+        vitalClient.vitalPrivateService.bloodPressureTimeseriesPost(
             userId, TimeseriesPayload(
                 stage = stage,
                 provider = ManualProviderSlug.HealthConnect,

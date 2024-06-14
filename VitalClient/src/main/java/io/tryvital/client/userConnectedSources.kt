@@ -14,6 +14,7 @@ fun VitalClient.hasUserConnectedTo(provider: ProviderSlug): Boolean {
     )
 }
 
+@VitalPrivateApi
 suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProviderSlug) {
     val userId = VitalClient.checkUserId()
     val slug = provider.toProviderSlug()
@@ -35,7 +36,6 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
             .apply()
     }
 
-    @OptIn(VitalPrivateApi::class)
     try {
         // Remote Miss: Try to create the manual connected source.
         vitalPrivateService.manualProvider(

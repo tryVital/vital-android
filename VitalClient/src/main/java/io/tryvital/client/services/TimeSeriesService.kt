@@ -44,29 +44,6 @@ class TimeSeriesService private constructor(private val timeSeries: TimeSeries) 
         )
     }
 
-    suspend fun sendBloodPressure(
-        userId: String,
-        timeseriesPayload: TimeseriesPayload<List<BloodPressureSamplePayload>>
-    ) {
-        timeSeries.bloodPressureTimeseriesPost(
-            userId = userId,
-            resource = "blood_pressure",
-            payload = timeseriesPayload
-        )
-    }
-
-    suspend fun sendQuantitySamples(
-        resource: IngestibleTimeseriesResource,
-        userId: String,
-        timeseriesPayload: TimeseriesPayload<List<QuantitySamplePayload>>
-    ) {
-        timeSeries.timeseriesPost(
-            userId = userId,
-            resource = resource.toString(),
-            payload = timeseriesPayload
-        )
-    }
-
     companion object {
         fun create(retrofit: Retrofit): TimeSeriesService {
             return TimeSeriesService(retrofit.create(TimeSeries::class.java))
@@ -93,19 +70,5 @@ private interface TimeSeries {
         @Query("provider") provider: String? = null,
         @Query("next_cursor") nextCursor: String? = null,
     ): GroupedSamplesResponse<BloodPressureSample>
-
-    @POST("timeseries/{user_id}/{resource}")
-    suspend fun timeseriesPost(
-        @Path("user_id") userId: String,
-        @Path("resource", encoded = true) resource: String,
-        @Body payload: TimeseriesPayload<List<QuantitySamplePayload>>
-    ): Response<Unit>
-
-    @POST("timeseries/{user_id}/{resource}")
-    suspend fun bloodPressureTimeseriesPost(
-        @Path("user_id") userId: String,
-        @Path("resource", encoded = true) resource: String,
-        @Body payload: TimeseriesPayload<List<BloodPressureSamplePayload>>
-    ): Response<Unit>
 }
 

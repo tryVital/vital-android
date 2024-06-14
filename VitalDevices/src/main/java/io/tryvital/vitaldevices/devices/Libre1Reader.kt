@@ -2,6 +2,7 @@ package io.tryvital.vitaldevices.devices
 
 import android.app.Activity
 import android.content.pm.PackageManager.PERMISSION_GRANTED
+import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.vitaldevices.PermissionMissing
 import io.tryvital.vitaldevices.devices.nfc.Glucose
@@ -81,6 +82,8 @@ internal class Libre1ReaderImpl(private val activity: Activity): Libre1Reader {
             continuation.invokeOnCancellation { nfc?.close() }
         }
 
+        val samples = glucose.map { quantitySampleFromGlucose(it) }
+        postGlucoseSamples(activity.applicationContext, ManualProviderSlug.LibreBLE, samples)
 
         return Libre1Read(
             samples = glucose.map { quantitySampleFromGlucose(it) },

@@ -5,11 +5,14 @@ import ManualProviderResponse
 import UserSDKSyncStateBody
 import UserSDKSyncStateResponse
 import io.tryvital.client.services.data.ActivityPayload
+import io.tryvital.client.services.data.BloodPressureSamplePayload
 import io.tryvital.client.services.data.BodyPayload
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.ProfilePayload
+import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.client.services.data.SleepPayload
 import io.tryvital.client.services.data.SummaryPayload
+import io.tryvital.client.services.data.TimeseriesPayload
 import io.tryvital.client.services.data.WorkoutPayload
 import retrofit2.Response
 import retrofit2.Retrofit
@@ -63,6 +66,19 @@ interface VitalPrivateService {
     suspend fun addSleeps(
         @Path("user_id") userId: String,
         @Body body: SummaryPayload<List<SleepPayload>>
+    ): Response<Unit>
+
+    @POST("timeseries/{user_id}/{resource}")
+    suspend fun timeseriesPost(
+        @Path("user_id") userId: String,
+        @Path("resource", encoded = true) resource: String,
+        @Body payload: TimeseriesPayload<List<QuantitySamplePayload>>
+    ): Response<Unit>
+
+    @POST("timeseries/{user_id}/blood_pressure")
+    suspend fun bloodPressureTimeseriesPost(
+        @Path("user_id") userId: String,
+        @Body payload: TimeseriesPayload<List<BloodPressureSamplePayload>>
     ): Response<Unit>
 
     companion object {
