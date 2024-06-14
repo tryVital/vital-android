@@ -21,6 +21,7 @@ import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.isConnectedToInternet
 import io.tryvital.vitalhealthconnect.markAutoSyncSuccess
+import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -34,7 +35,7 @@ import java.util.UUID
 import kotlin.random.Random
 
 internal data class ResourceSyncStarterInput(
-    val resources: Set<VitalResource>,
+    val resources: Set<RemappedVitalResource>,
     /**
      * Whether the work should request WorkManager to start a foregorund service.
      * For sync triggered by user interaction, or sync triggered by ProcessLifecycle ON_START,
@@ -47,14 +48,16 @@ internal data class ResourceSyncStarterInput(
     val startForeground: Boolean,
 ) {
     fun toData(): Data = Data.Builder().run {
-        putStringArray("resources", resources.map { it.toString() }.toTypedArray())
+        putStringArray("resources", resources.map { it.wrapped.toString() }.toTypedArray())
         putBoolean("startForeground", startForeground)
         build()
     }
 
     companion object {
         fun fromData(data: Data) = ResourceSyncStarterInput(
-            resources = data.getStringArray("resources")?.mapTo(mutableSetOf()) { VitalResource.valueOf(it) } ?: emptySet(),
+            resources = data.getStringArray("resources")?.mapTo(mutableSetOf()) {
+                RemappedVitalResource(VitalResource.valueOf(it))
+            } ?: emptySet(),
             startForeground = data.getBoolean("startForeground", true),
         )
     }
@@ -110,7 +113,10 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
                 return Result.failure()
             }
 
-            val notification = syncNotificationBuilder.build(applicationContext, input.resources)
+            val notification = syncNotificationBuilder.build(
+                applicationContext,
+                input.resources.mapTo(mutableSetOf()) { it.wrapped }
+            )
 
             setForeground(
                 ForegroundInfo(VITAL_SYNC_NOTIFICATION_ID, notification, foregroundServiceType())
@@ -137,7 +143,7 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
         for (resource in input.resources) {
             val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>()
                 .setInputData(ResourceSyncWorkerInput(resource = resource).toData())
-                .addTag(resource.name)
+                .addTag(resource.wrapped.name)
                 .build()
 
             val workManager = WorkManager.getInstance(applicationContext)

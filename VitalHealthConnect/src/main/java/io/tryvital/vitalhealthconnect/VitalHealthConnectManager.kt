@@ -164,8 +164,13 @@ class VitalHealthConnectManager private constructor(
         val lastKnownGrantedResources = resourcesWithReadPermission()
         val currentGrants = getGrantedPermissions(context)
 
-        val readResourcesByStatus = VitalResource.values()
-            .groupBy { currentGrants.containsAll(permissionsRequiredToSyncResources(setOf(it))) }
+        val readResourcesByStatus = VitalResource.values().groupBy { resource ->
+            return@groupBy resource.recordTypeDependencies().isResourceActive { recordType ->
+                val readPermission = HealthPermission.getReadPermission(recordType)
+                return@isResourceActive readPermission in currentGrants
+            }
+        }
+
         val writeResourcesByStatus = WritableVitalResource.values()
             .groupBy { currentGrants.containsAll(permissionsRequiredToWriteResources(setOf(it))) }
 
@@ -199,9 +204,16 @@ class VitalHealthConnectManager private constructor(
         return recordTypes.map { HealthPermission.getWritePermission(it) }.toSet()
     }
 
-    internal fun permissionsRequiredToSyncResources(resources: Set<VitalResource>): Set<String> {
+    internal fun readPermissionsRequiredByResources(resources: Set<VitalResource>): Set<String> {
         return resources
-            .flatMapTo(mutableSetOf()) { it.recordTypeDependencies() }
+            .flatMapTo(mutableSetOf()) { it.recordTypeDependencies().required }
+            .map { HealthPermission.getReadPermission(it) }
+            .toSet()
+    }
+
+    internal fun readPermissionsToRequestForResources(resources: Set<VitalResource>): Set<String> {
+        return resources
+            .flatMapTo(mutableSetOf()) { it.recordTypeDependencies().allRecordTypes }
             .map { HealthPermission.getReadPermission(it) }
             .toSet()
     }
@@ -375,7 +387,7 @@ class VitalHealthConnectManager private constructor(
         processorOptions: ProcessorOptions = ProcessorOptions(),
     ): ProcessedResourceData {
         return readResourceByTimeRange(
-            resource,
+            resource.remapped(),
             startTime = startTime,
             endTime = endTime,
             timeZone = TimeZone.getDefault(),
@@ -397,7 +409,7 @@ class VitalHealthConnectManager private constructor(
      */
     @SuppressLint("MissingPermission")
     private fun startSyncWorker(
-        resources: Set<VitalResource>,
+        resources: Set<RemappedVitalResource>,
         startForeground: Boolean,
         beforeEnqueue: (() -> Unit)? = null
     ) {

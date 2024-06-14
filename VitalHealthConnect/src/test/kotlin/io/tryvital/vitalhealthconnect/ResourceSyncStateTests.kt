@@ -14,15 +14,15 @@ import java.time.Instant
 @OptIn(ExperimentalCoroutinesApi::class)
 class ResourceSyncStateTests {
     private val historicalStub = ResourceSyncState.Historical(
-        start = Instant.parse("2023-01-23T12:34:56Z").toDate(),
-        end = Instant.parse("2023-01-25T23:54:32Z").toDate(),
+        start = Instant.parse("2023-01-23T12:34:56Z"),
+        end = Instant.parse("2023-01-25T23:54:32Z"),
     )
-    private val historicalJsonStub = """{"type":"historical","start":"2023-01-23T12:34:56.000Z","end":"2023-01-25T23:54:32.000Z"}"""
+    private val historicalJsonStub = """{"type":"historical","start":"2023-01-23T12:34:56Z","end":"2023-01-25T23:54:32Z"}"""
     private val incrementalStub = ResourceSyncState.Incremental(
         changesToken = "this-is-not-a-token",
-        lastSync = Instant.parse("2023-01-25T23:54:32Z").toDate()
+        lastSync = Instant.parse("2023-01-25T23:54:32Z")
     )
-    private val incrementalJsonStub = """{"type":"incremental","changesToken":"this-is-not-a-token","lastSync":"2023-01-25T23:54:32.000Z"}"""
+    private val incrementalJsonStub = """{"type":"incremental","changesToken":"this-is-not-a-token","lastSync":"2023-01-25T23:54:32Z"}"""
     private val adapter: JsonAdapter<ResourceSyncState> = moshi.adapter(ResourceSyncState::class.java)
 
     @Test

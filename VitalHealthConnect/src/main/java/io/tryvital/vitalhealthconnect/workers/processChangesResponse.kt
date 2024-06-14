@@ -19,6 +19,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.response.ChangesResponse
+import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
@@ -31,7 +32,7 @@ import java.util.*
 import kotlin.reflect.KClass
 
 internal suspend fun processChangesResponse(
-    resource: VitalResource,
+    resource: RemappedVitalResource,
     responses: ChangesResponse,
     timeZone: TimeZone,
     currentDevice: String,
@@ -53,7 +54,7 @@ internal suspend fun processChangesResponse(
     ): ProcessedResourceData = process(currentDevice, records)
         .let(ProcessedResourceData::TimeSeries)
 
-    return when (resource.remapped()) {
+    return when (resource.wrapped) {
         VitalResource.ActiveEnergyBurned, VitalResource.BasalEnergyBurned, VitalResource.Steps ->
             throw IllegalArgumentException("Unexpected resource post remapped(): $resource")
 

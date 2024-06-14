@@ -1,5 +1,6 @@
 package io.tryvital.vitalhealthconnect.workers
 
+import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
@@ -11,7 +12,7 @@ import java.time.Instant
 import java.util.TimeZone
 
 internal suspend fun readResourceByTimeRange(
-    resource: VitalResource,
+    resource: RemappedVitalResource,
     startTime: Instant,
     endTime: Instant,
     timeZone: TimeZone,
@@ -28,7 +29,7 @@ internal suspend fun readResourceByTimeRange(
         read(startTime, endTime)
     ).let(ProcessedResourceData::TimeSeries)
 
-    return when (resource.remapped()) {
+    return when (resource.wrapped) {
         VitalResource.ActiveEnergyBurned, VitalResource.BasalEnergyBurned, VitalResource.Steps ->
             throw IllegalArgumentException("Unexpected resource post remapped(): $resource")
 
