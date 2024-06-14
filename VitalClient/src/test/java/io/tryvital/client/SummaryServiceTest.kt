@@ -56,7 +56,8 @@ class SummaryServiceTest {
                         caloriesInKiloJules = 101.0,
                         distanceInMeter = 301.0,
                         heartRate = emptyList(),
-                        respiratoryRate = emptyList()
+                        respiratoryRate = emptyList(),
+                        sourceType = SourceType.Watch,
                     )
                 )
             )

@@ -35,6 +35,8 @@ data class LocalWorkout(
     val sourceBundle: String?,
     @Json(name = "product_type")
     val deviceModel: String?,
+    @Json(name = "source_type")
+    val sourceType: SourceType?,
     @Json(name = "sport")
     val sport: String,
     @Json(name = "calories")
@@ -99,6 +101,8 @@ data class LocalSleep(
     val sourceBundle: String?,
     @Json(name = "product_type")
     val deviceModel: String?,
+    @Json(name = "source_type")
+    val sourceType: SourceType?,
     @Json(name = "heart_rate")
     val heartRate: List<LocalQuantitySample>,
     @Json(name = "resting_heart_rate")
