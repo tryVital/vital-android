@@ -39,7 +39,7 @@ import kotlin.reflect.KClass
 class VitalHealthConnectManager private constructor(
     internal val context: Context,
     private val healthConnectClientProvider: HealthConnectClientProvider,
-    private val vitalClient: VitalClient,
+    internal val vitalClient: VitalClient,
     private val recordReader: RecordReader,
     private val recordProcessor: RecordProcessor,
 ) {
