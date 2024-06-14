@@ -2,11 +2,10 @@ package io.tryvital.vitaldevices.devices
 
 import android.bluetooth.BluetoothDevice
 import android.content.Context
-import io.tryvital.client.services.data.BloodPressureSamplePayload
-import io.tryvital.client.services.data.QuantitySamplePayload
+import io.tryvital.client.services.data.LocalBloodPressureSample
+import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.vitaldevices.ScannedDevice
-import kotlinx.coroutines.flow.*
 import no.nordicsemi.android.ble.common.callback.bps.BloodPressureMeasurementResponse
 import no.nordicsemi.android.ble.data.Data
 import java.util.*
@@ -18,27 +17,27 @@ private val bloodPressureMeasurementCharacteristicUUID =
 
 interface BloodPressureReader {
     suspend fun pair()
-    suspend fun read(): List<BloodPressureSamplePayload>
+    suspend fun read(): List<LocalBloodPressureSample>
 }
 
 class BloodPressureReader1810(
     context: Context,
     scannedBluetoothDevice: BluetoothDevice,
     scannedDevice: ScannedDevice,
-) : GATTMeterWithNoRACP<BloodPressureSamplePayload>(
+) : GATTMeterWithNoRACP<LocalBloodPressureSample>(
     context,
     serviceID = bpsServiceUUID,
     measurementCharacteristicID = bloodPressureMeasurementCharacteristicUUID,
     scannedBluetoothDevice = scannedBluetoothDevice,
     scannedDevice = scannedDevice
 ), BloodPressureReader {
-    override fun onReceivedAll(samples: List<BloodPressureSamplePayload>) {
+    override fun onReceivedAll(samples: List<LocalBloodPressureSample>) {
         postBloodPressureSamples(context, scannedDevice.deviceModel.brand.toManualProviderSlug(), samples)
     }
 
     override fun mapRawData(
         device: BluetoothDevice, data: Data
-    ): BloodPressureSamplePayload? {
+    ): LocalBloodPressureSample? {
         val response = BloodPressureMeasurementResponse().apply {
             onDataReceived(device, data)
         }
@@ -48,8 +47,8 @@ class BloodPressureReader1810(
         val measurementTime = response.timestamp?.time?.toInstant() ?: return null
         val idPrefix = "${measurementTime.epochSecond}-"
 
-        return BloodPressureSamplePayload(
-            systolic = QuantitySamplePayload(
+        return LocalBloodPressureSample(
+            systolic = LocalQuantitySample(
                 id = idPrefix + "systolic",
                 value = response.systolic.toDouble(),
                 unit = SampleType.BloodPressureSystolic.unit,
@@ -57,7 +56,7 @@ class BloodPressureReader1810(
                 endDate = measurementTime,
                 type = "cuff",
             ),
-            diastolic = QuantitySamplePayload(
+            diastolic = LocalQuantitySample(
                 id = idPrefix + "diastolic",
                 value = response.diastolic.toDouble(),
                 unit = SampleType.BloodPressureDiastolic.unit,
@@ -66,7 +65,7 @@ class BloodPressureReader1810(
                 type = "cuff",
             ),
             pulse = response.pulseRate?.let { value ->
-                QuantitySamplePayload(
+                LocalQuantitySample(
                     id = idPrefix + "pulse",
                     value = value.toDouble(),
                     unit = SampleType.HeartRate.unit,

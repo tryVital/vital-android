@@ -2,10 +2,9 @@ package io.tryvital.vitaldevices.devices
 
 import android.bluetooth.BluetoothDevice
 import android.content.Context
-import io.tryvital.client.services.data.QuantitySamplePayload
+import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.vitaldevices.ScannedDevice
-import kotlinx.coroutines.flow.*
 import no.nordicsemi.android.ble.common.callback.glucose.GlucoseMeasurementResponse
 import no.nordicsemi.android.ble.common.profile.glucose.GlucoseMeasurementCallback.UNIT_kg_L
 import no.nordicsemi.android.ble.common.profile.glucose.GlucoseMeasurementCallback.UNIT_mol_L
@@ -19,27 +18,27 @@ private val glucoseMeasurementCharacteristicUUID =
 
 interface GlucoseMeter {
     suspend fun pair()
-    suspend fun read(): List<QuantitySamplePayload>
+    suspend fun read(): List<LocalQuantitySample>
 }
 
 class GlucoseMeter1808(
     context: Context,
     scannedBluetoothDevice: BluetoothDevice,
     scannedDevice: ScannedDevice,
-) : GATTMeter<QuantitySamplePayload>(
+) : GATTMeter<LocalQuantitySample>(
     context,
     serviceID = glsServiceUUID,
     measurementCharacteristicID = glucoseMeasurementCharacteristicUUID,
     scannedBluetoothDevice = scannedBluetoothDevice,
     scannedDevice = scannedDevice
 ), GlucoseMeter {
-    override fun onReceivedAll(samples: List<QuantitySamplePayload>) {
+    override fun onReceivedAll(samples: List<LocalQuantitySample>) {
         postGlucoseSamples(context, scannedDevice.deviceModel.brand.toManualProviderSlug(), samples)
     }
 
     override fun mapRawData(
         device: BluetoothDevice, data: Data
-    ): QuantitySamplePayload? {
+    ): LocalQuantitySample? {
         val response = GlucoseMeasurementResponse().apply {
             onDataReceived(device, data)
         }
@@ -56,7 +55,7 @@ class GlucoseMeter1808(
             else -> throw IllegalStateException("Glucose monitor reports unexpected unit: ${response.unit}")
         }
 
-        return QuantitySamplePayload(
+        return LocalQuantitySample(
             // Prefixed with epoch in seconds to avoid sequence number conflicts
             // (due to new device and/or device reset)
             id = "${measurementTime.epochSecond}-${response.sequenceNumber}",

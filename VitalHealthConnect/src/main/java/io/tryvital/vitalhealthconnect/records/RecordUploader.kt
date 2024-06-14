@@ -4,20 +4,19 @@ package io.tryvital.vitalhealthconnect.records
 
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.VitalPrivateApi
-import io.tryvital.client.services.data.ActivityPayload
-import io.tryvital.client.services.data.BloodPressureSamplePayload
-import io.tryvital.client.services.data.BodyPayload
+import io.tryvital.client.services.data.LocalActivity
+import io.tryvital.client.services.data.LocalBloodPressureSample
+import io.tryvital.client.services.data.LocalBody
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.ManualProviderSlug
-import io.tryvital.client.services.data.ProfilePayload
-import io.tryvital.client.services.data.QuantitySamplePayload
-import io.tryvital.client.services.data.SleepPayload
+import io.tryvital.client.services.data.LocalProfile
+import io.tryvital.client.services.data.LocalQuantitySample
+import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
 import io.tryvital.client.services.data.WorkoutPayload
 import java.time.Instant
-import java.util.Date
 
 
 interface RecordUploader {
@@ -27,7 +26,7 @@ interface RecordUploader {
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        sleepPayloads: List<SleepPayload>,
+        sleepPayloads: List<LocalSleep>,
         stage: DataStage = DataStage.Daily,
     )
 
@@ -36,7 +35,7 @@ interface RecordUploader {
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        bodyPayload: BodyPayload,
+        bodyPayload: LocalBody,
         stage: DataStage = DataStage.Daily,
     )
 
@@ -45,7 +44,7 @@ interface RecordUploader {
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        profilePayload: ProfilePayload,
+        profilePayload: LocalProfile,
         stage: DataStage = DataStage.Daily,
     )
 
@@ -54,7 +53,7 @@ interface RecordUploader {
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        activityPayloads: List<ActivityPayload>,
+        activityPayloads: List<LocalActivity>,
         stage: DataStage = DataStage.Daily,
     )
 
@@ -72,7 +71,7 @@ interface RecordUploader {
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        bloodPressurePayloads: List<BloodPressureSamplePayload>,
+        bloodPressurePayloads: List<LocalBloodPressureSample>,
         stage: DataStage = DataStage.Daily,
     )
 
@@ -82,7 +81,7 @@ interface RecordUploader {
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        quantitySamples: List<QuantitySamplePayload>,
+        quantitySamples: List<LocalQuantitySample>,
         stage: DataStage = DataStage.Daily,
     )
 }
@@ -93,7 +92,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        sleepPayloads: List<SleepPayload>,
+        sleepPayloads: List<LocalSleep>,
         stage: DataStage,
     ) {
         vitalClient.vitalPrivateService.addSleeps(
@@ -113,7 +112,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        bodyPayload: BodyPayload,
+        bodyPayload: LocalBody,
         stage: DataStage,
     ) {
         vitalClient.vitalPrivateService.addBody(
@@ -133,7 +132,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        profilePayload: ProfilePayload,
+        profilePayload: LocalProfile,
         stage: DataStage,
     ) {
         vitalClient.vitalPrivateService.addProfile(
@@ -153,7 +152,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        activityPayloads: List<ActivityPayload>,
+        activityPayloads: List<LocalActivity>,
         stage: DataStage,
     ) {
         vitalClient.vitalPrivateService.addActivities(
@@ -194,7 +193,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        quantitySamples: List<QuantitySamplePayload>,
+        quantitySamples: List<LocalQuantitySample>,
         stage: DataStage,
     ) {
         vitalClient.vitalPrivateService.timeseriesPost(
@@ -214,7 +213,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        bloodPressurePayloads: List<BloodPressureSamplePayload>,
+        bloodPressurePayloads: List<LocalBloodPressureSample>,
         stage: DataStage,
     ) {
         vitalClient.vitalPrivateService.bloodPressureTimeseriesPost(

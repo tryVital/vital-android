@@ -8,7 +8,6 @@ import android.content.*
 import android.content.Context.BLUETOOTH_SERVICE
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Build
-import io.tryvital.client.services.data.QuantitySamplePayload
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitaldevices.devices.*
 import kotlinx.coroutines.channels.awaitClose
