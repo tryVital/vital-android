@@ -1,6 +1,9 @@
+@file:OptIn(VitalPrivateApi::class)
+
 package io.tryvital.vitalhealthconnect.records
 
 import io.tryvital.client.VitalClient
+import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.ActivityPayload
 import io.tryvital.client.services.data.BloodPressureSamplePayload
 import io.tryvital.client.services.data.BodyPayload
@@ -93,7 +96,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         sleepPayloads: List<SleepPayload>,
         stage: DataStage,
     ) {
-        vitalClient.summaryService.addSleeps(
+        vitalClient.vitalPrivateService.addSleeps(
             userId, SummaryPayload(
                 stage = stage,
                 provider = ManualProviderSlug.HealthConnect,
@@ -113,7 +116,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         bodyPayload: BodyPayload,
         stage: DataStage,
     ) {
-        vitalClient.summaryService.addBody(
+        vitalClient.vitalPrivateService.addBody(
             userId, SummaryPayload(
                 stage = stage,
                 provider = ManualProviderSlug.HealthConnect,
@@ -133,7 +136,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         profilePayload: ProfilePayload,
         stage: DataStage,
     ) {
-        vitalClient.summaryService.addProfile(
+        vitalClient.vitalPrivateService.addProfile(
             userId, SummaryPayload(
                 stage = stage,
                 provider = ManualProviderSlug.HealthConnect,
@@ -153,7 +156,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         activityPayloads: List<ActivityPayload>,
         stage: DataStage,
     ) {
-        vitalClient.summaryService.addActivities(
+        vitalClient.vitalPrivateService.addActivities(
             userId, SummaryPayload(
                 stage = stage,
                 provider = ManualProviderSlug.HealthConnect,
@@ -173,7 +176,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         workoutPayloads: List<WorkoutPayload>,
         stage: DataStage,
     ) {
-        vitalClient.summaryService.addWorkouts(
+        vitalClient.vitalPrivateService.addWorkouts(
             userId, SummaryPayload(
                 stage = stage,
                 provider = ManualProviderSlug.HealthConnect,

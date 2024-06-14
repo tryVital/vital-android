@@ -1,7 +1,9 @@
+@file:OptIn(VitalPrivateApi::class)
+
 package io.tryvital.client
 
-import io.tryvital.client.dependencies.Dependencies
-import io.tryvital.client.services.SummaryService
+import io.tryvital.client.services.VitalPrivateApi
+import io.tryvital.client.services.VitalPrivateService
 import io.tryvital.client.services.data.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -11,10 +13,8 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Response
 import retrofit2.Retrofit
 import java.time.Instant
-import java.util.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SummaryServiceTest {
@@ -36,7 +36,7 @@ class SummaryServiceTest {
                 .setResponseCode(200)
         )
 
-        val summaryService = SummaryService.create(retrofit)
+        val summaryService = VitalPrivateService.create(retrofit)
         val response = summaryService.addWorkouts(
             userId = userId,
             body = SummaryPayload(
@@ -72,7 +72,7 @@ class SummaryServiceTest {
                 .setResponseCode(200)
                 .setBody("")
         )
-        val summaryService = SummaryService.create(retrofit)
+        val summaryService = VitalPrivateService.create(retrofit)
         val response = summaryService.addProfile(
             userId = userId,
             body = SummaryPayload(
@@ -100,7 +100,7 @@ class SummaryServiceTest {
                 .setResponseCode(200)
                 .setBody("")
         )
-        val summaryService = SummaryService.create(retrofit)
+        val summaryService = VitalPrivateService.create(retrofit)
         val response = summaryService.addBody(
             userId = userId,
             body = SummaryPayload(
@@ -127,7 +127,7 @@ class SummaryServiceTest {
                 .setResponseCode(200)
                 .setBody("")
         )
-        val summaryService = SummaryService.create(retrofit)
+        val summaryService = VitalPrivateService.create(retrofit)
         val response = summaryService.addSleeps(
             userId = userId,
             body = SummaryPayload(
@@ -151,7 +151,7 @@ class SummaryServiceTest {
                 .setResponseCode(200)
                 .setBody("")
         )
-        val summaryService = SummaryService.create(retrofit)
+        val summaryService = VitalPrivateService.create(retrofit)
         val response = summaryService.addActivities(
             userId = userId,
             body = SummaryPayload(
