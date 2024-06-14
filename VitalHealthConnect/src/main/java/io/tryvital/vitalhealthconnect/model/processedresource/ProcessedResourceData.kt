@@ -2,6 +2,7 @@ package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.LocalBody
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
+import io.tryvital.client.services.data.LocalActivity
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
@@ -103,7 +104,7 @@ sealed class SummaryData {
     }
 
     data class Activities(
-        val activities: List<Activity>
+        val activities: List<LocalActivity>
     ) : SummaryData() {
         override fun merge(other: SummaryData): SummaryData {
             check(other is Activities)
