@@ -2,7 +2,9 @@ package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.LocalBody
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
+import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalProfile
+import io.tryvital.client.services.data.LocalQuantitySample
 import java.time.Instant
 
 sealed class ProcessedResourceData {
@@ -33,7 +35,7 @@ sealed class TimeSeriesData {
     abstract fun merge(other: TimeSeriesData): TimeSeriesData
     abstract fun isNotEmpty(): Boolean
 
-    data class BloodPressure(val samples: List<BloodPressureSample>) : TimeSeriesData() {
+    data class BloodPressure(val samples: List<LocalBloodPressureSample>) : TimeSeriesData() {
         override fun merge(other: TimeSeriesData): TimeSeriesData {
             check(other is BloodPressure)
             return BloodPressure(samples + other.samples)
@@ -41,7 +43,7 @@ sealed class TimeSeriesData {
         override fun isNotEmpty(): Boolean = samples.isNotEmpty()
     }
 
-    data class QuantitySamples(val resource: IngestibleTimeseriesResource, val samples: List<QuantitySample>) : TimeSeriesData() {
+    data class QuantitySamples(val resource: IngestibleTimeseriesResource, val samples: List<LocalQuantitySample>) : TimeSeriesData() {
         override fun merge(other: TimeSeriesData): TimeSeriesData {
             check(other is QuantitySamples && resource == other.resource)
             return QuantitySamples(resource, samples + other.samples)
@@ -78,14 +80,14 @@ sealed class SummaryData {
     }
 
     data class Body(
-        val bodyMass: List<QuantitySample>,
-        val bodyFatPercentage: List<QuantitySample>,
+        val bodyMass: List<LocalQuantitySample>,
+        val bodyFatPercentage: List<LocalQuantitySample>,
     ) : SummaryData() {
 
         fun toBodyPayload(): LocalBody {
             return LocalBody(
-                bodyMass = bodyMass.map { it.toQuantitySamplePayload() },
-                bodyFatPercentage = bodyFatPercentage.map { it.toQuantitySamplePayload() },
+                bodyMass = bodyMass,
+                bodyFatPercentage = bodyFatPercentage,
             )
         }
 

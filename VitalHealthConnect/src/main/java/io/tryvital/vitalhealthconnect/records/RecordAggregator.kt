@@ -25,7 +25,7 @@ import kotlin.math.floor
 import kotlin.math.nextDown
 import kotlin.reflect.KClass
 
-interface RecordAggregator {
+internal interface RecordAggregator {
 
     suspend fun aggregateWorkoutSummary(
         startTime: Instant,

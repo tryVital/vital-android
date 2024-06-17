@@ -16,16 +16,14 @@ internal suspend fun readResourceByTimeRange(
     startTime: Instant,
     endTime: Instant,
     timeZone: TimeZone,
-    currentDevice: String,
     reader: RecordReader,
     processor: RecordProcessor,
     processorOptions: ProcessorOptions,
 ): ProcessedResourceData {
     suspend fun <Record, T: TimeSeriesData> readTimeseries(
         read: suspend (Instant, Instant) -> List<Record>,
-        process: suspend (String, List<Record>) -> T
+        process: suspend (List<Record>) -> T
     ): ProcessedResourceData = process(
-        currentDevice,
         read(startTime, endTime)
     ).let(ProcessedResourceData::TimeSeries)
 
@@ -35,7 +33,6 @@ internal suspend fun readResourceByTimeRange(
 
         VitalResource.Activity -> processor.processActivitiesFromRecords(
             timeZone = timeZone,
-            currentDevice = currentDevice,
             activeEnergyBurned = reader.readActiveEnergyBurned(startTime, endTime),
             basalMetabolicRate = reader.readBasalMetabolicRate(startTime, endTime),
             floorsClimbed = reader.readFloorsClimbed(startTime, endTime),
@@ -46,19 +43,16 @@ internal suspend fun readResourceByTimeRange(
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Workout -> processor.processWorkoutsFromRecords(
-            fallbackDeviceModel = currentDevice,
             exerciseRecords = reader.readExerciseSessions(startTime, endTime)
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Sleep -> reader.readSleepSession(startTime, endTime).let { sessions ->
             processor.processSleepFromRecords(
-                fallbackDeviceModel = currentDevice,
                 sleepSessionRecords = sessions,
             ).let(ProcessedResourceData::Summary)
         }
 
         VitalResource.Body -> processor.processBodyFromRecords(
-            fallbackDeviceModel = currentDevice,
             weightRecords = reader.readWeights(startTime, endTime),
             bodyFatRecords = reader.readBodyFat(startTime, endTime),
         ).let(ProcessedResourceData::Summary)

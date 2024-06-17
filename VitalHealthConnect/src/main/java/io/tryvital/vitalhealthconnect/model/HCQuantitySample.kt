@@ -1,29 +1,48 @@
 package io.tryvital.vitalhealthconnect.model
 
+import androidx.health.connect.client.records.metadata.Device
 import androidx.health.connect.client.records.metadata.Metadata
-import io.tryvital.vitalhealthconnect.model.processedresource.QuantitySample
+import io.tryvital.client.services.data.LocalQuantitySample
+import io.tryvital.client.services.data.SourceType
 import java.time.Instant
-import java.util.Date
 
-data class HCQuantitySample(
-    val value: Double,
-    val unit: String,
-    val startDate: Instant,
-    val endDate: Instant,
-    val type: String? = null,
-    val metadata: Metadata,
-) {
+fun quantitySample(
+    value: Double,
+    unit: String,
+    startDate: Instant,
+    endDate: Instant,
+    metadata: Metadata,
+): LocalQuantitySample {
+    return LocalQuantitySample(
+        id = metadata.id,
+        value = value,
+        unit = unit,
+        startDate = startDate,
+        endDate = endDate,
+        type = metadata.inferredSourceType,
+        sourceBundle = metadata.dataOrigin.packageName,
+        deviceModel = metadata.device?.model,
+    )
+}
 
-    fun toQuantitySample(fallbackDeviceModel: String): QuantitySample {
-        return QuantitySample(
-            id = metadata.id,
-            value = value,
-            unit = unit,
-            startDate = startDate,
-            endDate = endDate,
-            type = "automatic",
-            sourceBundle = metadata.dataOrigin.packageName,
-            deviceModel = metadata.device?.model ?: fallbackDeviceModel,
-        )
+internal val Metadata.inferredSourceType: SourceType? get() {
+    if (recordingMethod == Metadata.RECORDING_METHOD_MANUAL_ENTRY) {
+        return SourceType.App
     }
+
+    if (device != null) {
+        return device!!.sourceType
+    }
+
+    // Delegate to backend to infer source type from packageName and deviceModel.
+    return null
+}
+
+internal val Device.sourceType get() = when (this.type) {
+    Device.TYPE_CHEST_STRAP -> SourceType.ChestStrap
+    Device.TYPE_WATCH -> SourceType.Watch
+    Device.TYPE_PHONE -> SourceType.Phone
+    Device.TYPE_RING -> SourceType.Ring
+    Device.TYPE_SCALE -> SourceType.Scale
+    else -> SourceType.Unknown
 }

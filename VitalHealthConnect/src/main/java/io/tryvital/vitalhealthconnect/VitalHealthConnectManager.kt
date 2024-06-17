@@ -391,7 +391,6 @@ class VitalHealthConnectManager private constructor(
             startTime = startTime,
             endTime = endTime,
             timeZone = TimeZone.getDefault(),
-            currentDevice = Build.MODEL,
             reader = recordReader,
             processor = recordProcessor,
             processorOptions = processorOptions,

@@ -22,30 +22,26 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
+import io.tryvital.client.services.data.LocalBloodPressureSample
+import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
-import io.tryvital.vitalhealthconnect.ext.toDate
-import io.tryvital.vitalhealthconnect.model.HCQuantitySample
 import io.tryvital.vitalhealthconnect.model.processedresource.Activity
-import io.tryvital.vitalhealthconnect.model.processedresource.BloodPressureSample
-import io.tryvital.vitalhealthconnect.model.processedresource.QuantitySample
 import io.tryvital.vitalhealthconnect.model.processedresource.Sleep
 import io.tryvital.vitalhealthconnect.model.processedresource.SleepStage
 import io.tryvital.vitalhealthconnect.model.processedresource.SleepStages
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.processedresource.Workout
+import io.tryvital.vitalhealthconnect.model.quantitySample
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalDateTime
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
-import java.util.Date
 import java.util.TimeZone
 import kotlin.math.roundToInt
 
@@ -56,33 +52,26 @@ data class ProcessorOptions(
 interface RecordProcessor {
 
     suspend fun processBloodPressureFromRecords(
-        currentDevice: String,
         readBloodPressure: List<BloodPressureRecord>
     ): TimeSeriesData.BloodPressure
 
     suspend fun processGlucoseFromRecords(
-        currentDevice: String,
         readBloodGlucose: List<BloodGlucoseRecord>
     ): TimeSeriesData.QuantitySamples
 
     suspend fun processHeartRateFromRecords(
-        currentDevice: String,
         heartRateRecords: List<HeartRateRecord>
     ): TimeSeriesData.QuantitySamples
 
-
     fun processHeartRateVariabilityRmssFromRecords(
-        currentDevice: String,
         heartRateRecords: List<HeartRateVariabilityRmssdRecord>
     ): TimeSeriesData.QuantitySamples
 
     fun processWaterFromRecords(
-        currentDevice: String,
         readHydration: List<HydrationRecord>
     ): TimeSeriesData.QuantitySamples
 
     suspend fun processBodyFromRecords(
-        fallbackDeviceModel: String,
         weightRecords: List<WeightRecord>,
         bodyFatRecords: List<BodyFatRecord>,
     ): SummaryData.Body
@@ -93,18 +82,15 @@ interface RecordProcessor {
 
 
     suspend fun processWorkoutsFromRecords(
-        fallbackDeviceModel: String,
         exerciseRecords: List<ExerciseSessionRecord>
     ): SummaryData.Workouts
 
     suspend fun processSleepFromRecords(
-        fallbackDeviceModel: String,
         sleepSessionRecords: List<SleepSessionRecord>,
     ): SummaryData.Sleeps
 
     suspend fun processActivitiesFromRecords(
         timeZone: TimeZone,
-        currentDevice: String,
         activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,
         basalMetabolicRate: List<BasalMetabolicRateRecord>,
         steps: List<StepsRecord>,
@@ -121,26 +107,25 @@ internal class HealthConnectRecordProcessor(
 ) : RecordProcessor {
 
     override suspend fun processBloodPressureFromRecords(
-        currentDevice: String,
         readBloodPressure: List<BloodPressureRecord>
     ): TimeSeriesData.BloodPressure {
         return TimeSeriesData.BloodPressure(
             readBloodPressure.map {
-                BloodPressureSample(
-                    systolic = HCQuantitySample(
+                LocalBloodPressureSample(
+                    systolic = quantitySample(
                         value = it.systolic.inMillimetersOfMercury,
                         unit = SampleType.BloodPressureSystolic.unit,
                         startDate = it.time,
                         endDate = it.time,
                         metadata = it.metadata,
-                    ).toQuantitySample(currentDevice),
-                    diastolic = HCQuantitySample(
+                    ),
+                    diastolic = quantitySample(
                         value = it.diastolic.inMillimetersOfMercury,
                         unit = SampleType.BloodPressureDiastolic.unit,
                         startDate = it.time,
                         endDate = it.time,
                         metadata = it.metadata,
-                    ).toQuantitySample(currentDevice),
+                    ),
                     pulse = null,
                 )
             }
@@ -148,71 +133,66 @@ internal class HealthConnectRecordProcessor(
     }
 
     override suspend fun processGlucoseFromRecords(
-        currentDevice: String,
         readBloodGlucose: List<BloodGlucoseRecord>
     ): TimeSeriesData.QuantitySamples {
         return TimeSeriesData.QuantitySamples(
             IngestibleTimeseriesResource.BloodGlucose,
             readBloodGlucose.map {
-                HCQuantitySample(
+                quantitySample(
                     value = it.level.inMilligramsPerDeciliter,
                     unit = SampleType.GlucoseConcentrationMilligramPerDecilitre.unit,
                     startDate = it.time,
                     endDate = it.time,
                     metadata = it.metadata,
-                ).toQuantitySample(currentDevice)
+                )
             })
     }
 
     override suspend fun processHeartRateFromRecords(
-        currentDevice: String,
         heartRateRecords: List<HeartRateRecord>
     ): TimeSeriesData.QuantitySamples {
         return TimeSeriesData.QuantitySamples(
             IngestibleTimeseriesResource.HeartRate,
-            mapHearthRate(heartRateRecords, currentDevice)
+            mapHearthRate(heartRateRecords)
         )
     }
 
     override fun processHeartRateVariabilityRmssFromRecords(
-        currentDevice: String,
         heartRateRecords: List<HeartRateVariabilityRmssdRecord>
     ): TimeSeriesData.QuantitySamples {
         return TimeSeriesData.QuantitySamples(
             IngestibleTimeseriesResource.HeartRateVariability,
             heartRateRecords.map {
-                HCQuantitySample(
+                quantitySample(
                     value = it.heartRateVariabilityMillis,
                     unit = SampleType.HeartRateVariabilityRmssd.unit,
                     startDate = it.time,
                     endDate = it.time,
                     metadata = it.metadata,
-                ).toQuantitySample(currentDevice)
+                )
             }
         )
     }
 
 
     override fun processWaterFromRecords(
-        currentDevice: String,
         readHydration: List<HydrationRecord>
     ): TimeSeriesData.QuantitySamples {
         return TimeSeriesData.QuantitySamples(
             IngestibleTimeseriesResource.Water,
             readHydration.map {
-                HCQuantitySample(
+                quantitySample(
                     value = it.volume.inMilliliters,
                     unit = SampleType.Water.unit,
                     startDate = it.startTime,
                     endDate = it.endTime,
                     metadata = it.metadata,
-                ).toQuantitySample(currentDevice)
+                )
             }
         )
     }
 
     override suspend fun processWorkoutsFromRecords(
-        fallbackDeviceModel: String,
         exerciseRecords: List<ExerciseSessionRecord>
     ): SummaryData.Workouts {
         return SummaryData.Workouts(
@@ -228,19 +208,17 @@ internal class HealthConnectRecordProcessor(
                     id = exercise.metadata.id,
                     startDate = exercise.startTime,
                     endDate = exercise.endTime,
-                    sourceBundle = exercise.metadata.dataOrigin.packageName,
                     sport = EXERCISE_TYPE_INT_TO_STRING_MAP[exercise.exerciseType] ?: "workout",
                     caloriesInKiloJules = summary.caloriesBurned,
                     distanceInMeter = summary.distance,
                     heartRate = mapHearthRate(
                         heartRateRecord,
-                        fallbackDeviceModel
                     ),
                     respiratoryRate = mapRespiratoryRate(
                         respiratoryRateRecord,
-                        fallbackDeviceModel
                     ),
-                    deviceModel = fallbackDeviceModel
+                    sourceBundle = exercise.metadata.dataOrigin.packageName,
+                    deviceModel = exercise.metadata.device?.model
                 )
             }
         )
@@ -257,41 +235,38 @@ internal class HealthConnectRecordProcessor(
         )
 
     override suspend fun processBodyFromRecords(
-        fallbackDeviceModel: String,
         weightRecords: List<WeightRecord>,
         bodyFatRecords: List<BodyFatRecord>
     ) = SummaryData.Body(
         bodyMass = weightRecords.map {
-            HCQuantitySample(
+            quantitySample(
                 value = it.weight.inKilograms,
                 unit = SampleType.Weight.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
-            ).toQuantitySample(fallbackDeviceModel)
+            )
         },
         bodyFatPercentage = bodyFatRecords.map {
-            HCQuantitySample(
+            quantitySample(
                 value = it.percentage.value,
                 unit = SampleType.BodyFat.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
-            ).toQuantitySample(fallbackDeviceModel)
+            )
         }
     )
 
     override suspend fun processSleepFromRecords(
-        fallbackDeviceModel: String,
         sleepSessionRecords: List<SleepSessionRecord>,
     ): SummaryData.Sleeps {
         return SummaryData.Sleeps(
-            processSleeps(fallbackDeviceModel, sleepSessionRecords)
+            processSleeps(sleepSessionRecords)
         )
     }
 
     private suspend fun processSleeps(
-        fallbackDeviceModel: String,
         sleeps: List<SleepSessionRecord>,
     ): List<Sleep> {
         return sleeps.filterForAcceptedSleepDataSources().map { sleepSession ->
@@ -314,86 +289,77 @@ internal class HealthConnectRecordProcessor(
                 startDate = sleepSession.startTime,
                 endDate = sleepSession.endTime,
                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
-                deviceModel = fallbackDeviceModel,
-                heartRate = mapHearthRate(heartRateRecord, fallbackDeviceModel),
+                deviceModel = sleepSession.metadata.device?.model,
+                heartRate = mapHearthRate(heartRateRecord),
                 restingHeartRate = mapRestingHearthRate(
                     restingHeartRateRecord,
-                    fallbackDeviceModel
                 ),
-                respiratoryRate = mapRespiratoryRate(respiratoryRateRecord, fallbackDeviceModel),
+                respiratoryRate = mapRespiratoryRate(respiratoryRateRecord),
                 heartRateVariability = mapHeartRateVariabilityRmssdRecord(
                     readHeartRateVariabilityRmssdRecord,
-                    fallbackDeviceModel
                 ),
                 oxygenSaturation = mapOxygenSaturationRecord(
                     oxygenSaturationRecord,
-                    fallbackDeviceModel
                 ),
                 stages = SleepStages(
                     awakeSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_AWAKE }
                         .map { sleepStage ->
-                            QuantitySample(
+                            quantitySample(
                                 value = SleepStage.Awake.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
-                                sourceBundle = sleepSession.metadata.dataOrigin.packageName,
-                                deviceModel = fallbackDeviceModel,
+                                metadata = sleepSession.metadata,
                             )
                         },
                     deepSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_DEEP }
                         .map { sleepStage ->
-                            QuantitySample(
+                            quantitySample(
                                 value = SleepStage.Deep.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
-                                sourceBundle = sleepSession.metadata.dataOrigin.packageName,
-                                deviceModel = fallbackDeviceModel,
+                                metadata = sleepSession.metadata,
                             )
                         },
                     lightSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_LIGHT }
                         .map { sleepStage ->
-                            QuantitySample(
+                            quantitySample(
                                 value = SleepStage.Light.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
-                                sourceBundle = sleepSession.metadata.dataOrigin.packageName,
-                                deviceModel = fallbackDeviceModel,
+                                metadata = sleepSession.metadata,
                             )
                         },
                     remSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_REM }
                         .map { sleepStage ->
-                            QuantitySample(
+                            quantitySample(
                                 value = SleepStage.Rem.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
-                                sourceBundle = sleepSession.metadata.dataOrigin.packageName,
-                                deviceModel = fallbackDeviceModel,
+                                metadata = sleepSession.metadata,
                             )
                         },
                     unknownSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_UNKNOWN }
                         .map { sleepStage ->
-                            QuantitySample(
+                            quantitySample(
                                 value = SleepStage.Unknown.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
-                                sourceBundle = sleepSession.metadata.dataOrigin.packageName,
-                                deviceModel = fallbackDeviceModel,
+                                metadata = sleepSession.metadata,
                             )
                         },
                     outOfBedSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_OUT_OF_BED }
                         .map { sleepStage ->
-                            QuantitySample(
+                            quantitySample(
                                 value = SleepStage.OutOfBed.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
-                                sourceBundle = sleepSession.metadata.dataOrigin.packageName,
-                                deviceModel = fallbackDeviceModel,
+                                metadata = sleepSession.metadata,
                             )
                         },
                 )
@@ -403,7 +369,6 @@ internal class HealthConnectRecordProcessor(
 
     override suspend fun processActivitiesFromRecords(
         timeZone: TimeZone,
-        currentDevice: String,
         activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,
         basalMetabolicRate: List<BasalMetabolicRateRecord>,
         steps: List<StepsRecord>,
@@ -415,59 +380,59 @@ internal class HealthConnectRecordProcessor(
         val zoneId = timeZone.toZoneId()
 
         val activeEnergyBurnedByDate = quantitySamplesByDate(activeEnergyBurned, zoneId, { it.startTime }) {
-            HCQuantitySample(
+            quantitySample(
                 value = it.energy.inKilocalories,
                 unit = SampleType.ActiveCaloriesBurned.unit,
                 startDate = it.startTime,
                 endDate = it.endTime,
                 metadata = it.metadata,
-            ).toQuantitySample(currentDevice)
+            )
         }
         val basalMetabolicRateByDate = quantitySamplesByDate(basalMetabolicRate, zoneId, { it.time }) {
-            HCQuantitySample(
+            quantitySample(
                 value = it.basalMetabolicRate.inKilocaloriesPerDay,
                 unit = SampleType.BasalMetabolicRate.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
-            ).toQuantitySample(currentDevice)
+            )
         }
         val distanceByDate = quantitySamplesByDate(distance, zoneId, { it.startTime }) {
-            HCQuantitySample(
+            quantitySample(
                 value = it.distance.inMeters,
                 unit = SampleType.Distance.unit,
                 startDate = it.startTime,
                 endDate = it.endTime,
                 metadata = it.metadata,
-            ).toQuantitySample(currentDevice)
+            )
         }
         val floorsClimbedByDate = quantitySamplesByDate(floorsClimbed, zoneId, { it.startTime }) {
-            HCQuantitySample(
+            quantitySample(
                 value = it.floors,
                 unit = SampleType.FloorsClimbed.unit,
                 startDate = it.startTime,
                 endDate = it.endTime,
                 metadata = it.metadata,
-            ).toQuantitySample(currentDevice)
+            )
         }
         val stepsByDate = quantitySamplesByDate(steps, zoneId, { it.startTime }) {
-            HCQuantitySample(
+            quantitySample(
                 value = it.count.toDouble(),
                 unit = SampleType.Steps.unit,
                 startDate = it.startTime,
                 endDate = it.endTime,
                 metadata = it.metadata,
-            ).toQuantitySample(currentDevice)
+            )
 
         }
         val vo2MaxByDate = quantitySamplesByDate(vo2Max, zoneId, { it.time }) {
-            HCQuantitySample(
+            quantitySample(
                 value = it.vo2MillilitersPerMinuteKilogram,
                 unit = SampleType.Vo2Max.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
-            ).toQuantitySample(currentDevice)
+            )
         }
 
         val startDate = listOfNotNull(
@@ -507,11 +472,11 @@ internal class HealthConnectRecordProcessor(
             val daySummariesByDate = awaitAll(*summaryAggregators)
 
             fun merge(
-                discovered: Map<LocalDate, List<QuantitySample>>,
-                hourlyTotals: Map<LocalDate, List<QuantitySample>>,
+                discovered: Map<LocalDate, List<LocalQuantitySample>>,
+                hourlyTotals: Map<LocalDate, List<LocalQuantitySample>>,
                 date: LocalDate,
                 options: ProcessorOptions,
-            ): List<QuantitySample> {
+            ): List<LocalQuantitySample> {
                 return if (options.perDeviceActivityTS) {
                     (discovered[date] ?: emptyList()) + (hourlyTotals[date] ?: emptyList())
                 } else {
@@ -542,83 +507,78 @@ internal class HealthConnectRecordProcessor(
 
     private fun mapOxygenSaturationRecord(
         oxygenSaturationRecords: List<OxygenSaturationRecord>,
-        fallbackDeviceModel: String
-    ): List<QuantitySample> {
+    ): List<LocalQuantitySample> {
         return oxygenSaturationRecords.map {
-            HCQuantitySample(
+            quantitySample(
                 value = it.percentage.value,
                 unit = SampleType.OxygenSaturation.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
-            ).toQuantitySample(fallbackDeviceModel)
+            )
         }
     }
 
     private fun mapHeartRateVariabilityRmssdRecord(
         readHeartRateVariabilityRmssdRecords: List<HeartRateVariabilityRmssdRecord>,
-        fallbackDeviceModel: String
-    ): List<QuantitySample> {
+    ): List<LocalQuantitySample> {
         return readHeartRateVariabilityRmssdRecords.map {
-            HCQuantitySample(
+            quantitySample(
                 value = it.heartRateVariabilityMillis,
                 unit = SampleType.HeartRateVariabilityRmssd.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
-            ).toQuantitySample(fallbackDeviceModel)
+            )
         }
     }
 
     private fun mapRespiratoryRate(
         respiratoryRateRecords: List<RespiratoryRateRecord>,
-        fallbackDeviceModel: String
-    ): List<QuantitySample> {
+    ): List<LocalQuantitySample> {
         return respiratoryRateRecords.map {
-            HCQuantitySample(
+            quantitySample(
                 value = it.rate,
                 unit = SampleType.RespiratoryRate.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
-            ).toQuantitySample(fallbackDeviceModel)
+            )
 
         }
     }
 
     private fun mapHearthRate(
         heartRateRecords: List<HeartRateRecord>,
-        fallbackDeviceModel: String
-    ): List<QuantitySample> {
+    ): List<LocalQuantitySample> {
         return heartRateRecords.map { heartRateRecord ->
             heartRateRecord.samples.windowed(5)
                 .map {
                     val averagedSample =
                         it.fold(0L) { acc, sample -> acc + sample.beatsPerMinute } / it.size
 
-                    HCQuantitySample(
+                    quantitySample(
                         value = averagedSample.toDouble(),
                         unit = SampleType.HeartRate.unit,
                         startDate = it.first().time,
                         endDate = it.last().time,
                         metadata = heartRateRecord.metadata,
-                    ).toQuantitySample(fallbackDeviceModel)
+                    )
                 }
         }.flatten()
     }
 
     private fun mapRestingHearthRate(
         heartRateRecords: List<RestingHeartRateRecord>,
-        fallbackDeviceModel: String
-    ): List<QuantitySample> {
+    ): List<LocalQuantitySample> {
         return heartRateRecords.map {
-            HCQuantitySample(
+            quantitySample(
                 value = it.beatsPerMinute.toDouble(),
                 unit = SampleType.HeartRate.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
-            ).toQuantitySample(fallbackDeviceModel)
+            )
         }
     }
 }
@@ -635,8 +595,8 @@ inline fun <R: Record> quantitySamplesByDate(
     records: Iterable<R>,
     zoneId: ZoneId,
     timeSelector: (R) -> Instant,
-    transform: (R) -> QuantitySample
-): Map<LocalDate, List<QuantitySample>> {
+    transform: (R) -> LocalQuantitySample
+): Map<LocalDate, List<LocalQuantitySample>> {
     return records.groupBy(
         keySelector = { timeSelector(it).atZone(zoneId).toLocalDate() },
         valueTransform = transform

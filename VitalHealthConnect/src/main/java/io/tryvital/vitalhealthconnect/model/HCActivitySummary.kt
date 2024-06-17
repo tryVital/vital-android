@@ -3,7 +3,7 @@ package io.tryvital.vitalhealthconnect.model
 import io.tryvital.client.services.data.ActivityDaySummary
 import java.time.LocalDate
 
-data class HCActivitySummary(
+internal data class HCActivitySummary(
     /**
      * Unit: Scalar count
      */
