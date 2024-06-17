@@ -11,9 +11,9 @@ import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
+import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
-import io.tryvital.client.services.data.WorkoutPayload
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.Body
@@ -41,7 +41,7 @@ interface VitalPrivateService {
     @POST("summary/workouts/{user_id}")
     suspend fun addWorkouts(
         @Path("user_id") userId: String,
-        @Body body: SummaryPayload<List<WorkoutPayload>>
+        @Body body: SummaryPayload<List<LocalWorkout>>
     ): Response<Unit>
 
     @POST("summary/activity/{user_id}")

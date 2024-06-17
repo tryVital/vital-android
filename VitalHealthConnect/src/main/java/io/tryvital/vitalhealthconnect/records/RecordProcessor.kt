@@ -25,13 +25,13 @@ import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
+import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
 import io.tryvital.vitalhealthconnect.model.processedresource.Activity
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
-import io.tryvital.vitalhealthconnect.model.processedresource.Workout
 import io.tryvital.vitalhealthconnect.model.quantitySample
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -202,13 +202,13 @@ internal class HealthConnectRecordProcessor(
                 val respiratoryRateRecord =
                     recordReader.readRespiratoryRate(exercise.startTime, exercise.endTime)
 
-                Workout(
+                LocalWorkout(
                     id = exercise.metadata.id,
                     startDate = exercise.startTime,
                     endDate = exercise.endTime,
                     sport = EXERCISE_TYPE_INT_TO_STRING_MAP[exercise.exerciseType] ?: "workout",
-                    caloriesInKiloJules = summary.caloriesBurned,
-                    distanceInMeter = summary.distance,
+                    caloriesInKiloJules = summary.caloriesBurned ?: 0.0,
+                    distanceInMeter = summary.distance ?: 0.0,
                     heartRate = mapHearthRate(
                         heartRateRecord,
                     ),

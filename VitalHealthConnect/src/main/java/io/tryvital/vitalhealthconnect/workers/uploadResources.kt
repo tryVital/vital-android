@@ -41,7 +41,7 @@ internal suspend fun uploadResources(
             )
             is SummaryData.Workouts -> uploader.uploadWorkouts(
                 userId, start, end, timeZoneId,
-                data.summaryData.samples.map { it.toWorkoutPayload() },
+                data.summaryData.samples,
                 stage,
             )
         }

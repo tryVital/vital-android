@@ -13,9 +13,9 @@ import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
+import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
-import io.tryvital.client.services.data.WorkoutPayload
 import java.time.Instant
 
 
@@ -62,7 +62,7 @@ interface RecordUploader {
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        workoutPayloads: List<WorkoutPayload>,
+        workoutPayloads: List<LocalWorkout>,
         stage: DataStage = DataStage.Daily,
     )
 
@@ -172,7 +172,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         startDate: Instant?,
         endDate: Instant?,
         timeZoneId: String?,
-        workoutPayloads: List<WorkoutPayload>,
+        workoutPayloads: List<LocalWorkout>,
         stage: DataStage,
     ) {
         vitalClient.vitalPrivateService.addWorkouts(

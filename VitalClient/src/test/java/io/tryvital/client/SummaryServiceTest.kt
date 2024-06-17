@@ -46,7 +46,7 @@ class SummaryServiceTest {
                 endDate = null,
                 timeZoneId = null,
                 data = listOf(
-                    WorkoutPayload(
+                    LocalWorkout(
                         id = "test raw supersize",
                         startDate = Instant.parse("2007-01-01T00:00:00.00Z"),
                         endDate = Instant.parse("2007-01-05T00:00:00.00Z"),
