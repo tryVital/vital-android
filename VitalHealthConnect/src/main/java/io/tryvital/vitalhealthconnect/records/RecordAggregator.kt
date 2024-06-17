@@ -12,6 +12,7 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.request.AggregateGroupByDurationRequest
+import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import io.tryvital.client.services.data.LocalQuantitySample
@@ -26,6 +27,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.Period
 import java.util.TimeZone
 import kotlin.math.floor
 import kotlin.reflect.KClass
@@ -37,10 +39,11 @@ internal interface RecordAggregator {
         endTime: Instant
     ): HCWorkoutSummary
 
-    suspend fun aggregateActivityDaySummary(
-        date: LocalDate,
+    suspend fun aggregateActivityDaySummaries(
+        startDate: LocalDate,
+        endDate: LocalDate,
         timeZone: TimeZone
-    ): HCActivitySummary
+    ): Map<LocalDate, HCActivitySummary>
 
     suspend fun aggregateActivityHourlyTotals(
         start: Instant,
@@ -115,13 +118,13 @@ internal class HealthConnectRecordAggregator(
         )
     }
 
-    override suspend fun aggregateActivityDaySummary(
-        date: LocalDate,
+    override suspend fun aggregateActivityDaySummaries(
+        startDate: LocalDate,
+        endDate: LocalDate,
         timeZone: TimeZone
-    ): HCActivitySummary {
-        val zoneId = timeZone.toZoneId()
-        val startOfDay = LocalDateTime.of(date, LocalTime.MIDNIGHT).atZone(zoneId)
-        val endOfDay = LocalDateTime.of(date.plusDays(1), LocalTime.MIDNIGHT).atZone(zoneId)
+    ): Map<LocalDate, HCActivitySummary> {
+        val startOfDay = LocalDateTime.of(startDate, LocalTime.MIDNIGHT)
+        val endOfDay = LocalDateTime.of(endDate.plusDays(1), LocalTime.MIDNIGHT)
 
         val metricsToRequest = permittedMetrics(
             TotalCaloriesBurnedRecord::class to TotalCaloriesBurnedRecord.ENERGY_TOTAL,
@@ -135,35 +138,44 @@ internal class HealthConnectRecordAggregator(
 
         // No permission for anything; fail gracefully by returning an empty summary.
         if (metricsToRequest.isEmpty()) {
-            return HCActivitySummary()
+            return emptyMap()
         }
 
-        val response = healthConnectClient.aggregate(
-            AggregateRequest(
+        val responses = healthConnectClient.aggregateGroupByPeriod(
+            AggregateGroupByPeriodRequest(
                 metricsToRequest,
                 // Inclusive-exclusive
-                TimeRangeFilter.between(startOfDay.toInstant(), endOfDay.toInstant())
+                timeRangeFilter = TimeRangeFilter.between(startOfDay, endOfDay),
+                timeRangeSlicer = Period.ofDays(1),
             )
         )
-        val totalCaloriesBurned = response[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories?.let { floor(it) }
-        var activeCaloriesBurned = response[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.let { floor(it) }
-        var basalCaloriesBurned = response[BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL]?.inKilocalories?.let { floor(it) }
 
-        if (totalCaloriesBurned != null && basalCaloriesBurned != null && activeCaloriesBurned == null) {
-            activeCaloriesBurned = totalCaloriesBurned - basalCaloriesBurned
-        }
+        return responses.associateBy(
+            keySelector = { response ->
+                response.startTime.toLocalDate()
+            },
+            valueTransform = { response ->
+                val totalCaloriesBurned = response.result[TotalCaloriesBurnedRecord.ENERGY_TOTAL]?.inKilocalories?.let { floor(it) }
+                var activeCaloriesBurned = response.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.let { floor(it) }
+                var basalCaloriesBurned = response.result[BasalMetabolicRateRecord.BASAL_CALORIES_TOTAL]?.inKilocalories?.let { floor(it) }
 
-        if (totalCaloriesBurned != null && activeCaloriesBurned != null && basalCaloriesBurned == null) {
-            basalCaloriesBurned = totalCaloriesBurned - activeCaloriesBurned
-        }
+                if (totalCaloriesBurned != null && basalCaloriesBurned != null && activeCaloriesBurned == null) {
+                    activeCaloriesBurned = totalCaloriesBurned - basalCaloriesBurned
+                }
 
-        return HCActivitySummary(
-            steps = response[StepsRecord.COUNT_TOTAL],
-            activeCaloriesBurned = activeCaloriesBurned,
-            basalCaloriesBurned = basalCaloriesBurned,
-            distance = response[DistanceRecord.DISTANCE_TOTAL]?.inMeters?.let { floor(it) },
-            floorsClimbed = response[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.let { floor(it) },
-            totalExerciseDuration = response[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes(),
+                if (totalCaloriesBurned != null && activeCaloriesBurned != null && basalCaloriesBurned == null) {
+                    basalCaloriesBurned = totalCaloriesBurned - activeCaloriesBurned
+                }
+
+                HCActivitySummary(
+                    steps = response.result[StepsRecord.COUNT_TOTAL],
+                    activeCaloriesBurned = activeCaloriesBurned,
+                    basalCaloriesBurned = basalCaloriesBurned,
+                    distance = response.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters?.let { floor(it) },
+                    floorsClimbed = response.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.let { floor(it) },
+                    totalExerciseDuration = response.result[ExerciseSessionRecord.EXERCISE_DURATION_TOTAL]?.toMinutes(),
+                )
+            }
         )
     }
 

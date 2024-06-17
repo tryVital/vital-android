@@ -437,23 +437,6 @@ internal class HealthConnectRecordProcessor(
             )
         }
 
-        val startDate = listOfNotNull(
-            activeEnergyBurnedByDate.keys.minOrNull(),
-            basalMetabolicRateByDate.keys.minOrNull(),
-            floorsClimbedByDate.keys.minOrNull(),
-            distanceByDate.keys.minOrNull(),
-            stepsByDate.keys.minOrNull(),
-            vo2MaxByDate.keys.minOrNull(),
-        ).minOrNull()
-        val endDate = listOfNotNull(
-            activeEnergyBurnedByDate.keys.maxOrNull(),
-            basalMetabolicRateByDate.keys.maxOrNull(),
-            floorsClimbedByDate.keys.maxOrNull(),
-            distanceByDate.keys.maxOrNull(),
-            stepsByDate.keys.maxOrNull(),
-            vo2MaxByDate.keys.maxOrNull()
-        ).maxOrNull()
-
         val startInstant = listOfNotNull(
             activeEnergyBurned.minOfOrNull { it.startTime },
             floorsClimbed.minOfOrNull { it.startTime },
@@ -468,66 +451,71 @@ internal class HealthConnectRecordProcessor(
             steps.maxOfOrNull { it.endTime }
         ).maxOrNull()
 
-        val hourlyTotals = if (startInstant != null && endInstant != null) {
-            recordAggregator.aggregateActivityHourlyTotals(
-                start = startInstant.truncatedTo(ChronoUnit.HOURS),
-                end = endInstant.plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.HOURS),
-                timeZone = timeZone,
+        if (startInstant == null) {
+            return@coroutineScope SummaryData.Activities(activities = emptyList())
+        }
+
+        val startDate = startInstant.atZone(zoneId).toLocalDate()
+        val endDate = checkNotNull(endInstant).atZone(zoneId).toLocalDate()
+
+        val hourlyTotals = recordAggregator.aggregateActivityHourlyTotals(
+            start = startInstant.truncatedTo(ChronoUnit.HOURS),
+            end = endInstant.plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.HOURS),
+            timeZone = timeZone,
+        )
+
+        val daySummariesByDate = recordAggregator.aggregateActivityDaySummaries(
+            startDate = startDate,
+            endDate = endDate,
+            timeZone = timeZone
+        )
+
+        fun merge(
+            discovered: Map<LocalDate, List<LocalQuantitySample>>,
+            hourlyTotals: Map<LocalDate, List<LocalQuantitySample>>,
+            date: LocalDate,
+            options: ProcessorOptions,
+        ): List<LocalQuantitySample> {
+            return if (options.perDeviceActivityTS) {
+                (discovered[date] ?: emptyList()) + (hourlyTotals[date] ?: emptyList())
+            } else {
+                hourlyTotals[date] ?: emptyList()
+            }
+        }
+
+        var currentDate: LocalDate = startDate
+        val activities = mutableListOf<LocalActivity>()
+
+        while (currentDate <= endDate) {
+            val activity = LocalActivity(
+                daySummary = daySummariesByDate[currentDate]?.toDatedPayload(currentDate),
+                activeEnergyBurned = merge(
+                    activeEnergyBurnedByDate,
+                    hourlyTotals.activeCalories,
+                    currentDate,
+                    options
+                ),
+                basalEnergyBurned = merge(basalMetabolicRateByDate, emptyMap(), currentDate, options),
+                distanceWalkingRunning = merge(
+                    distanceByDate,
+                    hourlyTotals.distance,
+                    currentDate,
+                    options
+                ),
+                floorsClimbed = merge(
+                    floorsClimbedByDate,
+                    hourlyTotals.floorsClimbed,
+                    currentDate,
+                    options
+                ),
+                steps = merge(stepsByDate, hourlyTotals.steps, currentDate, options),
+                vo2Max = vo2MaxByDate[currentDate] ?: emptyList(),
             )
-        } else {
-            HCActivityHourlyTotals()
+            activities.add(activity)
+            currentDate = currentDate.plusDays(1)
         }
 
-        if (startDate != null && endDate != null) {
-            assert(startDate <= endDate)
-
-            // between is start-inclusive, end-exclusive
-            val numberOfDays = ChronoUnit.DAYS.between(startDate, endDate.plusDays(1)).toInt()
-            VitalLogger.getOrCreate().info { "activity: summarizing $numberOfDays ($startDate ... $endDate)" }
-
-            val summaryAggregators = Array(numberOfDays) { offset ->
-                async {
-                    val date = startDate.plusDays(offset.toLong())
-                    val summary = recordAggregator.aggregateActivityDaySummary(
-                        date = date,
-                        timeZone = timeZone
-                    )
-                    return@async date to summary.toDatedPayload(date)
-                }
-            }
-            val daySummariesByDate = awaitAll(*summaryAggregators)
-
-            fun merge(
-                discovered: Map<LocalDate, List<LocalQuantitySample>>,
-                hourlyTotals: Map<LocalDate, List<LocalQuantitySample>>,
-                date: LocalDate,
-                options: ProcessorOptions,
-            ): List<LocalQuantitySample> {
-                return if (options.perDeviceActivityTS) {
-                    (discovered[date] ?: emptyList()) + (hourlyTotals[date] ?: emptyList())
-                } else {
-                    hourlyTotals[date] ?: emptyList()
-                }
-            }
-
-            // TODO: On-device computed hourly totals
-
-            val activities = daySummariesByDate.map { (date, summary) ->
-                LocalActivity(
-                    daySummary = summary,
-                    activeEnergyBurned = merge(activeEnergyBurnedByDate, hourlyTotals.activeCalories, date, options),
-                    basalEnergyBurned = merge(basalMetabolicRateByDate, emptyMap(), date, options),
-                    distanceWalkingRunning = merge(distanceByDate, hourlyTotals.distance, date, options),
-                    floorsClimbed = merge(floorsClimbedByDate, hourlyTotals.floorsClimbed, date, options),
-                    steps = merge(stepsByDate, hourlyTotals.steps, date, options),
-                    vo2Max = vo2MaxByDate[date] ?: emptyList(),
-                )
-            }
-
-            SummaryData.Activities(activities = activities)
-        } else {
-            SummaryData.Activities(activities = emptyList())
-        }
+        SummaryData.Activities(activities = activities)
     }
 
 
