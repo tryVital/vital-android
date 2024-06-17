@@ -81,7 +81,7 @@ class SummaryServiceTest {
                 startDate = null,
                 endDate = null,
                 timeZoneId = null,
-                data = ProfilePayload(
+                data = LocalProfile(
                     biologicalSex = "not_set",
                     dateOfBirth = null,
                     heightInCm = 188,
@@ -109,7 +109,7 @@ class SummaryServiceTest {
                 startDate = null,
                 endDate = null,
                 timeZoneId = null,
-                data = BodyPayload(
+                data = LocalBody(
                     bodyMass = emptyList(),
                     bodyFatPercentage = emptyList()
                 )

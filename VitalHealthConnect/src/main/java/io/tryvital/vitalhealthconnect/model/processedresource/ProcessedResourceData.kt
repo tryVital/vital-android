@@ -1,10 +1,9 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
-import io.tryvital.client.services.data.BodyPayload
+import io.tryvital.client.services.data.LocalBody
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
-import io.tryvital.client.services.data.ProfilePayload
+import io.tryvital.client.services.data.LocalProfile
 import java.time.Instant
-import java.util.Date
 
 sealed class ProcessedResourceData {
     data class Summary(val summaryData: SummaryData) : ProcessedResourceData()
@@ -61,8 +60,8 @@ sealed class SummaryData {
         val heightInCm: Int?,
     ) : SummaryData() {
 
-        fun toProfilePayload(): ProfilePayload {
-            return ProfilePayload(
+        fun toProfilePayload(): LocalProfile {
+            return LocalProfile(
                 biologicalSex = biologicalSex,
                 dateOfBirth = dateOfBirth,
                 heightInCm = heightInCm,
@@ -83,8 +82,8 @@ sealed class SummaryData {
         val bodyFatPercentage: List<QuantitySample>,
     ) : SummaryData() {
 
-        fun toBodyPayload(): BodyPayload {
-            return BodyPayload(
+        fun toBodyPayload(): LocalBody {
+            return LocalBody(
                 bodyMass = bodyMass.map { it.toQuantitySamplePayload() },
                 bodyFatPercentage = bodyFatPercentage.map { it.toQuantitySamplePayload() },
             )

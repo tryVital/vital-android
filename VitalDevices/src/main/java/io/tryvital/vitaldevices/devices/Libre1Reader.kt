@@ -3,7 +3,7 @@ package io.tryvital.vitaldevices.devices
 import android.app.Activity
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import io.tryvital.client.services.data.ManualProviderSlug
-import io.tryvital.client.services.data.QuantitySamplePayload
+import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.vitaldevices.PermissionMissing
 import io.tryvital.vitaldevices.devices.nfc.Glucose
 import io.tryvital.vitaldevices.devices.nfc.NFC
@@ -13,7 +13,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.util.Date
 
 enum class Libre1SensorState {
     Unknown,
@@ -54,7 +53,7 @@ data class Libre1Sensor(
 }
 
 data class Libre1Read(
-    val samples: List<QuantitySamplePayload>,
+    val samples: List<LocalQuantitySample>,
     val sensor: Libre1Sensor,
 )
 
@@ -92,8 +91,8 @@ internal class Libre1ReaderImpl(private val activity: Activity): Libre1Reader {
     }
 }
 
-private fun quantitySampleFromGlucose(glucose: Glucose): QuantitySamplePayload {
-    return QuantitySamplePayload(
+private fun quantitySampleFromGlucose(glucose: Glucose): LocalQuantitySample {
+    return LocalQuantitySample(
         id = glucose.id.toString(),
         value = glucose.valueUnit,
         startDate = glucose.date,

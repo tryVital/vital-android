@@ -6,10 +6,10 @@ import android.content.Context
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.VitalPrivateApi
-import io.tryvital.client.services.data.BloodPressureSamplePayload
+import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.services.data.ManualProviderSlug
-import io.tryvital.client.services.data.QuantitySamplePayload
+import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.TimeseriesPayload
 import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -17,7 +17,7 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.util.TimeZone
 
-internal fun postGlucoseSamples(context: Context, provider: ManualProviderSlug, samples: List<QuantitySamplePayload>) {
+internal fun postGlucoseSamples(context: Context, provider: ManualProviderSlug, samples: List<LocalQuantitySample>) {
     if (samples.isEmpty()) {
         return
     }
@@ -33,7 +33,7 @@ internal fun postGlucoseSamples(context: Context, provider: ManualProviderSlug, 
     }
 }
 
-internal fun postBloodPressureSamples(context: Context, provider: ManualProviderSlug, samples: List<BloodPressureSamplePayload>) {
+internal fun postBloodPressureSamples(context: Context, provider: ManualProviderSlug, samples: List<LocalBloodPressureSample>) {
     if (samples.isEmpty()) {
         return
     }
@@ -49,7 +49,7 @@ internal fun postBloodPressureSamples(context: Context, provider: ManualProvider
     }
 }
 
-private suspend fun postGlucoseSamplesImpl(context: Context, provider: ManualProviderSlug, samples: List<QuantitySamplePayload>) {
+private suspend fun postGlucoseSamplesImpl(context: Context, provider: ManualProviderSlug, samples: List<LocalQuantitySample>) {
     val client = VitalClient.getOrCreate(context)
     if (VitalClient.Status.SignedIn !in VitalClient.status) {
         return
@@ -70,7 +70,7 @@ private suspend fun postGlucoseSamplesImpl(context: Context, provider: ManualPro
     )
 }
 
-private suspend fun postBloodPressureSamplesImpl(context: Context, provider: ManualProviderSlug, samples: List<BloodPressureSamplePayload>) {
+private suspend fun postBloodPressureSamplesImpl(context: Context, provider: ManualProviderSlug, samples: List<LocalBloodPressureSample>) {
     val client = VitalClient.getOrCreate(context)
     if (VitalClient.Status.SignedIn !in VitalClient.status) {
         return

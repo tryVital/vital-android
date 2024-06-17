@@ -4,13 +4,13 @@ import ManualProviderRequest
 import ManualProviderResponse
 import UserSDKSyncStateBody
 import UserSDKSyncStateResponse
-import io.tryvital.client.services.data.ActivityPayload
-import io.tryvital.client.services.data.BloodPressureSamplePayload
-import io.tryvital.client.services.data.BodyPayload
+import io.tryvital.client.services.data.LocalActivity
+import io.tryvital.client.services.data.LocalBloodPressureSample
+import io.tryvital.client.services.data.LocalBody
 import io.tryvital.client.services.data.ManualProviderSlug
-import io.tryvital.client.services.data.ProfilePayload
-import io.tryvital.client.services.data.QuantitySamplePayload
-import io.tryvital.client.services.data.SleepPayload
+import io.tryvital.client.services.data.LocalProfile
+import io.tryvital.client.services.data.LocalQuantitySample
+import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
 import io.tryvital.client.services.data.WorkoutPayload
@@ -47,38 +47,38 @@ interface VitalPrivateService {
     @POST("summary/activity/{user_id}")
     suspend fun addActivities(
         @Path("user_id") userId: String,
-        @Body body: SummaryPayload<List<ActivityPayload>>
+        @Body body: SummaryPayload<List<LocalActivity>>
     ): Response<Unit>
 
     @POST("summary/profile/{user_id}")
     suspend fun addProfile(
         @Path("user_id") userId: String,
-        @Body body: SummaryPayload<ProfilePayload>
+        @Body body: SummaryPayload<LocalProfile>
     ): Response<Unit>
 
     @POST("summary/body/{user_id}")
     suspend fun addBody(
         @Path("user_id") userId: String,
-        @Body body: SummaryPayload<BodyPayload>
+        @Body body: SummaryPayload<LocalBody>
     ): Response<Unit>
 
     @POST("summary/sleep/{user_id}")
     suspend fun addSleeps(
         @Path("user_id") userId: String,
-        @Body body: SummaryPayload<List<SleepPayload>>
+        @Body body: SummaryPayload<List<LocalSleep>>
     ): Response<Unit>
 
     @POST("timeseries/{user_id}/{resource}")
     suspend fun timeseriesPost(
         @Path("user_id") userId: String,
         @Path("resource", encoded = true) resource: String,
-        @Body payload: TimeseriesPayload<List<QuantitySamplePayload>>
+        @Body payload: TimeseriesPayload<List<LocalQuantitySample>>
     ): Response<Unit>
 
     @POST("timeseries/{user_id}/blood_pressure")
     suspend fun bloodPressureTimeseriesPost(
         @Path("user_id") userId: String,
-        @Body payload: TimeseriesPayload<List<BloodPressureSamplePayload>>
+        @Body payload: TimeseriesPayload<List<LocalBloodPressureSample>>
     ): Response<Unit>
 
     companion object {

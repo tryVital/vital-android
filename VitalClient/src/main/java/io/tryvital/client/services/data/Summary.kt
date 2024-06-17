@@ -2,9 +2,10 @@ package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import io.tryvital.client.services.VitalPrivateApi
 import java.time.Instant
-import java.util.*
 
+// @VitalPrivateApi
 @JsonClass(generateAdapter = true)
 data class SummaryPayload<T>(
     @Json(name = "stage")
@@ -21,6 +22,7 @@ data class SummaryPayload<T>(
     val data: T
 )
 
+// @VitalPrivateApi
 @JsonClass(generateAdapter = true)
 data class WorkoutPayload(
     @Json(name = "id")
@@ -40,31 +42,33 @@ data class WorkoutPayload(
     @Json(name = "distance")
     val distanceInMeter: Double,
     @Json(name = "heart_rate")
-    val heartRate: List<QuantitySamplePayload>,
+    val heartRate: List<LocalQuantitySample>,
     @Json(name = "respiratory_rate")
-    val respiratoryRate: List<QuantitySamplePayload>
+    val respiratoryRate: List<LocalQuantitySample>
 )
 
+// @VitalPrivateApi
 @JsonClass(generateAdapter = true)
-data class ActivityPayload(
+data class LocalActivity(
     @Json(name = "day_summary")
     val daySummary: ActivityDaySummary?,
     @Json(name = "active_energy_burned")
-    val activeEnergyBurned: List<QuantitySamplePayload>,
+    val activeEnergyBurned: List<LocalQuantitySample>,
     @Json(name = "basal_energy_burned")
-    val basalEnergyBurned: List<QuantitySamplePayload>,
+    val basalEnergyBurned: List<LocalQuantitySample>,
     @Json(name = "steps")
-    val steps: List<QuantitySamplePayload>,
+    val steps: List<LocalQuantitySample>,
     @Json(name = "distance_walking_running")
-    val distanceWalkingRunning: List<QuantitySamplePayload>,
+    val distanceWalkingRunning: List<LocalQuantitySample>,
     @Json(name = "vo2_max")
-    val vo2Max: List<QuantitySamplePayload>,
+    val vo2Max: List<LocalQuantitySample>,
     @Json(name = "floors_climbed")
-    val floorsClimbed: List<QuantitySamplePayload>,
+    val floorsClimbed: List<LocalQuantitySample>,
 )
 
+// @VitalPrivateApi
 @JsonClass(generateAdapter = true)
-data class ProfilePayload(
+data class LocalProfile(
     @Json(name = "biological_sex")
     val biologicalSex: String?,
     @Json(name = "date_of_birth")
@@ -73,16 +77,18 @@ data class ProfilePayload(
     val heightInCm: Int?,
 )
 
+// @VitalPrivateApi
 @JsonClass(generateAdapter = true)
-data class BodyPayload(
+data class LocalBody(
     @Json(name = "body_mass")
-    val bodyMass: List<QuantitySamplePayload>,
+    val bodyMass: List<LocalQuantitySample>,
     @Json(name = "body_fat_percentage")
-    val bodyFatPercentage: List<QuantitySamplePayload>,
+    val bodyFatPercentage: List<LocalQuantitySample>,
 )
 
+// @VitalPrivateApi
 @JsonClass(generateAdapter = true)
-data class SleepPayload(
+data class LocalSleep(
     @Json(name = "id")
     val id: String,
     @Json(name = "start_date")
@@ -94,19 +100,19 @@ data class SleepPayload(
     @Json(name = "product_type")
     val deviceModel: String?,
     @Json(name = "heart_rate")
-    val heartRate: List<QuantitySamplePayload>,
+    val heartRate: List<LocalQuantitySample>,
     @Json(name = "resting_heart_rate")
-    val restingHeartRate: List<QuantitySamplePayload>,
+    val restingHeartRate: List<LocalQuantitySample>,
     @Json(name = "heart_rate_variability")
-    val heartRateVariability: List<QuantitySamplePayload>,
+    val heartRateVariability: List<LocalQuantitySample>,
     @Json(name = "oxygen_saturation")
-    val oxygenSaturation: List<QuantitySamplePayload>,
+    val oxygenSaturation: List<LocalQuantitySample>,
     @Json(name = "respiratory_rate")
-    val respiratoryRate: List<QuantitySamplePayload>,
+    val respiratoryRate: List<LocalQuantitySample>,
 )
 
 @JsonClass(generateAdapter = true)
-data class QuantitySamplePayload(
+data class LocalQuantitySample(
     @Json(name = "id")
     val id: String? = null,
     @Json(name = "value")
@@ -128,13 +134,13 @@ data class QuantitySamplePayload(
 )
 
 @JsonClass(generateAdapter = true)
-data class BloodPressureSamplePayload(
+data class LocalBloodPressureSample(
     @Json(name = "systolic")
-    val systolic: QuantitySamplePayload,
+    val systolic: LocalQuantitySample,
     @Json(name = "diastolic")
-    val diastolic: QuantitySamplePayload,
+    val diastolic: LocalQuantitySample,
     @Json(name = "pulse")
-    val pulse: QuantitySamplePayload?,
+    val pulse: LocalQuantitySample?,
 )
 
 

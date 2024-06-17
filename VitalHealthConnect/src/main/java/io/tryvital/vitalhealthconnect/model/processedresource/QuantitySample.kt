@@ -1,8 +1,7 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
-import io.tryvital.client.services.data.QuantitySamplePayload
+import io.tryvital.client.services.data.LocalQuantitySample
 import java.time.Instant
-import java.util.Date
 
 data class QuantitySample(
     val id: String? = null,
@@ -15,7 +14,7 @@ data class QuantitySample(
     val type: String? = null,
     val metadata: String? = null,
 ) {
-    fun toQuantitySamplePayload() = QuantitySamplePayload(
+    fun toQuantitySamplePayload() = LocalQuantitySample(
         id = id,
         value = value,
         unit = unit,

@@ -1,8 +1,7 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
-import io.tryvital.client.services.data.SleepPayload
+import io.tryvital.client.services.data.LocalSleep
 import java.time.Instant
-import java.util.Date
 
 data class Sleep(
     val id: String,
@@ -17,8 +16,8 @@ data class Sleep(
     val respiratoryRate: List<QuantitySample>,
     val stages: SleepStages,
 ) {
-    fun toSleepPayload(): SleepPayload {
-        return SleepPayload(
+    fun toSleepPayload(): LocalSleep {
+        return LocalSleep(
             id = id,
             startDate = startDate,
             endDate = endDate,

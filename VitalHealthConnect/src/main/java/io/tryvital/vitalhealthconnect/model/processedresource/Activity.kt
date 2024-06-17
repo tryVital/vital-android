@@ -1,7 +1,7 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
 import io.tryvital.client.services.data.ActivityDaySummary
-import io.tryvital.client.services.data.ActivityPayload
+import io.tryvital.client.services.data.LocalActivity
 
 data class Activity(
     val daySummary: ActivityDaySummary?,
@@ -12,8 +12,8 @@ data class Activity(
     val vo2Max: List<QuantitySample>,
     val floorsClimbed: List<QuantitySample>,
 ) {
-    fun toActivityPayload(): ActivityPayload {
-        return ActivityPayload(
+    fun toActivityPayload(): LocalActivity {
+        return LocalActivity(
             daySummary = daySummary,
             activeEnergyBurned = activeEnergyBurned.map { it.toQuantitySamplePayload() },
             basalEnergyBurned = basalEnergyBurned.map { it.toQuantitySamplePayload() },
