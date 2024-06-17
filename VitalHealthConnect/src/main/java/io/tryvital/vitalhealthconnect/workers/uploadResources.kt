@@ -21,7 +21,7 @@ internal suspend fun uploadResources(
         is ProcessedResourceData.Summary -> when (data.summaryData) {
             is SummaryData.Activities -> uploader.uploadActivities(
                 userId, start, end, timeZoneId,
-                data.summaryData.activities.map { it.toActivityPayload() },
+                data.summaryData.activities,
                 stage,
             )
             is SummaryData.Body -> uploader.uploadBody(

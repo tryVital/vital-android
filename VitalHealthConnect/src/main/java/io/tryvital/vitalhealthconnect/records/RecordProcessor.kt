@@ -22,6 +22,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
+import io.tryvital.client.services.data.LocalActivity
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
@@ -29,7 +30,6 @@ import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
-import io.tryvital.vitalhealthconnect.model.processedresource.Activity
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.quantitySample
@@ -485,7 +485,7 @@ internal class HealthConnectRecordProcessor(
             // TODO: On-device computed hourly totals
 
             val activities = daySummariesByDate.map { (date, summary) ->
-                Activity(
+                LocalActivity(
                     daySummary = summary,
                     activeEnergyBurned = merge(activeEnergyBurnedByDate, emptyMap(), date, options),
                     basalEnergyBurned = merge(basalMetabolicRateByDate, emptyMap(), date, options),
