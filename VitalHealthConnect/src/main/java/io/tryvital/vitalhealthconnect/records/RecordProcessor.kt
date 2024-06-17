@@ -30,6 +30,7 @@ import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
+import io.tryvital.vitalhealthconnect.model.inferredSourceType
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.quantitySample
@@ -216,7 +217,8 @@ internal class HealthConnectRecordProcessor(
                         respiratoryRateRecord,
                     ),
                     sourceBundle = exercise.metadata.dataOrigin.packageName,
-                    deviceModel = exercise.metadata.device?.model
+                    deviceModel = exercise.metadata.device?.model,
+                    sourceType = exercise.metadata.inferredSourceType,
                 )
             }
         )
@@ -288,6 +290,7 @@ internal class HealthConnectRecordProcessor(
                 endDate = sleepSession.endTime,
                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                 deviceModel = sleepSession.metadata.device?.model,
+                sourceType = sleepSession.metadata.inferredSourceType,
                 heartRate = mapHearthRate(heartRateRecord),
                 restingHeartRate = mapRestingHearthRate(
                     restingHeartRateRecord,
