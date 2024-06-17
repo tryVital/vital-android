@@ -1,6 +1,7 @@
 package io.tryvital.vitalhealthconnect.model
 
 import io.tryvital.client.services.data.ActivityDaySummary
+import io.tryvital.client.services.data.LocalQuantitySample
 import java.time.LocalDate
 
 internal data class HCActivitySummary(
@@ -39,3 +40,10 @@ internal data class HCActivitySummary(
         exerciseTime = totalExerciseDuration?.toDouble(),
     )
 }
+
+internal data class HCActivityHourlyTotals(
+    val activeCalories: Map<LocalDate, List<LocalQuantitySample>> = emptyMap(),
+    val steps: Map<LocalDate, List<LocalQuantitySample>> = emptyMap(),
+    val distance: Map<LocalDate, List<LocalQuantitySample>> = emptyMap(),
+    val floorsClimbed: Map<LocalDate, List<LocalQuantitySample>> = emptyMap(),
+)

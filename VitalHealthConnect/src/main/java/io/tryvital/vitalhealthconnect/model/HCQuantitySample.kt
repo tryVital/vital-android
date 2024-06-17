@@ -11,17 +11,18 @@ fun quantitySample(
     unit: String,
     startDate: Instant,
     endDate: Instant,
-    metadata: Metadata,
+    metadata: Metadata? = null,
+    sourceType: SourceType? = null,
 ): LocalQuantitySample {
     return LocalQuantitySample(
-        id = metadata.id,
+        id = metadata?.id,
         value = value,
         unit = unit,
         startDate = startDate,
         endDate = endDate,
-        type = metadata.inferredSourceType,
-        sourceBundle = metadata.dataOrigin.packageName,
-        deviceModel = metadata.device?.model,
+        type = sourceType ?: metadata?.inferredSourceType,
+        sourceBundle = metadata?.dataOrigin?.packageName,
+        deviceModel = metadata?.device?.model,
     )
 }
 
