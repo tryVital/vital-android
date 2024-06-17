@@ -24,13 +24,11 @@ import androidx.health.connect.client.records.WeightRecord
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalQuantitySample
+import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
 import io.tryvital.vitalhealthconnect.model.processedresource.Activity
-import io.tryvital.vitalhealthconnect.model.processedresource.Sleep
-import io.tryvital.vitalhealthconnect.model.processedresource.SleepStage
-import io.tryvital.vitalhealthconnect.model.processedresource.SleepStages
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.processedresource.Workout
@@ -268,7 +266,7 @@ internal class HealthConnectRecordProcessor(
 
     private suspend fun processSleeps(
         sleeps: List<SleepSessionRecord>,
-    ): List<Sleep> {
+    ): List<LocalSleep> {
         return sleeps.filterForAcceptedSleepDataSources().map { sleepSession ->
             val heartRateRecord =
                 recordReader.readHeartRate(sleepSession.startTime, sleepSession.endTime)
@@ -284,7 +282,7 @@ internal class HealthConnectRecordProcessor(
             val oxygenSaturationRecord =
                 recordReader.readOxygenSaturation(sleepSession.startTime, sleepSession.endTime)
 
-            Sleep(
+            LocalSleep(
                 id = sleepSession.metadata.id,
                 startDate = sleepSession.startTime,
                 endDate = sleepSession.endTime,
@@ -301,11 +299,11 @@ internal class HealthConnectRecordProcessor(
                 oxygenSaturation = mapOxygenSaturationRecord(
                     oxygenSaturationRecord,
                 ),
-                stages = SleepStages(
+                sleepStages = LocalSleep.Stages(
                     awakeSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_AWAKE }
                         .map { sleepStage ->
                             quantitySample(
-                                value = SleepStage.Awake.id.toDouble(),
+                                value = LocalSleep.Stage.Awake.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
@@ -315,7 +313,7 @@ internal class HealthConnectRecordProcessor(
                     deepSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_DEEP }
                         .map { sleepStage ->
                             quantitySample(
-                                value = SleepStage.Deep.id.toDouble(),
+                                value = LocalSleep.Stage.Deep.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
@@ -325,7 +323,7 @@ internal class HealthConnectRecordProcessor(
                     lightSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_LIGHT }
                         .map { sleepStage ->
                             quantitySample(
-                                value = SleepStage.Light.id.toDouble(),
+                                value = LocalSleep.Stage.Light.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
@@ -335,7 +333,7 @@ internal class HealthConnectRecordProcessor(
                     remSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_REM }
                         .map { sleepStage ->
                             quantitySample(
-                                value = SleepStage.Rem.id.toDouble(),
+                                value = LocalSleep.Stage.Rem.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
@@ -345,7 +343,7 @@ internal class HealthConnectRecordProcessor(
                     unknownSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_UNKNOWN }
                         .map { sleepStage ->
                             quantitySample(
-                                value = SleepStage.Unknown.id.toDouble(),
+                                value = LocalSleep.Stage.Unknown.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,
@@ -355,7 +353,7 @@ internal class HealthConnectRecordProcessor(
                     outOfBedSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_OUT_OF_BED }
                         .map { sleepStage ->
                             quantitySample(
-                                value = SleepStage.OutOfBed.id.toDouble(),
+                                value = LocalSleep.Stage.OutOfBed.id.toDouble(),
                                 unit = "stage",
                                 startDate = sleepStage.startTime,
                                 endDate = sleepStage.endTime,

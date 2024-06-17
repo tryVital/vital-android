@@ -109,7 +109,29 @@ data class LocalSleep(
     val oxygenSaturation: List<LocalQuantitySample>,
     @Json(name = "respiratory_rate")
     val respiratoryRate: List<LocalQuantitySample>,
-)
+    @Json(name = "sleep_stages")
+    val sleepStages: Stages,
+) {
+
+    @JsonClass(generateAdapter = true)
+    data class Stages(
+        val awakeSleepSamples: List<LocalQuantitySample>,
+        val deepSleepSamples: List<LocalQuantitySample>,
+        val lightSleepSamples: List<LocalQuantitySample>,
+        val remSleepSamples: List<LocalQuantitySample>,
+        val outOfBedSleepSamples: List<LocalQuantitySample>,
+        val unknownSleepSamples: List<LocalQuantitySample>,
+    )
+
+    enum class Stage(val id: Int) {
+        Deep(1),
+        Light(2),
+        Rem(3),
+        Awake(4),
+        OutOfBed(5),
+        Unknown(-1),
+    }
+}
 
 @JsonClass(generateAdapter = true)
 data class LocalQuantitySample(

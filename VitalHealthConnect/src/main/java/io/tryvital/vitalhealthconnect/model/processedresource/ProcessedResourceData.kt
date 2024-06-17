@@ -5,6 +5,7 @@ import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
+import io.tryvital.client.services.data.LocalSleep
 import java.time.Instant
 
 sealed class ProcessedResourceData {
@@ -111,7 +112,7 @@ sealed class SummaryData {
     }
 
     data class Sleeps(
-        val samples: List<Sleep>
+        val samples: List<LocalSleep>
     ) : SummaryData() {
         override fun merge(other: SummaryData): SummaryData {
             check(other is Sleeps)
