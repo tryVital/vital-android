@@ -30,6 +30,7 @@ import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
+import io.tryvital.vitalhealthconnect.model.HCActivityHourlyTotals
 import io.tryvital.vitalhealthconnect.model.inferredSourceType
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
@@ -453,6 +454,30 @@ internal class HealthConnectRecordProcessor(
             vo2MaxByDate.keys.maxOrNull()
         ).maxOrNull()
 
+        val startInstant = listOfNotNull(
+            activeEnergyBurned.minOfOrNull { it.startTime },
+            floorsClimbed.minOfOrNull { it.startTime },
+            distance.minOfOrNull { it.startTime },
+            steps.minOfOrNull { it.startTime }
+        ).minOrNull()
+
+        val endInstant = listOfNotNull(
+            activeEnergyBurned.maxOfOrNull { it.endTime },
+            floorsClimbed.maxOfOrNull { it.endTime },
+            distance.maxOfOrNull { it.endTime },
+            steps.maxOfOrNull { it.endTime }
+        ).maxOrNull()
+
+        val hourlyTotals = if (startInstant != null && endInstant != null) {
+            recordAggregator.aggregateActivityHourlyTotals(
+                start = startInstant.truncatedTo(ChronoUnit.HOURS),
+                end = endInstant.plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.HOURS),
+                timeZone = timeZone,
+            )
+        } else {
+            HCActivityHourlyTotals()
+        }
+
         if (startDate != null && endDate != null) {
             assert(startDate <= endDate)
 
@@ -490,11 +515,11 @@ internal class HealthConnectRecordProcessor(
             val activities = daySummariesByDate.map { (date, summary) ->
                 LocalActivity(
                     daySummary = summary,
-                    activeEnergyBurned = merge(activeEnergyBurnedByDate, emptyMap(), date, options),
+                    activeEnergyBurned = merge(activeEnergyBurnedByDate, hourlyTotals.activeCalories, date, options),
                     basalEnergyBurned = merge(basalMetabolicRateByDate, emptyMap(), date, options),
-                    distanceWalkingRunning = merge(distanceByDate, emptyMap(), date, options),
-                    floorsClimbed = merge(floorsClimbedByDate, emptyMap(), date, options),
-                    steps = merge(stepsByDate, emptyMap(), date, options),
+                    distanceWalkingRunning = merge(distanceByDate, hourlyTotals.distance, date, options),
+                    floorsClimbed = merge(floorsClimbedByDate, hourlyTotals.floorsClimbed, date, options),
+                    steps = merge(stepsByDate, hourlyTotals.steps, date, options),
                     vo2Max = vo2MaxByDate[date] ?: emptyList(),
                 )
             }
