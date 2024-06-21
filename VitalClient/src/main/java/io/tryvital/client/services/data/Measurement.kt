@@ -45,6 +45,6 @@ data class GroupedSamples<Sample>(
 
 @JsonClass(generateAdapter = true)
 data class GroupedSamplesResponse<Sample>(
-    val groups: List<GroupedSamples<Sample>>,
-    val next: String?,
+    val groups: Map<ProviderSlug, List<GroupedSamples<Sample>>>,
+    val nextCursor: String?,
 )
