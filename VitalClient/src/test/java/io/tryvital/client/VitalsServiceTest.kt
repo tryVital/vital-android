@@ -55,25 +55,27 @@ class VitalsServiceTest {
 
     private fun checkMeasurements(measurements: GroupedSamplesResponse<ScalarSample>) {
         assertEquals(
-            listOf(
-                GroupedSamples(
-                    data = listOf(
-                        ScalarSample(
-                            timestamp = Instant.parse("2022-01-01T03:16:31+00:00"),
-                            value = 5.7,
-                            type = null,
-                            unit = "count",
+            mapOf(
+                ProviderSlug.Fitbit to listOf(
+                    GroupedSamples(
+                        data = listOf(
+                            ScalarSample(
+                                timestamp = Instant.parse("2022-01-01T03:16:31+00:00"),
+                                value = 5.7,
+                                type = null,
+                                unit = "count",
+                            ),
+                            ScalarSample(
+                                timestamp = Instant.parse("2022-01-02T03:16:32+00:00"),
+                                value = 10.2,
+                                type = null,
+                                unit = "count",
+                            )
                         ),
-                        ScalarSample(
-                            timestamp = Instant.parse("2022-01-02T03:16:32+00:00"),
-                            value = 10.2,
-                            type = null,
-                            unit = "count",
+                        source = Source(
+                            type = SourceType.Watch,
+                            provider = ProviderSlug.Fitbit,
                         )
-                    ),
-                    source = Source(
-                        type = SourceType.Watch,
-                        provider = ProviderSlug.Fitbit,
                     )
                 )
             ),
@@ -91,28 +93,30 @@ private const val userId = "user_id_1"
 
 private const val fakeScalarSampleResponse = """
 {
-    "groups": [
-        {
-            "data": [
-                {
-                    "timestamp": "2022-01-01T03:16:31+00:00",
-                    "value": 5.7,
-                    "type": null,
-                    "unit": "count"
-                },
-                {
-                    "timestamp": "2022-01-02T03:16:32+00:00",
-                    "value": 10.2,
-                    "type": null,
-                    "unit": "count"
+    "groups": {
+        "fitbit": [
+            {
+                "data": [
+                    {
+                        "timestamp": "2022-01-01T03:16:31+00:00",
+                        "value": 5.7,
+                        "type": null,
+                        "unit": "count"
+                    },
+                    {
+                        "timestamp": "2022-01-02T03:16:32+00:00",
+                        "value": 10.2,
+                        "type": null,
+                        "unit": "count"
+                    }
+                ],
+                "source": {
+                    "provider": "fitbit",
+                    "type": "watch"
                 }
-            ],
-            "source": {
-                "provider": "fitbit",
-                "type": "watch"
             }
-        }
-    ],
+        ]
+    },
     "next": null
 }
 """

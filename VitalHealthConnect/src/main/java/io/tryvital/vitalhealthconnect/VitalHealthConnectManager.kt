@@ -28,6 +28,8 @@ import io.tryvital.vitalhealthconnect.records.*
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 import java.time.ZoneOffset
 import java.util.*
@@ -44,6 +46,7 @@ class VitalHealthConnectManager private constructor(
     private val recordProcessor: RecordProcessor,
 ) {
     val sharedPreferences get() = vitalClient.sharedPreferences
+    private val permissionMutex = Mutex()
 
     /**
      * Pause all synchronization, both automatic syncs and any manual [syncData] calls.
@@ -156,7 +159,12 @@ class VitalHealthConnectManager private constructor(
             .toSet()
     }
 
-    internal suspend fun checkAndUpdatePermissions(): Pair<Set<VitalResource>, Set<VitalResource>> {
+    @Suppress("unused")
+    suspend fun reloadPermissions() {
+        checkAndUpdatePermissions()
+    }
+
+    internal suspend fun checkAndUpdatePermissions(): Pair<Set<VitalResource>, Set<VitalResource>> = permissionMutex.withLock {
         if (isAvailable(context) != HealthConnectAvailability.Installed) {
             return emptySet<VitalResource>() to emptySet()
         }
