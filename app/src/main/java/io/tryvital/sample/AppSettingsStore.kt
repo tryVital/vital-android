@@ -7,6 +7,7 @@ import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
+import io.tryvital.client.VitalClient
 import io.tryvital.sample.ui.settings.SettingsAuthMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,6 +33,16 @@ class AppSettingsStore(
         sharedPreferences.edit()
             .putString("demo-settings", moshi.adapter(AppSettings::class.java).toJson(newValue))
             .apply()
+    }
+
+    fun syncWithSDKStatus(context: Context) {
+        // Ensure that the VitalClient has been initialized.
+        VitalClient.getOrCreate(context)
+
+        val status = VitalClient.status
+
+        val isConfigured = VitalClient.Status.Configured in status
+        update { it.copy(isSDKConfigured = isConfigured) }
     }
 
     companion object {

@@ -19,19 +19,24 @@ internal fun processLifecycleObserver(
         if (event != Lifecycle.Event.ON_START) {
             return
         }
-        if (VitalClient.Status.SignedIn !in VitalClient.status) {
-            return
-        }
+
+        val isSignedIn = VitalClient.Status.SignedIn in VitalClient.status
+
         if (VitalHealthConnectManager.isAvailable(manager.context) != HealthConnectAvailability.Installed) {
             return
         }
 
-        if (manager.isBackgroundSyncEnabled) {
+        if (isSignedIn && manager.isBackgroundSyncEnabled) {
             manager.scheduleNextExactAlarm(force = false)
         }
 
         source.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
             manager.checkAndUpdatePermissions()
+
+            if (!isSignedIn) {
+                return@launch
+            }
+
             manager.launchAutoSyncWorker(startForeground = true) {
                 VitalLogger.getOrCreate().info { "BgSync: sync triggered by process ON_START" }
             }

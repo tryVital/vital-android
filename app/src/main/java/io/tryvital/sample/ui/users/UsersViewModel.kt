@@ -33,7 +33,7 @@ class UsersViewModel(
     val uiState = viewModelState.asStateFlow()
 
     private val controlPlane = settingsStore.uiState
-        .distinctUntilChangedBy { Triple(it.apiKey, it.environment, it.region) }
+        .distinctUntilChangedBy { Pair(Triple(it.apiKey, it.environment, it.region), it.isSDKConfigured) }
         .map {
             if (it.isSDKConfigured)
                 VitalClient.controlPlane(context, it.environment, it.region, it.apiKey)
@@ -52,6 +52,8 @@ class UsersViewModel(
             .distinctUntilChanged()
             .onEach { sdkUserId -> viewModelState.update { it.copy(sdkUserId = sdkUserId) } }
             .launchIn(viewModelScope)
+
+        settingsStore.syncWithSDKStatus(context)
     }
 
     fun update() {
