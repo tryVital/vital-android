@@ -1,13 +1,12 @@
 package io.tryvital.client
 
 import ManualProviderRequest
+import android.content.Context
 import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.*
 import retrofit2.HttpException
 
 fun VitalClient.hasUserConnectedTo(provider: ProviderSlug): Boolean {
-    resetCachedUserConnectedSourceRecordIfNeeded()
-
     return this.sharedPreferences.getBoolean(
         VitalClientPrefKeys.userHasConnectedTo(provider),
         false
@@ -46,7 +45,6 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
 
 suspend fun VitalClient.userConnections(): List<UserConnection> {
     val userId = VitalClient.checkUserId()
-    resetCachedUserConnectedSourceRecordIfNeeded()
 
     val response = userService.getUserConnections(userId = userId)
 
@@ -65,25 +63,24 @@ suspend fun VitalClient.userConnections(): List<UserConnection> {
 
 /**
  * Sometimes SharedPreferences can survive app deletion / OS reinstall due to automatic backup.
- * This method is used to detect such cases — where the user ID no longer matches — and proactively
- * clear the SharedPreferences.
+ * This method is used to detect such cases — where the first install time no longer matches — and
+ * proactively clear the SharedPreferences.
  */
-private fun VitalClient.resetCachedUserConnectedSourceRecordIfNeeded() {
-    val userId = VitalClient.currentUserId ?: return
-    val perfUserId = this.sharedPreferences.getString(VitalClientPrefKeys.connectedSourcePerfUserId, null)
+internal fun VitalClient.resetSharedPreferencesOnReinstallation(context: Context) {
+    val storedTime = this.sharedPreferences.getLong(VitalClientPrefKeys.firstInstallTimeKey, -1L)
+    val appPackage = context.packageManager.getPackageInfo(
+        context.applicationInfo.packageName, 0
+    )
+    val observedTime = appPackage.firstInstallTime
 
-    if (userId != perfUserId) {
-        sharedPreferences.edit()
-            .apply {
-                // Delete all existing records, since the user ID has changed
-                ProviderSlug.values()
-                    .map { VitalClientPrefKeys.userHasConnectedTo(it) }
-                    .forEach { key -> remove(key) }
-            }
-            .apply {
-                // Write the new user ID
-                putString(VitalClientPrefKeys.connectedSourcePerfUserId, userId)
-            }
-            .apply()
+    if (storedTime != observedTime) {
+        val editor = sharedPreferences.edit()
+
+        if (storedTime != -1L) {
+            editor.clear()
+        }
+
+        editor.putLong(VitalClientPrefKeys.firstInstallTimeKey, observedTime)
+        editor.apply()
     }
 }

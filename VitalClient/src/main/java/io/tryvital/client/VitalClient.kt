@@ -281,6 +281,8 @@ class VitalClient internal constructor(context: Context) {
          */
         @OptIn(DelicateCoroutinesApi::class)
         private fun bind(client: VitalClient, jwtAuth: VitalJWTAuth, context: Context) {
+            client.resetSharedPreferencesOnReinstallation(context)
+
             jwtAuth.statusChanged
                 .filter { it == VitalJWTAuthChangeReason.UserNoLongerValid }
                 .onEach {

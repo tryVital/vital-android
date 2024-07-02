@@ -49,7 +49,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     )
 
     fun didLaunch(context: Context) {
-        updateSDKStatus(context)
+        store.syncWithSDKStatus(context)
     }
 
     fun setEnvironment(environment: Environment, region: Region) {
@@ -111,7 +111,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
             logsEnabled = true
         )
 
-        updateSDKStatus(context)
+        store.syncWithSDKStatus(context)
     }
 
     fun signInWithToken(context: Context) {
@@ -131,7 +131,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
                     logsEnabled = true
                 )
 
-                updateSDKStatus(context)
+                store.syncWithSDKStatus(context)
 
             } catch (e: Throwable) {
                 VitalLogger.getOrCreate().logE("Demo: Sign-in failed", e)
@@ -143,24 +143,8 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     fun resetSDK(context: Context) {
         viewModelScope.launch {
             VitalClient.getOrCreate(context).signOut()
-            updateSDKStatus(context)
+            store.syncWithSDKStatus(context)
         }
-    }
-
-    fun updateSDKStatus(context: Context) {
-        // Ensure that the VitalClient has been initialized.
-        VitalClient.getOrCreate(context)
-
-        val status = VitalClient.status
-
-        viewModelState.update {
-            it.copy(
-                sdkUserId = if (VitalClient.Status.SignedIn in status) VitalClient.currentUserId ?: "error" else "null",
-            )
-        }
-
-        val isConfigured = VitalClient.Status.Configured in status
-        store.update { it.copy(isSDKConfigured = isConfigured) }
     }
 
     companion object {
