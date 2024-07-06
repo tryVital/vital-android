@@ -30,6 +30,7 @@ import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
+import io.tryvital.vitalhealthconnect.getGrantedPermissions
 import io.tryvital.vitalhealthconnect.model.HCActivityHourlyTotals
 import io.tryvital.vitalhealthconnect.model.inferredSourceType
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData

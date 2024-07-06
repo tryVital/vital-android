@@ -1,6 +1,7 @@
 package io.tryvital.vitalhealthconnect.records
 
 import android.content.Context
+import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
@@ -25,7 +26,11 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.ext.returnEmptyIfException
+import io.tryvital.vitalhealthconnect.getGrantedPermissions
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.time.Instant
+import kotlin.reflect.KClass
 
 interface RecordReader {
     suspend fun readExerciseSessions(
@@ -133,6 +138,26 @@ internal class HealthConnectRecordReader(
         healthConnectClientProvider.getHealthConnectClient(context)
     }
 
+    private var grantedPermissions: Set<String>? = null
+    private var semaphore = Semaphore(1, 0)
+
+    private suspend fun hasPermission(recordType: KClass<out Record>): Boolean {
+        val permission = HealthPermission.getReadPermission(recordType)
+
+        val grants = grantedPermissions
+        if (grants != null) {
+            return grants.contains(permission)
+        }
+
+        semaphore.withPermit {
+            if (grantedPermissions == null) {
+                grantedPermissions = getGrantedPermissions(context)
+            }
+        }
+
+        return hasPermission(recordType)
+    }
+
     override suspend fun readExerciseSessions(
         startTime: Instant, endTime: Instant
     ): List<ExerciseSessionRecord> = readRecords(startTime, endTime)
@@ -216,13 +241,15 @@ internal class HealthConnectRecordReader(
     private suspend inline fun <reified T : Record> readRecords(
         startTime: Instant, endTime: Instant
     ): List<T> {
-        return returnEmptyIfException {
-            healthConnectClient.readRecords(
-                ReadRecordsRequest(
-                    T::class,
-                    timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
-                )
-            ).records
+        if (!this.hasPermission(Record::class)) {
+            return emptyList()
         }
+
+        return healthConnectClient.readRecords(
+            ReadRecordsRequest(
+                T::class,
+                timeRangeFilter = TimeRangeFilter.between(startTime, endTime)
+            )
+        ).records
     }
 }
