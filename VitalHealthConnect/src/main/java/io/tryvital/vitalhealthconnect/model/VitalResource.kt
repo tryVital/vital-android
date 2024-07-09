@@ -1,5 +1,6 @@
 package io.tryvital.vitalhealthconnect.model
 
+import android.health.connect.datatypes.units.Power
 import androidx.health.connect.client.records.*
 
 import kotlin.reflect.KClass
@@ -168,9 +169,11 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
         optional = listOf(
             ActiveCaloriesBurnedRecord::class,
             BasalMetabolicRateRecord::class,
+            TotalCaloriesBurnedRecord::class,
             StepsRecord::class,
             DistanceRecord::class,
             FloorsClimbedRecord::class,
+            Vo2MaxRecord::class,
         ),
         supplementary = emptyList(),
     )
@@ -195,7 +198,11 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
     )
     VitalResource.Workout -> RecordTypeRequirements(
         required = listOf(ExerciseSessionRecord::class),
-        optional = emptyList(),
+        optional = listOf(
+            ElevationGainedRecord::class,
+            SpeedRecord::class,
+            PowerRecord::class,
+        ),
         supplementary = listOf(
             HeartRateRecord::class,
         ),
@@ -222,6 +229,7 @@ internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Rec
         StepsRecord::class,
         DistanceRecord::class,
         FloorsClimbedRecord::class,
+        Vo2MaxRecord::class,
     )
     VitalResource.BloodPressure -> listOf(BloodPressureRecord::class)
     VitalResource.Body -> listOf(BodyFatRecord::class, WeightRecord::class)
