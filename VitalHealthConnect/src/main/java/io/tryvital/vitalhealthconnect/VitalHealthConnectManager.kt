@@ -398,6 +398,7 @@ class VitalHealthConnectManager private constructor(
             resource.remapped(),
             startTime = startTime,
             endTime = endTime,
+            stage = DataStage.Daily,
             timeZone = TimeZone.getDefault(),
             reader = recordReader,
             processor = recordProcessor,
