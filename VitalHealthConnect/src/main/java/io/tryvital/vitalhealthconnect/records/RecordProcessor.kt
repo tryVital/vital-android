@@ -552,7 +552,11 @@ internal class HealthConnectRecordProcessor(
         val sexualActivity = recordReader.sexualActivity(startInstant, endInstant)
         val cervicalMucus = recordReader.cervicalMucus(startInstant, endInstant)
 
-        return SummaryData.MenstrualCycles(cycles = emptyList())
+        val cycles = processMenstrualCycle(
+            periods, flows, cervicalMucus, intermenstrualBleeding, ovulationTest, sexualActivity
+        )
+
+        return SummaryData.MenstrualCycles(cycles = cycles)
     }
 
 
