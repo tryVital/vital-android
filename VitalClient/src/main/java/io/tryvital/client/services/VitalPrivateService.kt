@@ -7,6 +7,7 @@ import UserSDKSyncStateResponse
 import io.tryvital.client.services.data.LocalActivity
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalBody
+import io.tryvital.client.services.data.LocalMenstrualCycle
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
@@ -42,6 +43,12 @@ interface VitalPrivateService {
     suspend fun addWorkouts(
         @Path("user_id") userId: String,
         @Body body: SummaryPayload<List<LocalWorkout>>
+    ): Response<Unit>
+
+    @POST("summary/mennstrual_cycle/{user_id}")
+    suspend fun addMenstrualCycles(
+        @Path("user_id") userId: String,
+        @Body body: SummaryPayload<List<LocalMenstrualCycle>>
     ): Response<Unit>
 
     @POST("summary/activity/{user_id}")

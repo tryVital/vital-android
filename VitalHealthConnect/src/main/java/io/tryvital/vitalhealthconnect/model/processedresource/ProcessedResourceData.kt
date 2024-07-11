@@ -4,10 +4,12 @@ import io.tryvital.client.services.data.LocalBody
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.LocalActivity
 import io.tryvital.client.services.data.LocalBloodPressureSample
+import io.tryvital.client.services.data.LocalMenstrualCycle
 import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.LocalWorkout
+import io.tryvital.client.services.data.MenstrualCycle
 import java.time.Instant
 
 sealed class ProcessedResourceData {
@@ -131,6 +133,16 @@ sealed class SummaryData {
             return Workouts(samples + other.samples)
         }
         override fun isNotEmpty(): Boolean = samples.isNotEmpty()
+    }
+
+    data class MenstrualCycles(
+        val cycles: List<LocalMenstrualCycle>
+    ) : SummaryData() {
+        override fun merge(other: SummaryData): SummaryData {
+            check(other is MenstrualCycles)
+            return MenstrualCycles(cycles + other.cycles)
+        }
+        override fun isNotEmpty(): Boolean = cycles.isNotEmpty()
     }
 }
 

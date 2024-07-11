@@ -9,6 +9,7 @@ import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalBody
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
+import io.tryvital.client.services.data.LocalMenstrualCycle
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
@@ -63,6 +64,15 @@ interface RecordUploader {
         endDate: Instant?,
         timeZoneId: String?,
         workoutPayloads: List<LocalWorkout>,
+        stage: DataStage = DataStage.Daily,
+    )
+
+    suspend fun uploadMenstrualCycles(
+        userId: String,
+        startDate: Instant?,
+        endDate: Instant?,
+        timeZoneId: String?,
+        cyclePayloads: List<LocalMenstrualCycle>,
         stage: DataStage = DataStage.Daily,
     )
 
@@ -183,6 +193,26 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 endDate = endDate,
                 timeZoneId = timeZoneId,
                 data = workoutPayloads,
+            )
+        )
+    }
+
+    override suspend fun uploadMenstrualCycles(
+        userId: String,
+        startDate: Instant?,
+        endDate: Instant?,
+        timeZoneId: String?,
+        cyclePayloads: List<LocalMenstrualCycle>,
+        stage: DataStage
+    ) {
+        vitalClient.vitalPrivateService.addMenstrualCycles(
+            userId, SummaryPayload(
+                stage = stage,
+                provider = ManualProviderSlug.HealthConnect,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneId = timeZoneId,
+                data = cyclePayloads,
             )
         )
     }
