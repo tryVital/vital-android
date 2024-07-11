@@ -17,8 +17,10 @@ import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
+import retrofit2.Response
 import java.time.Instant
 
+internal class UploadFailure(statusCode: Int, message: String): Throwable("code[$statusCode]: $message}")
 
 interface RecordUploader {
 
@@ -114,7 +116,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 timeZoneId = timeZoneId,
                 data = sleepPayloads,
             )
-        )
+        ).throwOnErrorStatus()
     }
 
     override suspend fun uploadBody(
@@ -134,7 +136,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 timeZoneId = timeZoneId,
                 data = bodyPayload
             )
-        )
+        ).throwOnErrorStatus()
     }
 
     override suspend fun uploadProfile(
@@ -154,7 +156,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 timeZoneId = timeZoneId,
                 data = profilePayload
             )
-        )
+        ).throwOnErrorStatus()
     }
 
     override suspend fun uploadActivities(
@@ -174,7 +176,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 timeZoneId = timeZoneId,
                 data = activityPayloads,
             )
-        )
+        ).throwOnErrorStatus()
     }
 
     override suspend fun uploadWorkouts(
@@ -194,7 +196,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 timeZoneId = timeZoneId,
                 data = workoutPayloads,
             )
-        )
+        ).throwOnErrorStatus()
     }
 
     override suspend fun uploadMenstrualCycles(
@@ -214,7 +216,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 timeZoneId = timeZoneId,
                 data = cyclePayloads,
             )
-        )
+        ).throwOnErrorStatus()
     }
 
     override suspend fun uploadQuantitySamples(
@@ -235,7 +237,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 timeZoneId = timeZoneId,
                 data = quantitySamples,
             )
-        )
+        ).throwOnErrorStatus()
     }
 
     override suspend fun uploadBloodPressure(
@@ -255,6 +257,12 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 timeZoneId = timeZoneId,
                 data = bloodPressurePayloads,
             )
-        )
+        ).throwOnErrorStatus()
+    }
+}
+
+internal inline fun <reified T> Response<T>.throwOnErrorStatus() {
+    if (!isSuccessful) {
+        throw UploadFailure(this.code(), this.errorBody()?.string() ?: "empty body")
     }
 }

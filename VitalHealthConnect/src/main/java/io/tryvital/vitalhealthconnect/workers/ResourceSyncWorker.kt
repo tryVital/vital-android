@@ -1,11 +1,7 @@
 package io.tryvital.vitalhealthconnect.workers
 
-import UserSDKSyncStateBody
-import UserSDKSyncStateResponse
-import UserSDKSyncStatus
 import android.content.Context
 import android.content.SharedPreferences
-import android.os.Build
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.request.ChangesTokenRequest
@@ -16,17 +12,12 @@ import androidx.work.WorkerParameters
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
-import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import io.tryvital.client.VitalClient
-import io.tryvital.client.createConnectedSourceIfNotExist
-import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.DataStage
-import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
-import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -40,14 +31,7 @@ import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import io.tryvital.vitalhealthconnect.records.RecordUploader
 import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withLock
-import java.time.Duration
 import java.time.Instant
-import java.time.ZonedDateTime
-import java.time.temporal.ChronoUnit
-import java.util.Date
 import java.util.TimeZone
 import kotlin.reflect.KClass
 
@@ -376,13 +360,15 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
             token = changes.nextChangesToken
 
-            allData += processChangesResponse(
-                resource = input.resource,
-                responses = changes,
-                timeZone = timeZone,
-                processor = recordProcessor,
-                processorOptions = processorOptions,
-            )
+            if (changes.changes.isNotEmpty()) {
+                allData += processChangesResponse(
+                    resource = input.resource,
+                    responses = changes,
+                    timeZone = timeZone,
+                    processor = recordProcessor,
+                    processorOptions = processorOptions,
+                )
+            }
 
         } while (changes.hasMore)
 

@@ -1,6 +1,7 @@
 package io.tryvital.vitalhealthconnect.records
 
 import android.content.Context
+import android.os.RemoteException
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
@@ -29,8 +30,10 @@ import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.ext.returnEmptyIfException
+import kotlinx.coroutines.delay
 import java.time.Instant
 
 interface RecordReader {
@@ -257,7 +260,10 @@ internal class HealthConnectRecordReader(
                 )
 
                 records.addAll(result.records)
-                pageToken = result.pageToken
+
+                // pageToken can be empty string (undocumented) or null.
+                pageToken = if (result.pageToken.isNullOrBlank()) null else result.pageToken
+                VitalLogger.getOrCreate().info { "${T::class.simpleName}: received ${result.records.size} pageToken = ${result.pageToken}" }
 
             } while (pageToken != null)
 

@@ -5,7 +5,6 @@ import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
-import androidx.health.connect.client.records.CervicalMucusRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_INT_TO_STRING_MAP
@@ -14,15 +13,10 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
-import androidx.health.connect.client.records.IntermenstrualBleedingRecord
-import androidx.health.connect.client.records.MenstruationFlowRecord
-import androidx.health.connect.client.records.MenstruationPeriodRecord
-import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
-import androidx.health.connect.client.records.SexualActivityRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
@@ -36,13 +30,10 @@ import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
-import io.tryvital.vitalhealthconnect.model.HCActivityHourlyTotals
 import io.tryvital.vitalhealthconnect.model.inferredSourceType
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.quantitySample
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 import java.time.LocalDate
@@ -544,6 +535,10 @@ internal class HealthConnectRecordProcessor(
 
         val startInstant = realStartDate.atStartOfDay(timeZone.toZoneId()).toInstant()
         val endInstant = endDate.plusDays(1).atStartOfDay(timeZone.toZoneId()).toInstant()
+
+        VitalLogger.getOrCreate().info {
+            "menstrualCycle: query range [${startInstant} ..< ${endInstant}]"
+        }
 
         val periods = recordReader.menstruationPeriod(startInstant, endInstant)
         val flows = recordReader.menstruationFlow(startInstant, endInstant)

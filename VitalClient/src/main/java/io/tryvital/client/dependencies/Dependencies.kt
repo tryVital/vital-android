@@ -18,6 +18,7 @@ import io.tryvital.client.services.data.ProviderSlug
 import io.tryvital.client.services.data.ResourceAvailability
 import io.tryvital.client.services.data.SourceType
 import io.tryvital.client.services.data.VitalAPIResource
+import io.tryvital.client.utils.AlwaysSerializeNullsFactory
 import io.tryvital.client.utils.ApiKeyInterceptor
 import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalRequestInterceptor
@@ -103,6 +104,7 @@ internal class Dependencies(
                 .build()
 
         internal fun createMoshi(): Moshi = Moshi.Builder()
+            .addLast(AlwaysSerializeNullsFactory)
             .add(Instant::class.java, InstantJsonAdapter)
             .add(LocalDate::class.java, LocalDateJsonAdapter)
             .add(ProviderSlug::class.java, ProviderSlug.jsonAdapter)
