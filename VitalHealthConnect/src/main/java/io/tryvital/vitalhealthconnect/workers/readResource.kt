@@ -1,5 +1,6 @@
 package io.tryvital.vitalhealthconnect.workers
 
+import io.tryvital.client.services.data.DataStage
 import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -15,6 +16,7 @@ internal suspend fun readResourceByTimeRange(
     resource: RemappedVitalResource,
     startTime: Instant,
     endTime: Instant,
+    stage: DataStage,
     timeZone: TimeZone,
     reader: RecordReader,
     processor: RecordProcessor,
@@ -71,5 +73,13 @@ internal suspend fun readResourceByTimeRange(
             readTimeseries(reader::readBloodPressure, processor::processBloodPressureFromRecords)
         VitalResource.Water ->
             readTimeseries(reader::readHydration, processor::processWaterFromRecords)
+
+        VitalResource.MenstrualCycle -> processor.processMenstrualCyclesFromRecords(
+            endTime.atZone(timeZone.toZoneId()).toLocalDate(),
+            if (stage == DataStage.Historical)
+                endTime.atZone(timeZone.toZoneId()).toLocalDate()
+            else null,
+            timeZone,
+        ).let(ProcessedResourceData::Summary)
     }
 }

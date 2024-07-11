@@ -359,6 +359,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             resource = input.resource,
             startTime = start,
             endTime = end,
+            stage = stage,
             timeZone = timeZone,
             reader = recordReader,
             processor = recordProcessor,

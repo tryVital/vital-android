@@ -19,6 +19,7 @@ sealed class VitalResource(val name: String) {
     object BasalEnergyBurned : VitalResource("basalEnergyBurned")
     object Water : VitalResource("water")
     object HeartRateVariability : VitalResource("heartRateVariability")
+    object MenstrualCycle : VitalResource("menstrualCycle")
 
     override fun toString(): String {
         return name
@@ -41,6 +42,7 @@ sealed class VitalResource(val name: String) {
                 BasalEnergyBurned,
                 Water,
                 HeartRateVariability,
+                MenstrualCycle,
             )
         }
 
@@ -59,6 +61,7 @@ sealed class VitalResource(val name: String) {
                 "basalEnergyBurned" -> BasalEnergyBurned
                 "water" -> Water
                 "heartRateVariability" -> HeartRateVariability
+                "menstrualCycle" -> MenstrualCycle
                 else -> throw IllegalArgumentException("No object io.tryvital.vitalhealthconnect.model.HealthResource.$value")
             }
         }
@@ -207,6 +210,17 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
             HeartRateRecord::class,
         ),
     )
+    VitalResource.MenstrualCycle -> RecordTypeRequirements(
+        required = listOf(MenstruationPeriodRecord::class),
+        optional = listOf(
+            MenstruationFlowRecord::class,
+            CervicalMucusRecord::class,
+            OvulationTestRecord::class,
+            IntermenstrualBleedingRecord::class,
+            SexualActivityRecord::class,
+        ),
+        supplementary = emptyList(),
+    )
 }
 
 /**
@@ -239,6 +253,14 @@ internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Rec
     VitalResource.Profile -> listOf(HeightRecord::class)
     VitalResource.Sleep -> listOf(SleepSessionRecord::class)
     VitalResource.Workout -> listOf(ExerciseSessionRecord::class)
+    VitalResource.MenstrualCycle -> listOf(
+        MenstruationPeriodRecord::class,
+        MenstruationFlowRecord::class,
+        CervicalMucusRecord::class,
+        OvulationTestRecord::class,
+        IntermenstrualBleedingRecord::class,
+        SexualActivityRecord::class,
+    )
 
     VitalResource.ActiveEnergyBurned, VitalResource.BasalEnergyBurned, VitalResource.Steps ->
         throw IllegalArgumentException("Should have been remapped to Activity.")

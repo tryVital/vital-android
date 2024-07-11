@@ -19,6 +19,7 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.response.ChangesResponse
+import io.tryvital.client.services.data.DataStage
 import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -28,6 +29,7 @@ import io.tryvital.vitalhealthconnect.records.ProcessorOptions
 import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import java.time.Instant
+import java.time.LocalDate
 import java.util.*
 import kotlin.reflect.KClass
 
@@ -119,6 +121,12 @@ internal suspend fun processChangesResponse(
                 records.get<HydrationRecord>().filter { it.endTime <= endAdjusted },
                 processor::processWaterFromRecords
             )
+
+        VitalResource.MenstrualCycle -> processor.processMenstrualCyclesFromRecords(
+            LocalDate.now(),
+            null,
+            timeZone,
+        ).let(ProcessedResourceData::Summary)
     }
 }
 
