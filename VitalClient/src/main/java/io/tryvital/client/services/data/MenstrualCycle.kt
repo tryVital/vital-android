@@ -87,6 +87,7 @@ data class MenstrualCycle(
     @JsonClass(generateAdapter = false)
     enum class OvulationTestResult {
         @Json(name = "negative") Negative,
+        @Json(name = "positive") Positive,
         @Json(name = "luteinizing_hormone_surge") LuteinizingHormoneSurge,
         @Json(name = "estrogen_surge") EstrogenSurge,
         @Json(name = "indeterminate") Indeterminate;
@@ -153,7 +154,7 @@ data class MenstrualCycle(
     data class SexualActivityEntry(
         val date: LocalDate,
         @Json(name = "protection_used")
-        val protectionUsed: Boolean,
+        val protectionUsed: Boolean?,
     )
 
     @JsonClass(generateAdapter = true)
