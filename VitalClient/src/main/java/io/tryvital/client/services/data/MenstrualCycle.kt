@@ -2,8 +2,10 @@ package io.tryvital.client.services.data
 
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import io.tryvital.client.utils.AlwaysSerializeNulls
 import java.time.LocalDate
 
+@AlwaysSerializeNulls
 @JsonClass(generateAdapter = true)
 data class MenstrualCycle(
     @Json(name = "period_start")
@@ -150,6 +152,7 @@ data class MenstrualCycle(
         val testResult: HomeTestResult,
     )
 
+    @AlwaysSerializeNulls
     @JsonClass(generateAdapter = true)
     data class SexualActivityEntry(
         val date: LocalDate,

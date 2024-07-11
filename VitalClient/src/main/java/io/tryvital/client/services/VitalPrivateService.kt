@@ -45,7 +45,7 @@ interface VitalPrivateService {
         @Body body: SummaryPayload<List<LocalWorkout>>
     ): Response<Unit>
 
-    @POST("summary/mennstrual_cycle/{user_id}")
+    @POST("summary/menstrual_cycle/{user_id}")
     suspend fun addMenstrualCycles(
         @Path("user_id") userId: String,
         @Body body: SummaryPayload<List<LocalMenstrualCycle>>
