@@ -3,7 +3,8 @@ package io.tryvital.vitalhealthconnect.ext
 suspend fun <T> returnEmptyIfException(block: suspend () -> List<T>): List<T> {
     return try {
         block()
-    } catch (exception: Exception) {
+    } catch (exception: SecurityException) {
+        // No permission to access
         emptyList()
     }
 }

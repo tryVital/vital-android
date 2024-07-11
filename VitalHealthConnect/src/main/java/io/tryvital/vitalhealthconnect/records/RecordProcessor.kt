@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.CervicalMucusRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_INT_TO_STRING_MAP
@@ -13,10 +14,15 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.IntermenstrualBleedingRecord
+import androidx.health.connect.client.records.MenstruationFlowRecord
+import androidx.health.connect.client.records.MenstruationPeriodRecord
+import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.SexualActivityRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
@@ -99,6 +105,12 @@ interface RecordProcessor {
         vo2Max: List<Vo2MaxRecord>,
         options: ProcessorOptions,
     ): SummaryData.Activities
+
+    suspend fun processMenstrualCyclesFromRecords(
+        endDate: LocalDate,
+        startDate: LocalDate?,
+        timeZone: TimeZone,
+    ): SummaryData.MenstrualCycles
 }
 
 internal class HealthConnectRecordProcessor(
@@ -516,6 +528,31 @@ internal class HealthConnectRecordProcessor(
         }
 
         SummaryData.Activities(activities = activities)
+    }
+
+    /**
+     * We ignore any delta record inputs. We recompute cycle boundaries on the fly every time,
+     * and then grouping the record scraps into [MenstrualCycle]s based on the boundaries.
+     */
+    override suspend fun processMenstrualCyclesFromRecords(
+        endDate: LocalDate,
+        startDate: LocalDate?,
+        timeZone: TimeZone,
+    ): SummaryData.MenstrualCycles {
+        // Look ~3 cycles back
+        val realStartDate = (startDate ?: endDate).minusDays(90)
+
+        val startInstant = realStartDate.atStartOfDay(timeZone.toZoneId()).toInstant()
+        val endInstant = endDate.plusDays(1).atStartOfDay(timeZone.toZoneId()).toInstant()
+
+        val periods = recordReader.menstruationPeriod(startInstant, endInstant)
+        val flows = recordReader.menstruationFlow(startInstant, endInstant)
+        val intermenstrualBleeding = recordReader.intermenstrualBleeding(startInstant, endInstant)
+        val ovulationTest = recordReader.ovulationTest(startInstant, endInstant)
+        val sexualActivity = recordReader.sexualActivity(startInstant, endInstant)
+        val cervicalMucus = recordReader.cervicalMucus(startInstant, endInstant)
+
+        return SummaryData.MenstrualCycles(cycles = emptyList())
     }
 
 
