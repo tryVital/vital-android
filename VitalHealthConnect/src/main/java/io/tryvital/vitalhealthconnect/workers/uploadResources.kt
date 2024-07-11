@@ -44,6 +44,11 @@ internal suspend fun uploadResources(
                 data.summaryData.samples,
                 stage,
             )
+            is SummaryData.MenstrualCycles -> uploader.uploadMenstrualCycles(
+                userId, start, end, timeZoneId,
+                data.summaryData.cycles,
+                stage,
+            )
         }
 
         is ProcessedResourceData.TimeSeries -> when (data.timeSeriesData) {

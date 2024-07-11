@@ -137,6 +137,15 @@ data class LocalSleep(
     }
 }
 
+// @VitalPrivateApi
+@JsonClass(generateAdapter = true)
+data class LocalMenstrualCycle(
+    @Json(name = "source_bundle")
+    val sourceBundle: String,
+
+    val cycle: MenstrualCycle,
+)
+
 @JsonClass(generateAdapter = true)
 data class LocalQuantitySample(
     @Json(name = "id")
