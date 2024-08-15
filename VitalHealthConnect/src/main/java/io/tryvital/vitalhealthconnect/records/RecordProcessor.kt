@@ -201,25 +201,24 @@ internal class HealthConnectRecordProcessor(
         return SummaryData.Workouts(
             exerciseRecords.map { exercise ->
                 val summary =
-                    recordAggregator.aggregateWorkoutSummary(exercise.startTime, exercise.endTime)
-                val heartRateRecord =
-                    recordReader.readHeartRate(exercise.startTime, exercise.endTime)
-                val respiratoryRateRecord =
-                    recordReader.readRespiratoryRate(exercise.startTime, exercise.endTime)
+                    recordAggregator.aggregateWorkoutSummary(exercise.startTime, exercise.endTime, exercise.metadata.dataOrigin)
 
                 LocalWorkout(
                     id = exercise.metadata.id,
                     startDate = exercise.startTime,
                     endDate = exercise.endTime,
                     sport = EXERCISE_TYPE_INT_TO_STRING_MAP[exercise.exerciseType] ?: "workout",
-                    caloriesInKiloJules = summary.caloriesBurned ?: 0.0,
-                    distanceInMeter = summary.distance ?: 0.0,
-                    heartRate = mapHearthRate(
-                        heartRateRecord,
-                    ),
-                    respiratoryRate = mapRespiratoryRate(
-                        respiratoryRateRecord,
-                    ),
+                    calories = summary.caloriesBurned ?: 0.0,
+                    distance = summary.distanceMeter ?: 0.0,
+                    heartRateMinimum = summary.heartRateMinimum,
+                    heartRateMaximum = summary.heartRateMaximum,
+                    heartRateMean = summary.heartRateMean,
+                    heartRateZone1 = summary.heartRateZone1,
+                    heartRateZone2 = summary.heartRateZone2,
+                    heartRateZone3 = summary.heartRateZone3,
+                    heartRateZone4 = summary.heartRateZone4,
+                    heartRateZone5 = summary.heartRateZone5,
+                    heartRateZone6 = summary.heartRateZone6,
                     sourceBundle = exercise.metadata.dataOrigin.packageName,
                     deviceModel = exercise.metadata.device?.model,
                     sourceType = exercise.metadata.inferredSourceType,
@@ -274,19 +273,11 @@ internal class HealthConnectRecordProcessor(
         sleeps: List<SleepSessionRecord>,
     ): List<LocalSleep> {
         return sleeps.filterForAcceptedSleepDataSources().map { sleepSession ->
-            val heartRateRecord =
-                recordReader.readHeartRate(sleepSession.startTime, sleepSession.endTime)
-            val restingHeartRateRecord =
-                recordReader.readRestingHeartRate(sleepSession.startTime, sleepSession.endTime)
-            val respiratoryRateRecord =
-                recordReader.readRespiratoryRate(sleepSession.startTime, sleepSession.endTime)
-            val readHeartRateVariabilityRmssdRecord =
-                recordReader.readHeartRateVariabilityRmssd(
-                    sleepSession.startTime,
-                    sleepSession.endTime
-                )
-            val oxygenSaturationRecord =
-                recordReader.readOxygenSaturation(sleepSession.startTime, sleepSession.endTime)
+            val statistics = recordAggregator.aggregateSleepSummary(
+                sleepSession.startTime,
+                sleepSession.endTime,
+                sleepSession.metadata.dataOrigin
+            )
 
             LocalSleep(
                 id = sleepSession.metadata.id,
@@ -295,17 +286,11 @@ internal class HealthConnectRecordProcessor(
                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
                 deviceModel = sleepSession.metadata.device?.model,
                 sourceType = sleepSession.metadata.inferredSourceType,
-                heartRate = mapHearthRate(heartRateRecord),
-                restingHeartRate = mapRestingHearthRate(
-                    restingHeartRateRecord,
-                ),
-                respiratoryRate = mapRespiratoryRate(respiratoryRateRecord),
-                heartRateVariability = mapHeartRateVariabilityRmssdRecord(
-                    readHeartRateVariabilityRmssdRecord,
-                ),
-                oxygenSaturation = mapOxygenSaturationRecord(
-                    oxygenSaturationRecord,
-                ),
+                heartRateMean = statistics.heartRateMean,
+                heartRateMaximum = statistics.heartRateMaximum,
+                heartRateMinimum = statistics.heartRateMinimum,
+                hrvMeanSdnn = statistics.hrvMeanSdnn,
+                respiratoryRateMean = statistics.respiratoryRateMean,
                 sleepStages = LocalSleep.Stages(
                     awakeSleepSamples = sleepSession.stages.filter { it.stage == SleepSessionRecord.STAGE_TYPE_AWAKE }
                         .map { sleepStage ->
