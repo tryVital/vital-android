@@ -91,7 +91,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'io.tryvital'
             artifactId = 'vital-client'
-            version = '3.2.0-beta.1'
+            version = '3.2.0-beta.2'
 
             afterEvaluate {
                 from components.release
