@@ -73,19 +73,19 @@ data class LocalWorkout(
 @JsonClass(generateAdapter = true)
 data class LocalActivity(
     @Json(name = "day_summary")
-    val daySummary: ActivityDaySummary?,
+    val daySummary: ActivityDaySummary? = null,
     @Json(name = "active_energy_burned")
-    val activeEnergyBurned: List<LocalQuantitySample>,
+    val activeEnergyBurned: List<LocalQuantitySample> = emptyList(),
     @Json(name = "basal_energy_burned")
-    val basalEnergyBurned: List<LocalQuantitySample>,
+    val basalEnergyBurned: List<LocalQuantitySample> = emptyList(),
     @Json(name = "steps")
-    val steps: List<LocalQuantitySample>,
+    val steps: List<LocalQuantitySample> = emptyList(),
     @Json(name = "distance_walking_running")
-    val distanceWalkingRunning: List<LocalQuantitySample>,
+    val distanceWalkingRunning: List<LocalQuantitySample> = emptyList(),
     @Json(name = "vo2_max")
-    val vo2Max: List<LocalQuantitySample>,
+    val vo2Max: List<LocalQuantitySample> = emptyList(),
     @Json(name = "floors_climbed")
-    val floorsClimbed: List<LocalQuantitySample>,
+    val floorsClimbed: List<LocalQuantitySample> = emptyList(),
 )
 
 // @VitalPrivateApi

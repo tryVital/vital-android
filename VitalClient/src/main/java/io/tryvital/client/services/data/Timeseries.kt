@@ -24,6 +24,12 @@ data class TimeseriesPayload<T> (
 
 @JsonClass(generateAdapter = false)
 enum class IngestibleTimeseriesResource {
+    @Json(name = "vo2_max") Vo2Max,
+    @Json(name = "distance") Distance,
+    @Json(name = "floors_climbed") FloorsClimbed,
+    @Json(name = "calories_basal") CaloriesBasal,
+    @Json(name = "calories_active") CaloriesActive,
+    @Json(name = "steps") Steps,
     @Json(name = "glucose") BloodGlucose,
     @Json(name = "water") Water,
     @Json(name = "heartrate") HeartRate,

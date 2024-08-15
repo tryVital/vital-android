@@ -120,7 +120,6 @@ class VitalResourceTests {
             val requirements = resource.wrapped.recordTypeDependencies()
 
             val isNonoverlapping = requirements.required.intersect(claimedObjectTypes).isEmpty()
-                    && requirements.optional.intersect(claimedObjectTypes).isEmpty()
 
             Assert.assertTrue(
                 "$resource overlaps with another VitalResource.",
@@ -130,7 +129,6 @@ class VitalResourceTests {
             // NOTE = A VitalResource can declare `requirements.supplementary` that overlaps with other
             //       resource.
             claimedObjectTypes.addAll(requirements.required)
-            claimedObjectTypes.addAll(requirements.optional)
         }
     }
 }

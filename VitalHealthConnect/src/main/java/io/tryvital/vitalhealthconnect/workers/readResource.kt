@@ -1,14 +1,20 @@
 package io.tryvital.vitalhealthconnect.workers
 
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BasalMetabolicRateRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.FloorsClimbedRecord
+import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.Vo2MaxRecord
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
-import io.tryvital.vitalhealthconnect.model.remapped
 import io.tryvital.vitalhealthconnect.records.ProcessorOptions
 import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
+import io.tryvital.vitalhealthconnect.records.TimeRangeOrRecords
 import java.time.Instant
 import java.util.TimeZone
 
@@ -30,19 +36,40 @@ internal suspend fun readResourceByTimeRange(
     ).let(ProcessedResourceData::TimeSeries)
 
     return when (resource.wrapped) {
-        VitalResource.ActiveEnergyBurned, VitalResource.BasalEnergyBurned, VitalResource.Steps ->
-            throw IllegalArgumentException("Unexpected resource post remapped(): $resource")
-
-        VitalResource.Activity -> processor.processActivitiesFromRecords(
+        VitalResource.Activity -> processor.processActivities(
+            lastSynced = startTime,
             timeZone = timeZone,
-            activeEnergyBurned = reader.readActiveEnergyBurned(startTime, endTime),
-            basalMetabolicRate = reader.readBasalMetabolicRate(startTime, endTime),
-            floorsClimbed = reader.readFloorsClimbed(startTime, endTime),
-            distance = reader.readDistance(startTime, endTime),
-            steps = reader.readSteps(startTime, endTime),
-            vo2Max = reader.readVo2Max(startTime, endTime),
-            options = processorOptions,
         ).let(ProcessedResourceData::Summary)
+
+        VitalResource.ActiveEnergyBurned -> processor.processActiveCaloriesBurnedRecords(
+            TimeRangeOrRecords.TimeRange(start = startTime, end = endTime),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.BasalEnergyBurned -> processor.processBasalMetabolicRateRecords(
+            reader.readBasalMetabolicRate(startTime, endTime),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.DistanceWalkingRunning -> processor.processDistanceRecords(
+            TimeRangeOrRecords.TimeRange(start = startTime, end = endTime),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.FloorsClimbed -> processor.processFloorsClimbedRecords(
+            TimeRangeOrRecords.TimeRange(start = startTime, end = endTime),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.Steps -> processor.processStepsRecords(
+            TimeRangeOrRecords.TimeRange(start = startTime, end = endTime),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.Vo2Max -> processor.processVo2MaxRecords(
+            reader.readVo2Max(startTime, endTime),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
 
         VitalResource.Workout -> processor.processWorkoutsFromRecords(
             exerciseRecords = reader.readExerciseSessions(startTime, endTime)

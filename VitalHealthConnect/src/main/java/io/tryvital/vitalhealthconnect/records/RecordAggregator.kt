@@ -2,6 +2,7 @@ package io.tryvital.vitalhealthconnect.records
 
 import android.content.Context
 import androidx.health.connect.client.aggregate.AggregateMetric
+import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
@@ -65,11 +66,25 @@ internal interface RecordAggregator {
         timeZone: TimeZone
     ): Map<LocalDate, HCActivitySummary>
 
-    suspend fun aggregateActivityHourlyTotals(
+    suspend fun aggregateStepHourlyTotals(
         start: Instant,
         end: Instant,
-        timeZone: TimeZone,
-    ): HCActivityHourlyTotals
+    ): List<LocalQuantitySample>
+
+    suspend fun aggregateCaloriesActiveHourlyTotals(
+        start: Instant,
+        end: Instant,
+    ): List<LocalQuantitySample>
+
+    suspend fun aggregateFloorsClimbedHourlyTotals(
+        start: Instant,
+        end: Instant,
+    ): List<LocalQuantitySample>
+
+    suspend fun aggregateDistanceHourlyTotals(
+        start: Instant,
+        end: Instant,
+    ): List<LocalQuantitySample>
 }
 
 
@@ -330,22 +345,68 @@ internal class HealthConnectRecordAggregator(
         )
     }
 
-    override suspend fun aggregateActivityHourlyTotals(
+    override suspend fun aggregateCaloriesActiveHourlyTotals(
+        start: Instant,
+        end: Instant
+    ) = aggregateActivityHourlyTotals(
+        start = start,
+        end = end,
+        record = ActiveCaloriesBurnedRecord::class,
+        metric = ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
+        extractValue = { floor(it.inKilocalories) },
+        unit = "kcal",
+    )
+
+    override suspend fun aggregateDistanceHourlyTotals(
+        start: Instant,
+        end: Instant
+    ) = aggregateActivityHourlyTotals(
+        start = start,
+        end = end,
+        record = DistanceRecord::class,
+        metric = DistanceRecord.DISTANCE_TOTAL,
+        extractValue = { it.inMeters },
+        unit = "m",
+    )
+
+    override suspend fun aggregateFloorsClimbedHourlyTotals(
+        start: Instant,
+        end: Instant
+    ) = aggregateActivityHourlyTotals(
+        start = start,
+        end = end,
+        record = FloorsClimbedRecord::class,
+        metric = FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
+        extractValue = { it },
+        unit = "count",
+    )
+
+    override suspend fun aggregateStepHourlyTotals(
         start: Instant,
         end: Instant,
-        timeZone: TimeZone,
-    ): HCActivityHourlyTotals {
+    ) = aggregateActivityHourlyTotals(
+        start = start,
+        end = end,
+        record = StepsRecord::class,
+        metric = StepsRecord.COUNT_TOTAL,
+        extractValue = { it.toDouble() },
+        unit = "count",
+    )
 
-        val metricsToRequest = permittedMetrics(
-            ActiveCaloriesBurnedRecord::class to ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL,
-            StepsRecord::class to StepsRecord.COUNT_TOTAL,
-            DistanceRecord::class to DistanceRecord.DISTANCE_TOTAL,
-            FloorsClimbedRecord::class to FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL,
-        )
+    internal suspend inline fun <reified R: Record, M: Any> aggregateActivityHourlyTotals(
+        start: Instant,
+        end: Instant,
+        record: KClass<R>,
+        metric: AggregateMetric<M>,
+        extractValue: (M) -> Double,
+        unit: String
+    ): List<LocalQuantitySample> {
+
+        val metricsToRequest = permittedMetrics(record to metric)
 
         // No permission for anything; fail gracefully by returning an empty summary.
         if (metricsToRequest.isEmpty()) {
-            return HCActivityHourlyTotals()
+            return emptyList()
         }
 
         val results = healthConnectClient.aggregateGroupByDuration(
@@ -357,55 +418,13 @@ internal class HealthConnectRecordAggregator(
             )
         )
 
-        val activeCaloriesByDate = mutableMapOf<LocalDate, MutableList<LocalQuantitySample>>()
-        val stepsByDate = mutableMapOf<LocalDate, MutableList<LocalQuantitySample>>()
-        val distanceByDate = mutableMapOf<LocalDate, MutableList<LocalQuantitySample>>()
-        val floorsClimbedByDate = mutableMapOf<LocalDate, MutableList<LocalQuantitySample>>()
-
+        val samples = mutableListOf<LocalQuantitySample>()
         for (response in results) {
-            val date = response.startTime.atZone(timeZone.toZoneId()).toLocalDate()
-
-            response.result[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories?.let { activeCalories ->
-                activeCaloriesByDate.getOrPut(date) { mutableListOf() }.add(
+            response.result[metric]?.let { result ->
+                samples.add(
                     quantitySample(
-                        value = floor(activeCalories),
-                        unit = "kcal",
-                        startDate = response.startTime,
-                        endDate = response.endTime,
-                        metadata = null,
-                        sourceType = SourceType.MultipleSources,
-                    )
-                )
-            }
-            response.result[StepsRecord.COUNT_TOTAL]?.let { steps ->
-                stepsByDate.getOrPut(date) { mutableListOf() }.add(
-                    quantitySample(
-                        value = steps.toDouble(),
-                        unit = "count",
-                        startDate = response.startTime,
-                        endDate = response.endTime,
-                        metadata = null,
-                        sourceType = SourceType.MultipleSources,
-                    )
-                )
-            }
-            response.result[DistanceRecord.DISTANCE_TOTAL]?.inMeters?.let { distance ->
-                distanceByDate.getOrPut(date) { mutableListOf() }.add(
-                    quantitySample(
-                        value = floor(distance),
-                        unit = "m",
-                        startDate = response.startTime,
-                        endDate = response.endTime,
-                        metadata = null,
-                        sourceType = SourceType.MultipleSources,
-                    )
-                )
-            }
-            response.result[FloorsClimbedRecord.FLOORS_CLIMBED_TOTAL]?.let { floorsClimbed ->
-                floorsClimbedByDate.getOrPut(date) { mutableListOf() }.add(
-                    quantitySample(
-                        value = floor(floorsClimbed),
-                        unit = "count",
+                        value = extractValue(result),
+                        unit = unit,
                         startDate = response.startTime,
                         endDate = response.endTime,
                         metadata = null,
@@ -415,11 +434,6 @@ internal class HealthConnectRecordAggregator(
             }
         }
 
-        return HCActivityHourlyTotals(
-            activeCalories = activeCaloriesByDate,
-            steps = stepsByDate,
-            distance = distanceByDate,
-            floorsClimbed = floorsClimbedByDate
-        )
+        return samples
     }
 }
