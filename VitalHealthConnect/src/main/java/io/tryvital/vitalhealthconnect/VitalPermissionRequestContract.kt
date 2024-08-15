@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.PermissionController
+import androidx.health.connect.client.permission.HealthPermission
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.VitalPrivateApi
@@ -86,7 +87,11 @@ class VitalPermissionRequestContract(
     @OptIn(VitalPrivateApi::class)
     private fun processGrantedPermissionsAsync(requested: Set<String>, granted: Set<String>): Deferred<PermissionOutcome> {
         val readGrants = readResources
-            .filter { granted.containsAll(manager.readPermissionsRequiredByResources(setOf(it))) }
+            .filter { resource ->
+                resource.recordTypeDependencies().isResourceActive {
+                    HealthPermission.getReadPermission(it) in granted
+                }
+            }
             .toSet()
 
         val writeGrants = writeResources

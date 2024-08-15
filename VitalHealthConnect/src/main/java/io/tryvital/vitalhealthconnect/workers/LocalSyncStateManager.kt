@@ -53,7 +53,9 @@ internal class LocalSyncStateManager(
             vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
 
             val now = Instant.now()
-            val numberOfDaysToBackfill = preferences.getInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, 30).toLong()
+
+            // Health Connect limits historical query to first connection date mins 30 days.
+            val numberOfDaysToBackfill = minOf(preferences.getInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, 30).toLong(), 30)
             val proposedStart = now.minus(numberOfDaysToBackfill, ChronoUnit.DAYS)
             val backendState = vitalClient.vitalPrivateService.healthConnectSdkSyncState(
                 VitalClient.checkUserId(),

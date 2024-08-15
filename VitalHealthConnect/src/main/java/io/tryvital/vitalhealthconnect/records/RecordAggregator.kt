@@ -21,8 +21,10 @@ import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
+import androidx.health.platform.client.request.AggregateDataRequest
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SourceType
+import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.model.HCActivityHourlyTotals
 import io.tryvital.vitalhealthconnect.model.HCActivitySummary
@@ -181,15 +183,16 @@ internal class HealthConnectRecordAggregator(
                         setOf(dataOrigin),
                     )
                 )
-            }
+            }.await()
+
             val heartRate = async {
                 if (HealthPermission.getReadPermission(HeartRateRecord::class) !in grantedPermissions()) {
                     return@async HCWorkoutSummary()
                 }
                 aggregateHeartRateZones(startTime, endTime, dataOrigin)
-            }
+            }.await()
 
-            heartRate.await() to response.await()
+            heartRate to response
         }
 
         return if (response != null) {
@@ -210,17 +213,20 @@ internal class HealthConnectRecordAggregator(
     ): HCWorkoutSummary {
         val timestamps = arrayListOf<Long>()
         val values = arrayListOf<Long>()
-        var pageToken: String?
+        var pageToken: String? = null
 
         do {
             val response = healthConnectClient.readRecords(
                 ReadRecordsRequest<HeartRateRecord>(
                     TimeRangeFilter.between(startTime, endTime),
                     setOf(dataOrigin),
+                    pageSize = 2500,
+                    pageToken = pageToken,
                 )
             )
 
-            pageToken = response.pageToken
+            pageToken = if (response.pageToken.isNullOrBlank()) null else response.pageToken
+            VitalLogger.getOrCreate().logI("pageToken: ${response.pageToken}")
 
             response.records.forEach { record ->
                 record.samples.forEach { timestamps.add(it.time.toEpochMilli() / 1000) }
