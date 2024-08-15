@@ -71,7 +71,7 @@ internal sealed class ResourceSyncState {
     }
 
     @JsonClass(generateAdapter = true)
-    data class Incremental(val changesToken: String, val lastSync: Instant) : ResourceSyncState() {
+    data class Incremental(val changesToken: String?, val lastSync: Instant) : ResourceSyncState() {
         override fun toString(): String =
             "incremental($changesToken; lastSync=${lastSync})"
     }
@@ -241,6 +241,18 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val userId = VitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
 
+        // If the resource does not use record changes monitoring,
+        // use the generic backfill path
+        if (!useRecordChangesForIncrementalBackfill) {
+            return genericBackfill(
+                stage = DataStage.Daily,
+                start = state.lastSync,
+                end = minOf(Instant.now(), state.end ?: Instant.now()),
+                timeZone = timeZone,
+                processorOptions = processorOptions,
+            )
+        }
+
         val recordTypesToMonitor = recordTypesToMonitor().toSimpleNameSet()
         val monitoringTypes = monitoringRecordTypes()
 
@@ -322,12 +334,19 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val userId = VitalClient.checkUserId()
         val client = healthConnectClientProvider.getHealthConnectClient(applicationContext)
 
-        val recordTypesToMonitor = recordTypesToMonitor()
-        var token = client.getChangesToken(ChangesTokenRequest(recordTypes = recordTypesToMonitor))
+        val anchorChangesToken = if (useRecordChangesForIncrementalBackfill) {
+            val recordTypesToMonitor = recordTypesToMonitor()
+            val token = client.getChangesToken(ChangesTokenRequest(recordTypes = recordTypesToMonitor))
 
-        sharedPreferences.edit()
-            .putStringSet(input.resource.wrapped.monitoringTypesKey, recordTypesToMonitor.toSimpleNameSet())
-            .apply()
+            sharedPreferences.edit()
+                .putStringSet(
+                    input.resource.wrapped.monitoringTypesKey,
+                    recordTypesToMonitor.toSimpleNameSet()
+                )
+                .apply()
+
+            token
+        } else null
 
         val (stageStart, stageEnd) = when (stage) {
             // Historical stage must pass the same start ..< end throughout all the chunks.
@@ -350,27 +369,32 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             processorOptions = processorOptions,
         )
 
-        var changes: ChangesResponse
+        var tokenToStore: String? = null
 
-        do {
-            changes = client.getChanges(token)
-            check(!changes.changesTokenExpired)
+        if (useRecordChangesForIncrementalBackfill) {
+            tokenToStore = checkNotNull(anchorChangesToken)
+            var changes: ChangesResponse
 
-            vitalLogger.info { "${input.resource}: found ${changes.changes.count()} new changes after range request" }
+            do {
+                changes = client.getChanges(tokenToStore!!)
+                check(!changes.changesTokenExpired)
 
-            token = changes.nextChangesToken
+                vitalLogger.info { "${input.resource}: found ${changes.changes.count()} new changes after range request" }
 
-            if (changes.changes.isNotEmpty()) {
-                allData += processChangesResponse(
-                    resource = input.resource,
-                    responses = changes,
-                    timeZone = timeZone,
-                    processor = recordProcessor,
-                    processorOptions = processorOptions,
-                )
-            }
+                tokenToStore = changes.nextChangesToken
 
-        } while (changes.hasMore)
+                if (changes.changes.isNotEmpty()) {
+                    allData += processChangesResponse(
+                        resource = input.resource,
+                        responses = changes,
+                        timeZone = timeZone,
+                        processor = recordProcessor,
+                        processorOptions = processorOptions,
+                    )
+                }
+
+            } while (changes.hasMore)
+        }
 
         val mergedData = allData.merged()
         // We always make a POST request in DataStage.Historical, even if there is no data, so that
@@ -391,11 +415,15 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             )
         }
 
-        setIncremental(token = token)
+        setIncremental(token = tokenToStore)
     }
 
     private fun monitoringRecordTypes(): Set<String> {
         return sharedPreferences.getStringSet(input.resource.wrapped.monitoringTypesKey, null) ?: setOf()
+    }
+
+    private val useRecordChangesForIncrementalBackfill by lazy {
+        input.resource.wrapped.recordTypeChangesToTriggerSync().isNotEmpty()
     }
 
     /**
@@ -413,7 +441,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             }
     }
 
-    private fun setIncremental(token: String) {
+    private fun setIncremental(token: String?) {
         val newState = ResourceSyncState.Incremental(token, lastSync = Instant.now())
 
         sharedPreferences.edit()

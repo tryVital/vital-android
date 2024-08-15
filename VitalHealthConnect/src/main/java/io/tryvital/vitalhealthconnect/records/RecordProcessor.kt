@@ -38,6 +38,7 @@ import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.TimeZone
 import kotlin.math.roundToInt
@@ -45,6 +46,13 @@ import kotlin.math.roundToInt
 data class ProcessorOptions(
     val perDeviceActivityTS: Boolean = false
 )
+
+const val ACTIVITY_STATS_DAYS_TO_LOOKBACK = 3L
+
+sealed class TimeRangeOrRecords<out R: Record> {
+    data class TimeRange<out R: Record>(val start: Instant, val end: Instant): TimeRangeOrRecords<R>()
+    data class Records<out R: Record>(val records: List<R>): TimeRangeOrRecords<R>()
+}
 
 interface RecordProcessor {
 
@@ -86,16 +94,40 @@ interface RecordProcessor {
         sleepSessionRecords: List<SleepSessionRecord>,
     ): SummaryData.Sleeps
 
-    suspend fun processActivitiesFromRecords(
+    suspend fun processActivities(
+        lastSynced: Instant?,
         timeZone: TimeZone,
-        activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,
+    ): SummaryData.Activities
+
+    suspend fun processActiveCaloriesBurnedRecords(
+        activeEnergyBurned: TimeRangeOrRecords<ActiveCaloriesBurnedRecord>,
+        options: ProcessorOptions,
+    ): TimeSeriesData.QuantitySamples
+
+    suspend fun processBasalMetabolicRateRecords(
         basalMetabolicRate: List<BasalMetabolicRateRecord>,
-        steps: List<StepsRecord>,
-        distance: List<DistanceRecord>,
-        floorsClimbed: List<FloorsClimbedRecord>,
+        options: ProcessorOptions,
+    ): TimeSeriesData.QuantitySamples
+
+    suspend fun processStepsRecords(
+        steps: TimeRangeOrRecords<StepsRecord>,
+        options: ProcessorOptions,
+    ): TimeSeriesData.QuantitySamples
+
+    suspend fun processDistanceRecords(
+        distance: TimeRangeOrRecords<DistanceRecord>,
+        options: ProcessorOptions,
+    ): TimeSeriesData.QuantitySamples
+
+    suspend fun processFloorsClimbedRecords(
+        floorsClimbed: TimeRangeOrRecords<FloorsClimbedRecord>,
+        options: ProcessorOptions,
+    ): TimeSeriesData.QuantitySamples
+
+    suspend fun processVo2MaxRecords(
         vo2Max: List<Vo2MaxRecord>,
         options: ProcessorOptions,
-    ): SummaryData.Activities
+    ): TimeSeriesData.QuantitySamples
 
     suspend fun processMenstrualCyclesFromRecords(
         endDate: LocalDate,
@@ -357,28 +389,61 @@ internal class HealthConnectRecordProcessor(
         }
     }
 
-    override suspend fun processActivitiesFromRecords(
-        timeZone: TimeZone,
-        activeEnergyBurned: List<ActiveCaloriesBurnedRecord>,
-        basalMetabolicRate: List<BasalMetabolicRateRecord>,
-        steps: List<StepsRecord>,
-        distance: List<DistanceRecord>,
-        floorsClimbed: List<FloorsClimbedRecord>,
-        vo2Max: List<Vo2MaxRecord>,
-        options: ProcessorOptions,
-    ): SummaryData.Activities = coroutineScope {
-        val zoneId = timeZone.toZoneId()
+    override suspend fun processActiveCaloriesBurnedRecords(
+        activeEnergyBurned: TimeRangeOrRecords<ActiveCaloriesBurnedRecord>,
+        options: ProcessorOptions
+    ): TimeSeriesData.QuantitySamples {
+        val caloriesActive = if (options.perDeviceActivityTS) {
+            val records = when (activeEnergyBurned) {
+                is TimeRangeOrRecords.Records ->
+                    activeEnergyBurned.records
 
-        val activeEnergyBurnedByDate = quantitySamplesByDate(activeEnergyBurned, zoneId, { it.startTime }) {
-            quantitySample(
-                value = it.energy.inKilocalories,
-                unit = SampleType.ActiveCaloriesBurned.unit,
-                startDate = it.startTime,
-                endDate = it.endTime,
-                metadata = it.metadata,
+                is TimeRangeOrRecords.TimeRange ->
+                    recordReader.readActiveEnergyBurned(
+                        activeEnergyBurned.start,
+                        activeEnergyBurned.end
+                    )
+            }
+            records.map {
+                quantitySample(
+                    value = it.energy.inKilocalories,
+                    unit = SampleType.ActiveCaloriesBurned.unit,
+                    startDate = it.startTime,
+                    endDate = it.endTime,
+                    metadata = it.metadata,
+                )
+            }
+        } else emptyList()
+
+        val (startInstant, endInstant) = when (activeEnergyBurned) {
+            is TimeRangeOrRecords.TimeRange -> activeEnergyBurned.start to activeEnergyBurned.end
+            is TimeRangeOrRecords.Records -> activeEnergyBurned.records.minOfOrNull { it.startTime } to activeEnergyBurned.records.maxOfOrNull { it.endTime }
+        }
+
+        if (startInstant == null) {
+            return TimeSeriesData.QuantitySamples(
+                IngestibleTimeseriesResource.CaloriesActive,
+                emptyList()
             )
         }
-        val basalMetabolicRateByDate = quantitySamplesByDate(basalMetabolicRate, zoneId, { it.time }) {
+        checkNotNull(endInstant)
+
+        val hourlyTotals = recordAggregator.aggregateCaloriesActiveHourlyTotals(
+            start = startInstant.truncatedTo(ChronoUnit.HOURS),
+            end = endInstant.plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.HOURS),
+        )
+
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.CaloriesActive,
+            merge(caloriesActive, hourlyTotals, options)
+        )
+    }
+
+    override suspend fun processBasalMetabolicRateRecords(
+        basalMetabolicRate: List<BasalMetabolicRateRecord>,
+        options: ProcessorOptions
+    ): TimeSeriesData.QuantitySamples {
+        val caloriesBasal = basalMetabolicRate.map {
             quantitySample(
                 value = it.basalMetabolicRate.inKilocaloriesPerDay,
                 unit = SampleType.BasalMetabolicRate.unit,
@@ -387,35 +452,154 @@ internal class HealthConnectRecordProcessor(
                 metadata = it.metadata,
             )
         }
-        val distanceByDate = quantitySamplesByDate(distance, zoneId, { it.startTime }) {
-            quantitySample(
-                value = it.distance.inMeters,
-                unit = SampleType.Distance.unit,
-                startDate = it.startTime,
-                endDate = it.endTime,
-                metadata = it.metadata,
-            )
-        }
-        val floorsClimbedByDate = quantitySamplesByDate(floorsClimbed, zoneId, { it.startTime }) {
-            quantitySample(
-                value = it.floors,
-                unit = SampleType.FloorsClimbed.unit,
-                startDate = it.startTime,
-                endDate = it.endTime,
-                metadata = it.metadata,
-            )
-        }
-        val stepsByDate = quantitySamplesByDate(steps, zoneId, { it.startTime }) {
-            quantitySample(
-                value = it.count.toDouble(),
-                unit = SampleType.Steps.unit,
-                startDate = it.startTime,
-                endDate = it.endTime,
-                metadata = it.metadata,
-            )
 
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.CaloriesBasal,
+            caloriesBasal
+        )
+    }
+    override suspend fun processDistanceRecords(
+        distance: TimeRangeOrRecords<DistanceRecord>,
+        options: ProcessorOptions
+    ): TimeSeriesData.QuantitySamples {
+        val distanceSamples = if (options.perDeviceActivityTS) {
+            val records = when (distance) {
+                is TimeRangeOrRecords.Records ->
+                    distance.records
+
+                is TimeRangeOrRecords.TimeRange ->
+                    recordReader.readDistance(distance.start, distance.end)
+            }
+            records.map {
+                quantitySample(
+                    value = it.distance.inMeters,
+                    unit = SampleType.Distance.unit,
+                    startDate = it.startTime,
+                    endDate = it.endTime,
+                    metadata = it.metadata,
+                )
+            }
         }
-        val vo2MaxByDate = quantitySamplesByDate(vo2Max, zoneId, { it.time }) {
+        else emptyList()
+
+        val (startInstant, endInstant) = when (distance) {
+            is TimeRangeOrRecords.TimeRange -> distance.start to distance.end
+            is TimeRangeOrRecords.Records -> distance.records.minOfOrNull { it.startTime } to distance.records.maxOfOrNull { it.endTime }
+        }
+
+        if (startInstant == null) {
+            return TimeSeriesData.QuantitySamples(
+                IngestibleTimeseriesResource.Distance, emptyList()
+            )
+        }
+        checkNotNull(endInstant)
+
+        val hourlyTotals = recordAggregator.aggregateDistanceHourlyTotals(
+            start = startInstant.truncatedTo(ChronoUnit.HOURS),
+            end = endInstant.plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.HOURS),
+        )
+
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.Distance,
+            merge(distanceSamples, hourlyTotals, options)
+        )
+    }
+
+    override suspend fun processFloorsClimbedRecords(
+        floorsClimbed: TimeRangeOrRecords<FloorsClimbedRecord>,
+        options: ProcessorOptions
+    ): TimeSeriesData.QuantitySamples {
+        val floorsClimbedSamples = if (options.perDeviceActivityTS) {
+            val records = when (floorsClimbed) {
+                is TimeRangeOrRecords.Records ->
+                    floorsClimbed.records
+                is TimeRangeOrRecords.TimeRange ->
+                    recordReader.readFloorsClimbed(floorsClimbed.start, floorsClimbed.end)
+            }
+            records.map {
+                quantitySample(
+                    value = it.floors,
+                    unit = SampleType.FloorsClimbed.unit,
+                    startDate = it.startTime,
+                    endDate = it.endTime,
+                    metadata = it.metadata,
+                )
+            }
+        }
+        else emptyList()
+
+        val (startInstant, endInstant) = when (floorsClimbed) {
+            is TimeRangeOrRecords.TimeRange -> floorsClimbed.start to floorsClimbed.end
+            is TimeRangeOrRecords.Records -> floorsClimbed.records.minOfOrNull { it.startTime } to floorsClimbed.records.maxOfOrNull { it.endTime }
+        }
+
+
+        if (startInstant == null) {
+            return TimeSeriesData.QuantitySamples(
+                IngestibleTimeseriesResource.FloorsClimbed, emptyList()
+            )
+        }
+        checkNotNull(endInstant)
+
+        val hourlyTotals = recordAggregator.aggregateFloorsClimbedHourlyTotals(
+            start = startInstant.truncatedTo(ChronoUnit.HOURS),
+            end = endInstant.plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.HOURS),
+        )
+
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.FloorsClimbed,
+            merge(floorsClimbedSamples, hourlyTotals, options)
+        )
+    }
+    override suspend fun processStepsRecords(
+        steps: TimeRangeOrRecords<StepsRecord>,
+        options: ProcessorOptions
+    ): TimeSeriesData.QuantitySamples {
+        val stepsSamples = if (options.perDeviceActivityTS) {
+            val records = when (steps) {
+                is TimeRangeOrRecords.Records ->
+                    steps.records
+                is TimeRangeOrRecords.TimeRange ->
+                    recordReader.readSteps(steps.start, steps.end)
+            }
+            records.map {
+                quantitySample(
+                    value = it.count.toDouble(),
+                    unit = SampleType.Steps.unit,
+                    startDate = it.startTime,
+                    endDate = it.endTime,
+                    metadata = it.metadata,
+                )
+            }
+        }
+        else emptyList()
+
+        val (startInstant, endInstant) = when (steps) {
+            is TimeRangeOrRecords.TimeRange -> steps.start to steps.end
+            is TimeRangeOrRecords.Records -> steps.records.minOfOrNull { it.startTime } to steps.records.maxOfOrNull { it.endTime }
+        }
+
+        if (startInstant == null) {
+            return TimeSeriesData.QuantitySamples(IngestibleTimeseriesResource.Steps, emptyList())
+        }
+        checkNotNull(endInstant)
+
+        val hourlyTotals = recordAggregator.aggregateStepHourlyTotals(
+            start = startInstant.truncatedTo(ChronoUnit.HOURS),
+            end = endInstant.plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.HOURS),
+        )
+
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.Steps,
+            merge(stepsSamples, hourlyTotals, options)
+        )
+    }
+
+    override suspend fun processVo2MaxRecords(
+        vo2Max: List<Vo2MaxRecord>,
+        options: ProcessorOptions
+    ): TimeSeriesData.QuantitySamples {
+        val vo2MaxSamples = vo2Max.map {
             quantitySample(
                 value = it.vo2MillilitersPerMinuteKilogram,
                 unit = SampleType.Vo2Max.unit,
@@ -425,85 +609,36 @@ internal class HealthConnectRecordProcessor(
             )
         }
 
-        val startInstant = listOfNotNull(
-            activeEnergyBurned.minOfOrNull { it.startTime },
-            floorsClimbed.minOfOrNull { it.startTime },
-            distance.minOfOrNull { it.startTime },
-            steps.minOfOrNull { it.startTime }
-        ).minOrNull()
+        return TimeSeriesData.QuantitySamples(
+            IngestibleTimeseriesResource.Vo2Max,
+            vo2MaxSamples
+        )
+    }
 
-        val endInstant = listOfNotNull(
-            activeEnergyBurned.maxOfOrNull { it.endTime },
-            floorsClimbed.maxOfOrNull { it.endTime },
-            distance.maxOfOrNull { it.endTime },
-            steps.maxOfOrNull { it.endTime }
-        ).maxOrNull()
-
-        if (startInstant == null) {
-            return@coroutineScope SummaryData.Activities(activities = emptyList())
-        }
-
-        val startDate = startInstant.atZone(zoneId).toLocalDate()
-        val endDate = checkNotNull(endInstant).atZone(zoneId).toLocalDate()
-
-        val hourlyTotals = recordAggregator.aggregateActivityHourlyTotals(
-            start = startInstant.truncatedTo(ChronoUnit.HOURS),
-            end = endInstant.plus(1, ChronoUnit.HOURS).truncatedTo(ChronoUnit.HOURS),
-            timeZone = timeZone,
+    override suspend fun processActivities(
+        lastSynced: Instant?,
+        timeZone: TimeZone,
+    ): SummaryData.Activities = coroutineScope {
+        val zoneId = timeZone.toZoneId()
+        val now = ZonedDateTime.now(zoneId)
+        val summaryStart = minOf(
+            lastSynced?.atZone(zoneId) ?: now,
+            now.minusDays(ACTIVITY_STATS_DAYS_TO_LOOKBACK)
         )
 
         val daySummariesByDate = recordAggregator.aggregateActivityDaySummaries(
-            startDate = startDate,
-            endDate = endDate,
+            startDate = summaryStart.toLocalDate(),
+            endDate = now.toLocalDate(),
             timeZone = timeZone
         )
 
-        fun merge(
-            discovered: Map<LocalDate, List<LocalQuantitySample>>,
-            hourlyTotals: Map<LocalDate, List<LocalQuantitySample>>,
-            date: LocalDate,
-            options: ProcessorOptions,
-        ): List<LocalQuantitySample> {
-            return if (options.perDeviceActivityTS) {
-                (discovered[date] ?: emptyList()) + (hourlyTotals[date] ?: emptyList())
-            } else {
-                hourlyTotals[date] ?: emptyList()
+        SummaryData.Activities(
+            activities = daySummariesByDate.map { (date, summary) ->
+                LocalActivity(
+                    daySummary = summary.toDatedPayload(date),
+                )
             }
-        }
-
-        var currentDate: LocalDate = startDate
-        val activities = mutableListOf<LocalActivity>()
-
-        while (currentDate <= endDate) {
-            val activity = LocalActivity(
-                daySummary = daySummariesByDate[currentDate]?.toDatedPayload(currentDate),
-                activeEnergyBurned = merge(
-                    activeEnergyBurnedByDate,
-                    hourlyTotals.activeCalories,
-                    currentDate,
-                    options
-                ),
-                basalEnergyBurned = merge(basalMetabolicRateByDate, emptyMap(), currentDate, options),
-                distanceWalkingRunning = merge(
-                    distanceByDate,
-                    hourlyTotals.distance,
-                    currentDate,
-                    options
-                ),
-                floorsClimbed = merge(
-                    floorsClimbedByDate,
-                    hourlyTotals.floorsClimbed,
-                    currentDate,
-                    options
-                ),
-                steps = merge(stepsByDate, hourlyTotals.steps, currentDate, options),
-                vo2Max = vo2MaxByDate[currentDate] ?: emptyList(),
-            )
-            activities.add(activity)
-            currentDate = currentDate.plusDays(1)
-        }
-
-        SummaryData.Activities(activities = activities)
+        )
     }
 
     /**
@@ -626,7 +761,7 @@ private fun List<SleepSessionRecord>.filterForAcceptedSleepDataSources(): List<S
     }
 }
 
-inline fun <R: Record> quantitySamplesByDate(
+internal inline fun <R: Record> quantitySamplesByDate(
     records: Iterable<R>,
     zoneId: ZoneId,
     timeSelector: (R) -> Instant,
@@ -636,4 +771,17 @@ inline fun <R: Record> quantitySamplesByDate(
         keySelector = { timeSelector(it).atZone(zoneId).toLocalDate() },
         valueTransform = transform
     )
+}
+
+
+internal fun merge(
+    discovered: List<LocalQuantitySample>,
+    hourlyTotals: List<LocalQuantitySample>,
+    options: ProcessorOptions,
+): List<LocalQuantitySample> {
+    return if (options.perDeviceActivityTS) {
+        discovered + hourlyTotals
+    } else {
+        hourlyTotals
+    }
 }

@@ -25,6 +25,7 @@ import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceD
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.records.ProcessorOptions
 import io.tryvital.vitalhealthconnect.records.RecordProcessor
+import io.tryvital.vitalhealthconnect.records.TimeRangeOrRecords
 import java.time.Instant
 import java.time.LocalDate
 import java.util.*
@@ -52,21 +53,52 @@ internal suspend fun processChangesResponse(
         .let(ProcessedResourceData::TimeSeries)
 
     return when (resource.wrapped) {
-        VitalResource.ActiveEnergyBurned, VitalResource.BasalEnergyBurned, VitalResource.Steps ->
-            throw IllegalArgumentException("Unexpected resource post remapped(): $resource")
+        VitalResource.Activity ->
+            throw IllegalArgumentException("Activity does not work with processChangesResponse")
 
-        VitalResource.Activity -> processor.processActivitiesFromRecords(
-            timeZone = timeZone,
-            activeEnergyBurned = records.get<ActiveCaloriesBurnedRecord>()
-                .filter { it.endTime <= endAdjusted },
-            basalMetabolicRate = records.get<BasalMetabolicRateRecord>()
+        VitalResource.ActiveEnergyBurned -> processor.processActiveCaloriesBurnedRecords(
+            TimeRangeOrRecords.Records(
+                records.get<ActiveCaloriesBurnedRecord>()
+                    .filter { it.endTime <= endAdjusted }
+            ),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.BasalEnergyBurned -> processor.processBasalMetabolicRateRecords(
+            records.get<BasalMetabolicRateRecord>()
                 .filter { it.time <= endAdjusted },
-            floorsClimbed = records.get<FloorsClimbedRecord>().filter { it.endTime <= endAdjusted },
-            distance = records.get<DistanceRecord>().filter { it.endTime <= endAdjusted },
-            steps = records.get<StepsRecord>().filter { it.endTime <= endAdjusted },
-            vo2Max = records.get<Vo2MaxRecord>().filter { it.time <= endAdjusted },
-            options = processorOptions,
-        ).let(ProcessedResourceData::Summary)
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.DistanceWalkingRunning -> processor.processDistanceRecords(
+            TimeRangeOrRecords.Records(
+                records.get<DistanceRecord>()
+                .filter { it.endTime <= endAdjusted }
+            ),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.FloorsClimbed -> processor.processFloorsClimbedRecords(
+            TimeRangeOrRecords.Records(
+                records.get<FloorsClimbedRecord>()
+                .filter { it.endTime <= endAdjusted }
+            ),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.Steps -> processor.processStepsRecords(
+            TimeRangeOrRecords.Records(
+                records.get<StepsRecord>()
+                .filter { it.endTime <= endAdjusted }
+            ),
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.Vo2Max -> processor.processVo2MaxRecords(
+            records.get<Vo2MaxRecord>()
+                .filter { it.time <= endAdjusted },
+            processorOptions
+        ).let(ProcessedResourceData::TimeSeries)
 
         VitalResource.Workout -> processor.processWorkoutsFromRecords(
             exerciseRecords = records.get<ExerciseSessionRecord>()

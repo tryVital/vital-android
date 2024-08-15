@@ -14,12 +14,16 @@ sealed class VitalResource(val name: String) {
     object Glucose : VitalResource("glucose")
     object BloodPressure : VitalResource("bloodPressure")
     object HeartRate : VitalResource("heartRate")
-    object Steps : VitalResource("steps")
-    object ActiveEnergyBurned : VitalResource("activeEnergyBurned")
-    object BasalEnergyBurned : VitalResource("basalEnergyBurned")
     object Water : VitalResource("water")
     object HeartRateVariability : VitalResource("heartRateVariability")
     object MenstrualCycle : VitalResource("menstrualCycle")
+
+    object Steps : VitalResource("steps")
+    object ActiveEnergyBurned : VitalResource("activeEnergyBurned")
+    object BasalEnergyBurned : VitalResource("basalEnergyBurned")
+    object FloorsClimbed : VitalResource("floorsClimbed")
+    object DistanceWalkingRunning : VitalResource("distanceWalkingRunning")
+    object Vo2Max : VitalResource("vo2Max")
 
     override fun toString(): String {
         return name
@@ -40,6 +44,9 @@ sealed class VitalResource(val name: String) {
                 Steps,
                 ActiveEnergyBurned,
                 BasalEnergyBurned,
+                FloorsClimbed,
+                DistanceWalkingRunning,
+                Vo2Max,
                 Water,
                 HeartRateVariability,
                 MenstrualCycle,
@@ -59,6 +66,9 @@ sealed class VitalResource(val name: String) {
                 "steps" -> Steps
                 "activeEnergyBurned" -> ActiveEnergyBurned
                 "basalEnergyBurned" -> BasalEnergyBurned
+                "floorsClimbed" -> FloorsClimbed
+                "distanceWalkingRunning" -> DistanceWalkingRunning
+                "vo2Max" -> Vo2Max
                 "water" -> Water
                 "heartRateVariability" -> HeartRateVariability
                 "menstrualCycle" -> MenstrualCycle
@@ -79,11 +89,18 @@ sealed class VitalResource(val name: String) {
  *   - A VitalResource is "asked" if and only if all `required` sample types have been asked.
  * If `required` is empty:
  *   - A VitalResource is "asked" if at least one `optional` sample types have been asked.
+ *
  * In both cases, `supplementary` is not considered at all.
  *
- * Some sample types may appear in multiple `VitalResource`s:
- * 1. Each sample type can only be associated with ** one** VitalResource as their `required` or `optional` types.
- * 2. A sample type can optionally be marked as a `supplementary` type of any other VitalResource.
+ * A rule of thumb is that `supplementary` should be used over `optional` when the VitalResource
+ * should be considered as INACTIVE iff:
+ * 1. ONLY one or more supplementary Record types are granted
+ * 2. NONE of the optional Record types are granted.
+ * 3. The resource has no required Record types.
+ *
+ * Some Record types may appear in multiple `VitalResource`s:
+ * 1. Each Record type can only be associated with **one** VitalResource as their `required` types.
+ * 2. A Record type can be present an `optional` or `supplementary` type as many VitalResources as needed.
  *
  * Example:
  * - `VitalResource.heartrate` is the primary resource for `HeartRateRecord::class`.
@@ -143,9 +160,6 @@ value class RemappedVitalResource(val wrapped: VitalResource) {
  * state.
  */
 internal fun VitalResource.remapped(): RemappedVitalResource = when (this) {
-    VitalResource.ActiveEnergyBurned, VitalResource.BasalEnergyBurned, VitalResource.Steps ->
-        RemappedVitalResource(VitalResource.Activity)
-
     else -> RemappedVitalResource(this)
 }
 
@@ -178,8 +192,16 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
             FloorsClimbedRecord::class,
             Vo2MaxRecord::class,
         ),
-        supplementary = emptyList(),
+        supplementary = listOf(
+        ),
     )
+    VitalResource.ActiveEnergyBurned -> RecordTypeRequirements.single(ActiveCaloriesBurnedRecord::class)
+    VitalResource.BasalEnergyBurned -> RecordTypeRequirements.single(BasalMetabolicRateRecord::class)
+    VitalResource.DistanceWalkingRunning -> RecordTypeRequirements.single(DistanceRecord::class)
+    VitalResource.FloorsClimbed -> RecordTypeRequirements.single(FloorsClimbedRecord::class)
+    VitalResource.Steps -> RecordTypeRequirements.single(StepsRecord::class)
+    VitalResource.Vo2Max -> RecordTypeRequirements.single(Vo2MaxRecord::class)
+
     VitalResource.Body -> RecordTypeRequirements(
         required = emptyList(),
         optional = listOf(
@@ -236,13 +258,23 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
  */
 internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Record>> = when (this) {
     VitalResource.Water -> listOf(HydrationRecord::class)
-    VitalResource.Activity -> listOf(
+    VitalResource.Activity -> listOf()
+    VitalResource.ActiveEnergyBurned -> listOf(
         ActiveCaloriesBurnedRecord::class,
-        TotalCaloriesBurnedRecord::class,
+    )
+    VitalResource.BasalEnergyBurned -> listOf(
         BasalMetabolicRateRecord::class,
-        StepsRecord::class,
+    )
+    VitalResource.DistanceWalkingRunning -> listOf(
         DistanceRecord::class,
+    )
+    VitalResource.FloorsClimbed -> listOf(
         FloorsClimbedRecord::class,
+    )
+    VitalResource.Steps -> listOf(
+        StepsRecord::class,
+    )
+    VitalResource.Vo2Max -> listOf(
         Vo2MaxRecord::class,
     )
     VitalResource.BloodPressure -> listOf(BloodPressureRecord::class)
@@ -261,7 +293,4 @@ internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Rec
         IntermenstrualBleedingRecord::class,
         SexualActivityRecord::class,
     )
-
-    VitalResource.ActiveEnergyBurned, VitalResource.BasalEnergyBurned, VitalResource.Steps ->
-        throw IllegalArgumentException("Should have been remapped to Activity.")
 }
