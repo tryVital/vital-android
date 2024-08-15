@@ -33,7 +33,9 @@ enum class IngestibleTimeseriesResource {
     @Json(name = "glucose") BloodGlucose,
     @Json(name = "water") Water,
     @Json(name = "heartrate") HeartRate,
-    @Json(name = "heartrate_variability") HeartRateVariability;
+    @Json(name = "heartrate_variability") HeartRateVariability,
+    @Json(name = "respiratory_rate") RespiratoryRate,
+    @Json(name = "temperature") Temperature;
 
     // Use the Json name also when converting to string.
     // This is intended for Retrofit request parameter serialization.

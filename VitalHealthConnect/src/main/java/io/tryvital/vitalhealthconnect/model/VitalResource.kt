@@ -1,6 +1,5 @@
 package io.tryvital.vitalhealthconnect.model
 
-import android.health.connect.datatypes.units.Power
 import androidx.health.connect.client.records.*
 
 import kotlin.reflect.KClass
@@ -25,6 +24,9 @@ sealed class VitalResource(val name: String) {
     object DistanceWalkingRunning : VitalResource("distanceWalkingRunning")
     object Vo2Max : VitalResource("vo2Max")
 
+    object RespiratoryRate : VitalResource("respiratoryRate")
+    object Temperature : VitalResource("temperature")
+
     override fun toString(): String {
         return name
     }
@@ -40,6 +42,8 @@ sealed class VitalResource(val name: String) {
         HeartRateVariability -> 23
         Vo2Max -> 24
         Water -> 25
+        RespiratoryRate -> 26
+        Temperature -> 27
         Workout -> 31
         Steps -> 51
         DistanceWalkingRunning -> 52
@@ -70,31 +74,12 @@ sealed class VitalResource(val name: String) {
                 Water,
                 HeartRateVariability,
                 MenstrualCycle,
+                RespiratoryRate,
+                Temperature,
             )
         }
 
-        fun valueOf(value: String): VitalResource {
-            return when (value) {
-                "profile" -> Profile
-                "body" -> Body
-                "workout" -> Workout
-                "activity" -> Activity
-                "sleep" -> Sleep
-                "glucose" -> Glucose
-                "bloodPressure" -> BloodPressure
-                "heartRate" -> HeartRate
-                "steps" -> Steps
-                "activeEnergyBurned" -> ActiveEnergyBurned
-                "basalEnergyBurned" -> BasalEnergyBurned
-                "floorsClimbed" -> FloorsClimbed
-                "distanceWalkingRunning" -> DistanceWalkingRunning
-                "vo2Max" -> Vo2Max
-                "water" -> Water
-                "heartRateVariability" -> HeartRateVariability
-                "menstrualCycle" -> MenstrualCycle
-                else -> throw IllegalArgumentException("No object io.tryvital.vitalhealthconnect.model.HealthResource.$value")
-            }
-        }
+        fun valueOf(value: String) = values().first { it.name == value }
     }
 }
 
@@ -222,6 +207,9 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
     VitalResource.Steps -> RecordTypeRequirements.single(StepsRecord::class)
     VitalResource.Vo2Max -> RecordTypeRequirements.single(Vo2MaxRecord::class)
 
+    VitalResource.RespiratoryRate -> RecordTypeRequirements.single(RespiratoryRateRecord::class)
+    VitalResource.Temperature -> RecordTypeRequirements.single(BodyTemperatureRecord::class)
+
     VitalResource.Body -> RecordTypeRequirements(
         required = emptyList(),
         optional = listOf(
@@ -237,7 +225,6 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
             HeartRateRecord::class,
             HeartRateVariabilityRmssdRecord::class,
             RespiratoryRateRecord::class,
-            RestingHeartRateRecord::class,
             OxygenSaturationRecord::class,
         )
     )
@@ -279,24 +266,12 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
 internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Record>> = when (this) {
     VitalResource.Water -> listOf(HydrationRecord::class)
     VitalResource.Activity -> listOf()
-    VitalResource.ActiveEnergyBurned -> listOf(
-        ActiveCaloriesBurnedRecord::class,
-    )
-    VitalResource.BasalEnergyBurned -> listOf(
-        BasalMetabolicRateRecord::class,
-    )
-    VitalResource.DistanceWalkingRunning -> listOf(
-        DistanceRecord::class,
-    )
-    VitalResource.FloorsClimbed -> listOf(
-        FloorsClimbedRecord::class,
-    )
-    VitalResource.Steps -> listOf(
-        StepsRecord::class,
-    )
-    VitalResource.Vo2Max -> listOf(
-        Vo2MaxRecord::class,
-    )
+    VitalResource.ActiveEnergyBurned -> listOf(ActiveCaloriesBurnedRecord::class)
+    VitalResource.BasalEnergyBurned -> listOf(BasalMetabolicRateRecord::class)
+    VitalResource.DistanceWalkingRunning -> listOf(DistanceRecord::class)
+    VitalResource.FloorsClimbed -> listOf(FloorsClimbedRecord::class)
+    VitalResource.Steps -> listOf(StepsRecord::class)
+    VitalResource.Vo2Max -> listOf(Vo2MaxRecord::class)
     VitalResource.BloodPressure -> listOf(BloodPressureRecord::class)
     VitalResource.Body -> listOf(BodyFatRecord::class, WeightRecord::class)
     VitalResource.Glucose -> listOf(BloodGlucoseRecord::class)
@@ -313,4 +288,6 @@ internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Rec
         IntermenstrualBleedingRecord::class,
         SexualActivityRecord::class,
     )
+    VitalResource.RespiratoryRate -> listOf(RespiratoryRateRecord::class)
+    VitalResource.Temperature -> listOf(BodyTemperatureRecord::class)
 }

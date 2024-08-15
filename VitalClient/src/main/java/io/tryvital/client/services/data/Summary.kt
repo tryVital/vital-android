@@ -230,4 +230,5 @@ sealed class SampleType(val unit: String) {
     object BloodPressureSystolic : SampleType("mmHg")
     object BloodPressureDiastolic : SampleType("mmHg")
     object Water : SampleType("ml")
+    object Temperature : SampleType("°C")
 }
