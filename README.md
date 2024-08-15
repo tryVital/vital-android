@@ -2,23 +2,26 @@
 
 The official Swift Library for Vital API, HealthKit and Devices
 
-## Install
+## Installation
 
-Add the vital-ios package to your Package.swift.
+Add the Sonatype OSS Maven repository to your root `build.gradle`.
 
-```swift
-.package(url: "https://github.com/tryvital/vital-ios", from: "1.2.2"),
+```groovy
+repositories {
+  maven { url 'https://s01.oss.sonatype.org/content/repositories/releases/' }
+}
 ```
 
-Then add the Vital iOS library products you need to your app and/or library targets:
+Then include our Android SDK artifacts as dependencies of your modules as needed:
 
-```swift
-.target(name: "AppTarget", dependencies: [
-    .product(name: "VitalCore", package: "vital-ios"),
-    .product(name: "VitalDevices", package: "vital-ios"),
-    .product(name: "VitalHealthKit", package: "vital-ios"),
-]),
+```groovy
+def vital_version = '3.2.0-beta.1'
+
+implementation 'io.tryvital:vital-client:$vital_version'
+implementation 'io.tryvital:vital-health-connect:$vital_version'
+implementation 'io.tryvital:vital-devices:$vital_version'
 ```
+
 
 ## Documentation
 
