@@ -53,7 +53,10 @@ plugins {
 }
 
 def localProperties = new Properties()
-localProperties.load(project.rootProject.file("local.properties").newDataInputStream())
+def localPropertiesFile = project.rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.newDataInputStream())
+}
 
 subprojects {
     apply plugin: "maven-publish"
