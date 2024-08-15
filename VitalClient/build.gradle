@@ -13,6 +13,10 @@ android {
         minSdk 24
         targetSdk 34
 
+        aarMetadata {
+            minCompileSdk = 34
+        }
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -25,6 +29,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
         }
     }
 
@@ -74,4 +84,18 @@ dependencies {
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_coroutines_test"
 
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugar_jdk_libs"
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'io.tryvital'
+            artifactId = 'vital-client'
+            version = '3.2.0-beta.1'
+
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
 }

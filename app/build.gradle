@@ -101,3 +101,6 @@ dependencies {
     debugImplementation "androidx.compose.ui:ui-tooling:$compose"
     debugImplementation "androidx.compose.ui:ui-test-manifest:$compose"
 }
+
+tasks.withType(PublishToMavenRepository).configureEach { enabled = false }
+tasks.withType(PublishToMavenLocal).configureEach { enabled = false }

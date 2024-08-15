@@ -11,6 +11,10 @@ android {
         minSdk 26
         targetSdk 34
 
+        aarMetadata {
+            minCompileSdk = 34
+        }
+
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -19,6 +23,12 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
         }
     }
 
@@ -49,4 +59,18 @@ dependencies {
     testImplementation "junit:junit:$junit"
     androidTestImplementation "androidx.test.ext:junit:$test_ext"
     androidTestImplementation "androidx.test.espresso:espresso-core:$test_espresso"
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'io.tryvital'
+            artifactId = 'vital-devices'
+            version = '3.2.0-beta.1'
+
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
 }
