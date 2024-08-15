@@ -140,7 +140,9 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
                 .apply()
         }
 
-        for (resource in input.resources) {
+        val prioritizedResources = input.resources.sortedBy { it.wrapped.priority }
+
+        for (resource in prioritizedResources) {
             val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>()
                 .setInputData(ResourceSyncWorkerInput(resource = resource).toData())
                 .addTag(resource.wrapped.name)

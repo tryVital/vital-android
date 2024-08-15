@@ -29,6 +29,26 @@ sealed class VitalResource(val name: String) {
         return name
     }
 
+    val priority: Int get() = when (this) {
+        Activity -> 10
+        Body -> 11
+        MenstrualCycle -> 12
+        Profile -> 13
+        Sleep -> 20
+        BloodPressure -> 21
+        Glucose -> 22
+        HeartRateVariability -> 23
+        Vo2Max -> 24
+        Water -> 25
+        Workout -> 31
+        Steps -> 51
+        DistanceWalkingRunning -> 52
+        FloorsClimbed -> 53
+        HeartRate -> 91
+        ActiveEnergyBurned -> 92
+        BasalEnergyBurned -> 93
+    }
+
     companion object {
         @Suppress("unused")
         fun values(): Array<VitalResource> {
