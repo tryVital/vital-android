@@ -52,6 +52,25 @@ plugins {
     id 'org.jetbrains.kotlin.android' version '1.8.22' apply false
 }
 
+def localProperties = new Properties()
+localProperties.load(project.rootProject.file("local.properties").newDataInputStream())
+
+subprojects {
+    apply plugin: "maven-publish"
+    publishing {
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/tryVital/vital-android")
+                credentials {
+                    username = localProperties.getProperty("gpr.user") ?: System.getenv("USERNAME")
+                    password = localProperties.getProperty("gpr.key") ?: System.getenv("TOKEN")
+                }
+            }
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
