@@ -5,6 +5,7 @@ import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord.Companion.EXERCISE_TYPE_INT_TO_STRING_MAP
@@ -127,6 +128,14 @@ interface RecordProcessor {
     suspend fun processVo2MaxRecords(
         vo2Max: List<Vo2MaxRecord>,
         options: ProcessorOptions,
+    ): TimeSeriesData.QuantitySamples
+
+    suspend fun processRespiratoryRateRecords(
+        respiratoryRates: List<RespiratoryRateRecord>,
+    ): TimeSeriesData.QuantitySamples
+
+    suspend fun processBodyTemperatureRecords(
+        temperatures: List<BodyTemperatureRecord>,
     ): TimeSeriesData.QuantitySamples
 
     suspend fun processMenstrualCyclesFromRecords(
@@ -614,6 +623,32 @@ internal class HealthConnectRecordProcessor(
             vo2MaxSamples
         )
     }
+
+    override suspend fun processBodyTemperatureRecords(temperatures: List<BodyTemperatureRecord>) = TimeSeriesData.QuantitySamples(
+        IngestibleTimeseriesResource.Temperature,
+        temperatures.map {
+            quantitySample(
+                value = it.temperature.inCelsius,
+                unit = SampleType.Temperature.unit,
+                startDate = it.time,
+                endDate = it.time,
+                metadata = it.metadata,
+            )
+        }
+    )
+
+    override suspend fun processRespiratoryRateRecords(respiratoryRates: List<RespiratoryRateRecord>) = TimeSeriesData.QuantitySamples(
+        IngestibleTimeseriesResource.RespiratoryRate,
+        respiratoryRates.map {
+            quantitySample(
+                value = it.rate,
+                unit = SampleType.RespiratoryRate.unit,
+                startDate = it.time,
+                endDate = it.time,
+                metadata = it.metadata,
+            )
+        }
+    )
 
     override suspend fun processActivities(
         lastSynced: Instant?,

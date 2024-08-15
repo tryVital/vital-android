@@ -7,6 +7,7 @@ import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
 import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.CervicalMucusRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
@@ -56,11 +57,6 @@ interface RecordReader {
         startTime: Instant,
         endTime: Instant
     ): List<HeartRateVariabilityRmssdRecord>
-
-    suspend fun readRespiratoryRate(
-        startTime: Instant,
-        endTime: Instant
-    ): List<RespiratoryRateRecord>
 
     suspend fun readHeights(
         startTime: Instant,
@@ -132,6 +128,9 @@ interface RecordReader {
         endTime: Instant
     ): List<HydrationRecord>
 
+    suspend fun readRespiratoryRates(start: Instant, end: Instant): List<RespiratoryRateRecord>
+    suspend fun readBodyTemperatures(start: Instant, end: Instant): List<BodyTemperatureRecord>
+
     suspend fun menstruationPeriod(start: Instant, end: Instant): List<MenstruationPeriodRecord>
     suspend fun menstruationFlow(start: Instant, end: Instant): List<MenstruationFlowRecord>
     suspend fun cervicalMucus(start: Instant, end: Instant): List<CervicalMucusRecord>
@@ -164,10 +163,6 @@ internal class HealthConnectRecordReader(
     override suspend fun readHeartRateVariabilityRmssd(
         startTime: Instant, endTime: Instant
     ): List<HeartRateVariabilityRmssdRecord> = readRecords(startTime, endTime)
-
-    override suspend fun readRespiratoryRate(
-        startTime: Instant, endTime: Instant
-    ): List<RespiratoryRateRecord> = readRecords(startTime, endTime)
 
     override suspend fun readHeights(
         startTime: Instant, endTime: Instant
@@ -241,7 +236,11 @@ internal class HealthConnectRecordReader(
     override suspend fun intermenstrualBleeding(start: Instant, end: Instant): List<IntermenstrualBleedingRecord>
         = readRecords(start, end)
     override suspend fun ovulationTest(start: Instant, end: Instant): List<OvulationTestRecord>
-        = readRecords(start, end)
+            = readRecords(start, end)
+    override suspend fun readRespiratoryRates(start: Instant, end: Instant): List<RespiratoryRateRecord>
+            = readRecords(start, end)
+    override suspend fun readBodyTemperatures(start: Instant, end: Instant): List<BodyTemperatureRecord>
+            = readRecords(start, end)
 
     private suspend inline fun <reified T : Record> readRecords(
         startTime: Instant, endTime: Instant
