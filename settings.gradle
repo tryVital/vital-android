@@ -12,7 +12,7 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Vital sample"
+rootProject.name = "vital-android"
 include ':app'
 include ':VitalClient'
 include ':VitalDevices'

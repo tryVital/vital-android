@@ -52,6 +52,28 @@ plugins {
     id 'org.jetbrains.kotlin.android' version '1.8.22' apply false
 }
 
+def localProperties = new Properties()
+def localPropertiesFile = project.rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.newDataInputStream())
+}
+
+subprojects {
+    apply plugin: "maven-publish"
+    publishing {
+        repositories {
+            maven {
+                name = "SonatypeOSS"
+                url = uri("https://s01.oss.sonatype.org/content/repositories/releases/")
+                credentials {
+                    username = localProperties.getProperty("sonatype.user") ?: System.getenv("MAVEN_USER")
+                    password = localProperties.getProperty("sonatype.key") ?: System.getenv("MAVEN_PASSWORD")
+                }
+            }
+        }
+    }
+}
+
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
