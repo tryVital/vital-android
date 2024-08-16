@@ -218,7 +218,7 @@ sealed class SampleType(val unit: String) {
     object BodyFat : SampleType("percent")
     object HeartRate : SampleType("bpm")
     object HeartRateVariabilityRmssd : SampleType("rmssd")
-    object OxygenSaturation : SampleType("percent")
+    object OxygenSaturation : SampleType("%")
     object ActiveCaloriesBurned : SampleType("kJ")
     object Steps : SampleType("")
     object Distance : SampleType("m")

@@ -14,6 +14,7 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -104,6 +105,11 @@ internal suspend fun processChangesResponse(
 
         VitalResource.RespiratoryRate -> processor.processRespiratoryRateRecords(
             records.get<RespiratoryRateRecord>()
+                .filter { it.time <= endAdjusted },
+        ).let(ProcessedResourceData::TimeSeries)
+
+        VitalResource.BloodOxygen -> processor.processOxygenSaturationRecords(
+            records.get<OxygenSaturationRecord>()
                 .filter { it.time <= endAdjusted },
         ).let(ProcessedResourceData::TimeSeries)
 

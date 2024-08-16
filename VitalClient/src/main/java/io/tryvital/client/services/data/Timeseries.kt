@@ -34,6 +34,7 @@ enum class IngestibleTimeseriesResource {
     @Json(name = "water") Water,
     @Json(name = "heartrate") HeartRate,
     @Json(name = "heartrate_variability") HeartRateVariability,
+    @Json(name = "blood_oxygen") BloodOxygen,
     @Json(name = "respiratory_rate") RespiratoryRate,
     @Json(name = "temperature") Temperature;
 

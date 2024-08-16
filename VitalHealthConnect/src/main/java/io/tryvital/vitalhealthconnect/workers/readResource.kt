@@ -79,6 +79,10 @@ internal suspend fun readResourceByTimeRange(
             reader.readRespiratoryRates(startTime, endTime),
         ).let(ProcessedResourceData::TimeSeries)
 
+        VitalResource.BloodOxygen -> processor.processOxygenSaturationRecords(
+            reader.readOxygenSaturation(startTime, endTime),
+        ).let(ProcessedResourceData::TimeSeries)
+
         VitalResource.Workout -> processor.processWorkoutsFromRecords(
             exerciseRecords = reader.readExerciseSessions(startTime, endTime)
         ).let(ProcessedResourceData::Summary)
