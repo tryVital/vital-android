@@ -12,6 +12,7 @@ sealed class VitalResource(val name: String) {
     object Sleep : VitalResource("sleep")
     object Glucose : VitalResource("glucose")
     object BloodPressure : VitalResource("bloodPressure")
+    object BloodOxygen : VitalResource("bloodOxygen")
     object HeartRate : VitalResource("heartRate")
     object Water : VitalResource("water")
     object HeartRateVariability : VitalResource("heartRateVariability")
@@ -44,6 +45,7 @@ sealed class VitalResource(val name: String) {
         Water -> 25
         RespiratoryRate -> 26
         Temperature -> 27
+        BloodOxygen -> 28
         Workout -> 31
         Steps -> 51
         DistanceWalkingRunning -> 52
@@ -76,6 +78,7 @@ sealed class VitalResource(val name: String) {
                 MenstrualCycle,
                 RespiratoryRate,
                 Temperature,
+                BloodOxygen,
             )
         }
 
@@ -179,6 +182,7 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
     VitalResource.Steps -> RecordTypeRequirements.single(StepsRecord::class)
 
     VitalResource.BloodPressure -> RecordTypeRequirements.single(BloodPressureRecord::class)
+    VitalResource.BloodOxygen -> RecordTypeRequirements.single(OxygenSaturationRecord::class)
     VitalResource.Glucose -> RecordTypeRequirements.single(BloodGlucoseRecord::class)
     VitalResource.HeartRate -> RecordTypeRequirements.single(HeartRateRecord::class)
     VitalResource.HeartRateVariability -> RecordTypeRequirements.single(HeartRateVariabilityRmssdRecord::class)
@@ -272,6 +276,7 @@ internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Rec
     VitalResource.FloorsClimbed -> listOf(FloorsClimbedRecord::class)
     VitalResource.Steps -> listOf(StepsRecord::class)
     VitalResource.Vo2Max -> listOf(Vo2MaxRecord::class)
+    VitalResource.BloodOxygen -> listOf(OxygenSaturationRecord::class)
     VitalResource.BloodPressure -> listOf(BloodPressureRecord::class)
     VitalResource.Body -> listOf(BodyFatRecord::class, WeightRecord::class)
     VitalResource.Glucose -> listOf(BloodGlucoseRecord::class)

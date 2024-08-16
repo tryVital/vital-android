@@ -134,6 +134,10 @@ interface RecordProcessor {
         respiratoryRates: List<RespiratoryRateRecord>,
     ): TimeSeriesData.QuantitySamples
 
+    suspend fun processOxygenSaturationRecords(
+        oxygenSaturations: List<OxygenSaturationRecord>,
+    ): TimeSeriesData.QuantitySamples
+
     suspend fun processBodyTemperatureRecords(
         temperatures: List<BodyTemperatureRecord>,
     ): TimeSeriesData.QuantitySamples
@@ -643,6 +647,19 @@ internal class HealthConnectRecordProcessor(
             quantitySample(
                 value = it.rate,
                 unit = SampleType.RespiratoryRate.unit,
+                startDate = it.time,
+                endDate = it.time,
+                metadata = it.metadata,
+            )
+        }
+    )
+
+    override suspend fun processOxygenSaturationRecords(oxygenSaturations: List<OxygenSaturationRecord>) = TimeSeriesData.QuantitySamples(
+        IngestibleTimeseriesResource.BloodOxygen,
+        oxygenSaturations.map {
+            quantitySample(
+                value = it.percentage.value,
+                unit = SampleType.OxygenSaturation.unit,
                 startDate = it.time,
                 endDate = it.time,
                 metadata = it.metadata,
