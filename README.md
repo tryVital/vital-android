@@ -1,14 +1,14 @@
 # vital-android
 
-The official Android Library for Vital API, HealthKit and Devices
+The official Android Library for Vital API, Health Connect and Devices
 
 ## Installation
 
-Add the Sonatype OSS Maven repository to your root `build.gradle`.
+Make sure Maven Central is included in the list of repositories in your `build.gradle`.
 
 ```groovy
 repositories {
-  maven { url 'https://s01.oss.sonatype.org/content/repositories/releases/' }
+  mavenCentral()
 }
 ```
 
