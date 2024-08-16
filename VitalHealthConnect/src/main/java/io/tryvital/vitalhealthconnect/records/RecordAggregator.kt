@@ -258,7 +258,7 @@ internal class HealthConnectRecordAggregator(
         var maxHr = Long.MIN_VALUE
         var averageHr = 0.0
 
-        for (i in 0 ..< durations.lastIndex) {
+        for (i in 0 .. durations.lastIndex) {
             val value = values[i]
             minHr = min(minHr, value)
             maxHr = max(maxHr, value)
