@@ -1,6 +1,8 @@
 package io.tryvital.client
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
@@ -22,26 +24,19 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
+const val VITAL_CLIENT_LOCAL_STORAGE: String = "vital_client_local_storage"
 const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
 
 @Suppress("unused")
 class VitalClient internal constructor(context: Context) {
     val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences(
-            VITAL_PERFS_FILE_NAME, Context.MODE_PRIVATE
+            VITAL_PERFS_FILE_NAME, MODE_PRIVATE
         )
     }
 
     val encryptedSharedPreferences: SharedPreferences by lazy {
-        try {
-            createEncryptedSharedPreferences(context)
-        } catch (e: Exception) {
-            VitalLogger.getOrCreate().logE(
-                "Failed to decrypt shared preferences, creating new encrypted shared preferences", e
-            )
-            context.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
-            return@lazy createEncryptedSharedPreferences(context)
-        }
+        createLocalStorage(context.applicationContext)
     }
 
     private val configurationReader by lazy {
@@ -332,7 +327,42 @@ class VitalClient internal constructor(context: Context) {
     }
 }
 
-fun createEncryptedSharedPreferences(context: Context) = EncryptedSharedPreferences.create(
+@SuppressLint("ApplySharedPref")
+internal fun createLocalStorage(context: Context): SharedPreferences = synchronized(VitalClient) {
+    val preferences = context.getSharedPreferences(
+        VITAL_CLIENT_LOCAL_STORAGE, MODE_PRIVATE
+    )
+
+    // If an EncryptedSharedPreferences exists (created by an earlier SDK version),
+    // migrate it to the new SharedPreferences.
+    val oldPreferences = context.getSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME, MODE_PRIVATE)
+    if (!oldPreferences.getString("__androidx_security_crypto_encrypted_prefs_key_keyset__", "").isNullOrBlank()) {
+        try {
+            val oldDecryptedPreferences = getDeprecatedEncryptedSharedPreferences(context)
+            preferences.edit().apply {
+                oldDecryptedPreferences.all.forEach { key, value ->
+                    @Suppress("UNCHECKED_CAST")
+                    when (value) {
+                        is String -> putString(key, value)
+                        is Boolean -> putBoolean(key, value)
+                        is Long -> putLong(key, value)
+                        is Int -> putInt(key, value)
+                        is Float -> putFloat(key, value)
+                        is Set<*> -> putStringSet(key, value as Set<String>)
+                    }
+                }
+                commit()
+            }
+        } catch (e: Throwable) {
+            VitalLogger.getOrCreate().logE("failed to migrate EncryptedSharedPreferences to SharedPreferences", e)
+        }
+        context.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
+    }
+
+    return preferences
+}
+
+internal fun getDeprecatedEncryptedSharedPreferences(context: Context) = EncryptedSharedPreferences.create(
     VITAL_ENCRYPTED_PERFS_FILE_NAME,
     MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
     context,
