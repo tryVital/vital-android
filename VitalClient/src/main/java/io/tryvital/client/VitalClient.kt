@@ -337,10 +337,12 @@ internal fun createLocalStorage(context: Context): SharedPreferences = synchroni
     // migrate it to the new SharedPreferences.
     val oldPreferences = context.getSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME, MODE_PRIVATE)
     if (!oldPreferences.getString("__androidx_security_crypto_encrypted_prefs_key_keyset__", "").isNullOrBlank()) {
+        val logger = VitalLogger.getOrCreate()
+        logger.logI("EncryptedSharedPrefs migration: detected")
         try {
             val oldDecryptedPreferences = getDeprecatedEncryptedSharedPreferences(context)
             preferences.edit().apply {
-                oldDecryptedPreferences.all.forEach { key, value ->
+                for ((key, value) in oldDecryptedPreferences.all) {
                     @Suppress("UNCHECKED_CAST")
                     when (value) {
                         is String -> putString(key, value)
@@ -353,10 +355,13 @@ internal fun createLocalStorage(context: Context): SharedPreferences = synchroni
                 }
                 commit()
             }
+            logger.logI("EncryptedSharedPrefs migration: completed")
+
         } catch (e: Throwable) {
-            VitalLogger.getOrCreate().logE("failed to migrate EncryptedSharedPreferences to SharedPreferences", e)
+            VitalLogger.getOrCreate().logE("EncryptedSharedPrefs migration: failed", e)
         }
         context.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
+        logger.logI("EncryptedSharedPrefs migration: deleted old file")
     }
 
     return preferences
