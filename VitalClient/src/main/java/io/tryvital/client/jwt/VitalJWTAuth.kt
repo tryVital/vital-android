@@ -5,14 +5,11 @@ import android.content.SharedPreferences
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.adapters.Rfc3339DateJsonAdapter
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
-import io.tryvital.client.VITAL_ENCRYPTED_PERFS_FILE_NAME
-import io.tryvital.client.createEncryptedSharedPreferences
+import io.tryvital.client.createLocalStorage
 import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalLogger
-import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -32,7 +29,6 @@ import okio.ByteString.Companion.decodeBase64
 import java.io.IOException
 import java.lang.IllegalArgumentException
 import java.time.Instant
-import java.util.Date
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -98,15 +94,7 @@ internal class VitalJWTAuth(
                 return shared
             }
 
-            val sharedPreferences = try {
-                createEncryptedSharedPreferences(appContext)
-            } catch (e: Exception) {
-                VitalLogger.getOrCreate().logE(
-                    "Failed to decrypt VitalJWTAuth preferences, re-creating it", e
-                )
-                appContext.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
-                createEncryptedSharedPreferences(appContext)
-            }
+            val sharedPreferences = createLocalStorage(appContext)
 
             this.shared = VitalJWTAuth(
                 preferences = sharedPreferences

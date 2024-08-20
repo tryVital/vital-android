@@ -1,6 +1,7 @@
 package io.tryvital.client.utils
 
 import android.util.Log
+import io.tryvital.client.BuildConfig
 
 const val VITAL_LOGGER = "vital-logger"
 
@@ -38,6 +39,7 @@ class VitalLogger private constructor() {
         fun getOrCreate(): VitalLogger = synchronized(VitalLogger) {
             if (instance == null) {
                 instance = VitalLogger()
+                instance!!.enabled = BuildConfig.DEBUG
             }
             return instance!!
         }
