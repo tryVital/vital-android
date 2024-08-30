@@ -2,6 +2,7 @@ package io.tryvital.vitalhealthconnect
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
@@ -157,7 +158,18 @@ class VitalPermissionRequestContract(
     }
 
     private fun permissionsToRequest(): Set<String> {
-        return manager.permissionsRequiredToWriteResources(this.writeResources) +
+        val appContext = manager.context.applicationContext
+        val hostAppPackageInfo = appContext.packageManager.getPackageInfo(
+            appContext.packageName,
+            PackageManager.GET_PERMISSIONS,
+        )
+
+        val permissionsDeclaredByHostApp = (hostAppPackageInfo.requestedPermissions ?: emptyArray()).toSet()
+
+        // Only request permissions that the host app has declared in their AndroidManifest.xml
+        return permissionsDeclaredByHostApp.intersect(
+            manager.permissionsRequiredToWriteResources(this.writeResources) +
                 manager.readPermissionsToRequestForResources(this.readResources)
+        )
     }
 }
