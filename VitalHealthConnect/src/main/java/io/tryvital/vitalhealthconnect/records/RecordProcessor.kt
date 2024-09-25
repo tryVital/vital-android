@@ -706,7 +706,7 @@ internal class HealthConnectRecordProcessor(
     override suspend fun processMeals(
         lastSynced: Instant?,
         timeZone: TimeZone
-    ): SummaryData.Meals = coroutineScope {
+    ): SummaryData.Meals {
         val zoneId = timeZone.toZoneId()
         val now = ZonedDateTime.now(zoneId)
         val startInstant = minOf(
@@ -722,16 +722,16 @@ internal class HealthConnectRecordProcessor(
             it.startTime.atZone(it.startZoneOffset).toLocalDate().atStartOfDay()
         ) }
 
-        SummaryData.Meals(
+        return SummaryData.Meals(
             meals = meals.map{
                 ManualMealCreation(
                     healthConnect = HealthConnectRecordCollection(
                         nutritionRecords = it.value.map{record ->
                             NutritionRecord(
                                 startTime = record.startTime,
-                                startZoneOffset = record.startZoneOffset,
+                                startZoneOffset = record.startZoneOffset.toString(),
                                 endTime = record.endTime,
-                                endZoneOffset = record.endZoneOffset,
+                                endZoneOffset = record.endZoneOffset.toString(),
                                 biotin = record.biotin?.inMicrograms,
                                 caffeine = record.caffeine?.inMilligrams,
                                 calcium = record.calcium?.inMilligrams,

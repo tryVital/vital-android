@@ -23,11 +23,11 @@ data class NutritionRecord(
     @Json(name = "start_time")
     val startTime: Instant,
     @Json(name = "start_zone_offset")
-    val startZoneOffset: ZoneOffset?,
+    val startZoneOffset: String?,
     @Json(name = "end_time")
     val endTime: Instant,
     @Json(name = "end_zone_offset")
-    val endZoneOffset: ZoneOffset?,
+    val endZoneOffset: String?,
     val biotin: Double?,
     val caffeine: Double?,
     val calcium: Double?,
@@ -91,5 +91,5 @@ data class NutritionRecord(
     val name: String?,
     @Json(name = "meal_type")
     val mealType: Int,
-    val metadata: Map<String, Any>
+    val metadata: Map<String, Map<String, String>>
 )
