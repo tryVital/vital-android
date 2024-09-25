@@ -59,6 +59,9 @@ internal suspend fun processChangesResponse(
         VitalResource.Activity ->
             throw IllegalArgumentException("Activity does not work with processChangesResponse")
 
+        VitalResource.Meal ->
+            throw IllegalArgumentException("Meal does not work with processChangesResponse")
+
         VitalResource.ActiveEnergyBurned -> processor.processActiveCaloriesBurnedRecords(
             TimeRangeOrRecords.Records(
                 records.get<ActiveCaloriesBurnedRecord>()

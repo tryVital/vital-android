@@ -22,15 +22,19 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
+import io.tryvital.client.services.data.HealthConnectRecordCollection
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.LocalActivity
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.LocalWorkout
+import io.tryvital.client.services.data.ManualMealCreation
+import io.tryvital.client.services.data.NutritionRecord
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
+import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.inferredSourceType
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
@@ -49,6 +53,7 @@ data class ProcessorOptions(
 )
 
 const val ACTIVITY_STATS_DAYS_TO_LOOKBACK = 3L
+const val NUTRITION_STATS_DAYS_TO_LOOKBACK = 5L
 
 sealed class TimeRangeOrRecords<out R: Record> {
     data class TimeRange<out R: Record>(val start: Instant, val end: Instant): TimeRangeOrRecords<R>()
@@ -99,6 +104,11 @@ interface RecordProcessor {
         lastSynced: Instant?,
         timeZone: TimeZone,
     ): SummaryData.Activities
+
+    suspend fun processMeals(
+        lastSynced: Instant?,
+        timeZone: TimeZone,
+    ): SummaryData.Meals
 
     suspend fun processActiveCaloriesBurnedRecords(
         activeEnergyBurned: TimeRangeOrRecords<ActiveCaloriesBurnedRecord>,
@@ -688,6 +698,89 @@ internal class HealthConnectRecordProcessor(
             activities = daySummariesByDate.map { (date, summary) ->
                 LocalActivity(
                     daySummary = summary.toDatedPayload(date),
+                )
+            }
+        )
+    }
+
+    override suspend fun processMeals(
+        lastSynced: Instant?,
+        timeZone: TimeZone
+    ): SummaryData.Meals = coroutineScope {
+        val zoneId = timeZone.toZoneId()
+        val now = ZonedDateTime.now(zoneId)
+        val startInstant = minOf(
+            lastSynced?.atZone(zoneId) ?: now,
+            now.minusDays(ACTIVITY_STATS_DAYS_TO_LOOKBACK)
+        ).toInstant()
+
+        val nutritionRecords = recordReader.readNutritionRecords(startInstant, now.toInstant())
+
+        val meals = nutritionRecords.groupBy { Triple(
+            it.metadata.dataOrigin.packageName,
+            it.mealType,
+            it.startTime.atZone(it.startZoneOffset).toLocalDate().atStartOfDay()
+        ) }
+
+        SummaryData.Meals(
+            meals = meals.map{
+                ManualMealCreation(
+                    healthConnect = HealthConnectRecordCollection(
+                        nutritionRecords = it.value.map{record ->
+                            NutritionRecord(
+                                startTime = record.startTime,
+                                startZoneOffset = record.startZoneOffset,
+                                endTime = record.endTime,
+                                endZoneOffset = record.endZoneOffset,
+                                biotin = record.biotin?.inMicrograms,
+                                caffeine = record.caffeine?.inMilligrams,
+                                calcium = record.calcium?.inMilligrams,
+                                energy = record.energy?.inKilocalories,
+                                energyFromFat = record.energyFromFat?.inKilocalories,
+                                chloride = record.chloride?.inMilligrams,
+                                cholesterol = record.cholesterol?.inMilligrams,
+                                chromium = record.chromium?.inMicrograms,
+                                copper = record.copper?.inMilligrams,
+                                dietaryFiber = record.dietaryFiber?.inGrams,
+                                folate = record.folate?.inMicrograms,
+                                folicAcid = record.folicAcid?.inMicrograms,
+                                iodine = record.iodine?.inMicrograms,
+                                iron = record.iron?.inMilligrams,
+                                magnesium = record.magnesium?.inMilligrams,
+                                manganese = record.manganese?.inMilligrams,
+                                molybdenum = record.molybdenum?.inMicrograms,
+                                monounsaturatedFat = record.monounsaturatedFat?.inGrams,
+                                niacin = record.niacin?.inMilligrams,
+                                pantothenicAcid = record.pantothenicAcid?.inMilligrams,
+                                phosphorus = record.phosphorus?.inMilligrams,
+                                polyunsaturatedFat = record.polyunsaturatedFat?.inGrams,
+                                potassium = record.potassium?.inMilligrams,
+                                protein = record.protein?.inGrams,
+                                riboflavin = record.riboflavin?.inMilligrams,
+                                saturatedFat = record.saturatedFat?.inGrams,
+                                selenium = record.selenium?.inMicrograms,
+                                sodium = record.sodium?.inMilligrams,
+                                sugar = record.sugar?.inGrams,
+                                thiamin = record.thiamin?.inMilligrams,
+                                totalCarbohydrate = record.totalCarbohydrate?.inGrams,
+                                totalFat = record.totalFat?.inGrams,
+                                transFat = record.transFat?.inGrams,
+                                unsaturatedFat = record.unsaturatedFat?.inGrams,
+                                vitaminA = record.vitaminA?.inMicrograms,
+                                vitaminB12 = record.vitaminB12?.inMicrograms,
+                                vitaminB6 = record.vitaminB6?.inMilligrams,
+                                vitaminC = record.vitaminC?.inMilligrams,
+                                vitaminD = record.vitaminD?.inMicrograms,
+                                vitaminE = record.vitaminE?.inMilligrams,
+                                vitaminK = record.vitaminK?.inMicrograms,
+                                zinc = record.zinc?.inMilligrams,
+                                name = record.name,
+                                mealType = record.mealType,
+                                metadata = mapOf("dataOrigin" to mapOf("packageName" to record.metadata.dataOrigin.packageName))
+                            )
+                        },
+                        sourceBundle = it.key.first
+                    )
                 )
             }
         )

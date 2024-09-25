@@ -19,6 +19,7 @@ import androidx.health.connect.client.records.HydrationRecord
 import androidx.health.connect.client.records.IntermenstrualBleedingRecord
 import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
+import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OvulationTestRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
@@ -128,6 +129,11 @@ interface RecordReader {
         endTime: Instant
     ): List<HydrationRecord>
 
+    suspend fun readNutritionRecords(
+        start: Instant,
+        end: Instant,
+    ): List<NutritionRecord>
+
     suspend fun readRespiratoryRates(start: Instant, end: Instant): List<RespiratoryRateRecord>
     suspend fun readBodyTemperatures(start: Instant, end: Instant): List<BodyTemperatureRecord>
 
@@ -224,6 +230,8 @@ internal class HealthConnectRecordReader(
         endTime: Instant
     ): List<HydrationRecord> = readRecords(startTime, endTime)
 
+    override suspend fun readNutritionRecords(start: Instant, end: Instant): List<NutritionRecord>
+        = readRecords(start, end)
 
     override suspend fun menstruationPeriod(start: Instant, end: Instant): List<MenstruationPeriodRecord>
         = readRecords(start, end)

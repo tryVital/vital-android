@@ -49,6 +49,11 @@ internal suspend fun uploadResources(
                 data.summaryData.cycles,
                 stage,
             )
+            is SummaryData.Meals -> uploader.uploadMeals(
+                userId, start, end, timeZoneId,
+                data.summaryData.meals,
+                stage,
+            )
         }
 
         is ProcessedResourceData.TimeSeries -> when (data.timeSeriesData) {

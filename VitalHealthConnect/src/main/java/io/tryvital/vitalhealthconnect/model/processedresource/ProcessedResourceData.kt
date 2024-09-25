@@ -1,5 +1,6 @@
 package io.tryvital.vitalhealthconnect.model.processedresource
 
+import io.tryvital.client.services.data.HealthConnectRecordCollection
 import io.tryvital.client.services.data.LocalBody
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.LocalActivity
@@ -9,6 +10,7 @@ import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.LocalWorkout
+import io.tryvital.client.services.data.ManualMealCreation
 import io.tryvital.client.services.data.MenstrualCycle
 import java.time.Instant
 
@@ -143,6 +145,16 @@ sealed class SummaryData {
             return MenstrualCycles(cycles + other.cycles)
         }
         override fun isNotEmpty(): Boolean = cycles.isNotEmpty()
+    }
+
+    data class Meals(
+        val meals: List<ManualMealCreation>
+    ) : SummaryData() {
+        override fun merge(other: SummaryData): SummaryData {
+            check(other is Meals)
+            return Meals(meals + other.meals )
+        }
+        override fun isNotEmpty(): Boolean = meals.isNotEmpty()
     }
 }
 

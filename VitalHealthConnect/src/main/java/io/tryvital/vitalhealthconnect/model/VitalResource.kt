@@ -28,6 +28,8 @@ sealed class VitalResource(val name: String) {
     object RespiratoryRate : VitalResource("respiratoryRate")
     object Temperature : VitalResource("temperature")
 
+    object Meal: VitalResource("meal")
+
     override fun toString(): String {
         return name
     }
@@ -46,6 +48,7 @@ sealed class VitalResource(val name: String) {
         RespiratoryRate -> 26
         Temperature -> 27
         BloodOxygen -> 28
+        Meal -> 29
         Workout -> 31
         Steps -> 51
         DistanceWalkingRunning -> 52
@@ -79,6 +82,7 @@ sealed class VitalResource(val name: String) {
                 RespiratoryRate,
                 Temperature,
                 BloodOxygen,
+                Meal,
             )
         }
 
@@ -190,6 +194,8 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
     VitalResource.Water -> RecordTypeRequirements.single(HydrationRecord::class)
     VitalResource.Profile -> RecordTypeRequirements.single(HeightRecord::class)
 
+    VitalResource.Meal -> RecordTypeRequirements.single(NutritionRecord::class)
+
     VitalResource.Activity -> RecordTypeRequirements(
         required = emptyList(),
         optional = listOf(
@@ -270,6 +276,7 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
 internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Record>> = when (this) {
     VitalResource.Water -> listOf(HydrationRecord::class)
     VitalResource.Activity -> listOf()
+    VitalResource.Meal -> listOf()
     VitalResource.ActiveEnergyBurned -> listOf(ActiveCaloriesBurnedRecord::class)
     VitalResource.BasalEnergyBurned -> listOf(BasalMetabolicRateRecord::class)
     VitalResource.DistanceWalkingRunning -> listOf(DistanceRecord::class)
