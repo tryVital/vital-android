@@ -75,7 +75,7 @@ fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
             )
 
             TextField(
-                state.value.sdkUserId,
+                state.value.sdkUserId ?: "null",
                 onValueChange = {},
                 label = { Text("User ID") },
                 readOnly = true,

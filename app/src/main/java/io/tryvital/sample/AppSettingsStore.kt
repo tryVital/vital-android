@@ -42,7 +42,7 @@ class AppSettingsStore(
         val status = VitalClient.status
 
         val isConfigured = VitalClient.Status.Configured in status
-        update { it.copy(isSDKConfigured = isConfigured) }
+        update { it.copy(isSDKConfigured = isConfigured, sdkUserId = VitalClient.currentUserId) }
     }
 
     companion object {
@@ -70,6 +70,7 @@ data class AppSettings(
     val environment: Environment = Environment.Sandbox,
     val region: Region = Region.US,
     val userId: String = "",
+    val sdkUserId: String? = null,
     val isSDKConfigured: Boolean = false,
 )
 

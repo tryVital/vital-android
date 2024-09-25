@@ -167,16 +167,18 @@ enum class SettingsAuthMode {
 data class SettingsState(
     val appSettings: AppSettings = AppSettings(),
 
+    val currentError: Throwable? = null,
+) {
+
     /**
      * The current SDK user ID.
      *
      * Does not have to match [AppSettings.userId] if new app settings have not yet applied to the
      * SDK.
      * */
-    val sdkUserId: String = "",
+    val sdkUserId: String?
+        get() = appSettings.sdkUserId
 
-    val currentError: Throwable? = null,
-) {
     val isApiKeyValid: Boolean
         get() = appSettings.apiKey != ""
 
