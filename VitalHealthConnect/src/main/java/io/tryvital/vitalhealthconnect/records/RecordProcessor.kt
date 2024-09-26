@@ -14,7 +14,6 @@ import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HeightRecord
 import androidx.health.connect.client.records.HydrationRecord
-import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RespiratoryRateRecord
@@ -35,7 +34,6 @@ import io.tryvital.client.services.data.NutritionRecord
 import io.tryvital.client.services.data.SampleType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.SupportedSleepApps
-import io.tryvital.vitalhealthconnect.ext.toDate
 import io.tryvital.vitalhealthconnect.model.inferredSourceType
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
