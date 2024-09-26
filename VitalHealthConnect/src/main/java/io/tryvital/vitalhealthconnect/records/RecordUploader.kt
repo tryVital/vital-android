@@ -15,6 +15,7 @@ import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.LocalWorkout
+import io.tryvital.client.services.data.ManualMealCreation
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
 import retrofit2.Response
@@ -76,6 +77,15 @@ interface RecordUploader {
         timeZoneId: String?,
         cyclePayloads: List<LocalMenstrualCycle>,
         stage: DataStage = DataStage.Daily,
+    )
+
+    suspend fun uploadMeals(
+        userId: String,
+        startDate: Instant?,
+        endDate: Instant?,
+        timeZoneId: String?,
+        mealPayloads: List<ManualMealCreation>,
+        stage: DataStage = DataStage.Daily
     )
 
     suspend fun uploadBloodPressure(
@@ -215,6 +225,26 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
                 endDate = endDate,
                 timeZoneId = timeZoneId,
                 data = cyclePayloads,
+            )
+        ).throwOnErrorStatus()
+    }
+
+    override suspend fun uploadMeals(
+        userId: String,
+        startDate: Instant?,
+        endDate: Instant?,
+        timeZoneId: String?,
+        mealPayloads: List<ManualMealCreation>,
+        stage: DataStage
+    ){
+        vitalClient.vitalPrivateService.addMeals(
+            userId, SummaryPayload(
+                stage = stage,
+                provider = ManualProviderSlug.HealthConnect,
+                startDate = startDate,
+                endDate = endDate,
+                timeZoneId = timeZoneId,
+                data = mealPayloads,
             )
         ).throwOnErrorStatus()
     }

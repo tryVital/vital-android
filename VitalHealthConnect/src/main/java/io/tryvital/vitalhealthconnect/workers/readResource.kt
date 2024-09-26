@@ -41,6 +41,11 @@ internal suspend fun readResourceByTimeRange(
             timeZone = timeZone,
         ).let(ProcessedResourceData::Summary)
 
+        VitalResource.Meal -> processor.processMeals(
+            lastSynced = startTime,
+            timeZone = timeZone,
+        ).let(ProcessedResourceData::Summary)
+
         VitalResource.ActiveEnergyBurned -> processor.processActiveCaloriesBurnedRecords(
             TimeRangeOrRecords.TimeRange(start = startTime, end = endTime),
             processorOptions

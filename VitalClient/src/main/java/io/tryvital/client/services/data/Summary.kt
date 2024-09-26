@@ -182,6 +182,12 @@ data class LocalMenstrualCycle(
 )
 
 @JsonClass(generateAdapter = true)
+data class ManualMealCreation(
+    @Json(name = "health_connect")
+    val healthConnect: HealthConnectRecordCollection? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class LocalQuantitySample(
     @Json(name = "id")
     val id: String? = null,

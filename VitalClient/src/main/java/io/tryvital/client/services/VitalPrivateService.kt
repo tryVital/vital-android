@@ -13,6 +13,7 @@ import io.tryvital.client.services.data.LocalProfile
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.LocalWorkout
+import io.tryvital.client.services.data.ManualMealCreation
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
 import retrofit2.Response
@@ -49,6 +50,12 @@ interface VitalPrivateService {
     suspend fun addMenstrualCycles(
         @Path("user_id") userId: String,
         @Body body: SummaryPayload<List<LocalMenstrualCycle>>
+    ): Response<Unit>
+
+    @POST("summary/meal/{user_id}")
+    suspend fun addMeals(
+        @Path("user_id") userId: String,
+        @Body body: SummaryPayload<List<ManualMealCreation>>
     ): Response<Unit>
 
     @POST("summary/activity/{user_id}")
