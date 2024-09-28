@@ -314,7 +314,7 @@ class VitalHealthConnectManager private constructor(
         check(Looper.getMainLooper().isCurrentThread)
 
         // We assume:
-        // 1. Permissions in our SharedPerfs are up-to-date
+        // 1. Permissions in our SharedPrefs are up-to-date
         // 2. ConnectedSource is already created.
         // Fail gracefully if these assumptions are not satisfied.
 
