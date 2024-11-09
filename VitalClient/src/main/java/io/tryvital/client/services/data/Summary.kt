@@ -61,12 +61,6 @@ data class LocalWorkout(
     val heartRateZone5: Int? = null,
     @Json(name = "heart_rate_zone_6")
     val heartRateZone6: Int? = null,
-    @Deprecated(message = "LocalSleep no longer embeds high-frequency timeseries data")
-    @Json(name = "heart_rate")
-    val heartRate: List<LocalQuantitySample> = emptyList(),
-    @Deprecated(message = "LocalSleep no longer embeds high-frequency timeseries data")
-    @Json(name = "respiratory_rate")
-    val respiratoryRate: List<LocalQuantitySample> = emptyList()
 )
 
 // @VitalPrivateApi
@@ -133,21 +127,6 @@ data class LocalSleep(
     val hrvMeanSdnn: Double? = null,
     @Json(name = "respiratory_rate_mean")
     val respiratoryRateMean: Double? = null,
-    @Deprecated(message = "LocalSleep no longer embeds high-frequency timeseries data")
-    @Json(name = "heart_rate")
-    val heartRate: List<LocalQuantitySample> = emptyList(),
-    @Deprecated(message = "LocalSleep no longer embeds high-frequency timeseries data")
-    @Json(name = "resting_heart_rate")
-    val restingHeartRate: List<LocalQuantitySample> = emptyList(),
-    @Deprecated(message = "LocalSleep no longer embeds high-frequency timeseries data")
-    @Json(name = "heart_rate_variability")
-    val heartRateVariability: List<LocalQuantitySample> = emptyList(),
-    @Deprecated(message = "LocalSleep no longer embeds high-frequency timeseries data")
-    @Json(name = "oxygen_saturation")
-    val oxygenSaturation: List<LocalQuantitySample> = emptyList(),
-    @Deprecated(message = "LocalSleep no longer embeds high-frequency timeseries data")
-    @Json(name = "respiratory_rate")
-    val respiratoryRate: List<LocalQuantitySample> = emptyList(),
     @Json(name = "sleep_stages")
     val sleepStages: Stages,
 ) {
