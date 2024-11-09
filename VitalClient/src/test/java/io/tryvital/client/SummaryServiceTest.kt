@@ -55,8 +55,6 @@ class SummaryServiceTest {
                         sport = "walking",
                         calories = 101.0,
                         distance = 301.0,
-                        heartRate = emptyList(),
-                        respiratoryRate = emptyList(),
                         sourceType = SourceType.Watch,
                     )
                 )
