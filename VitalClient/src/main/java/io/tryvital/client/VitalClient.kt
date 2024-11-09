@@ -23,15 +23,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 
-const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
+const val VITAL_PREFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_CLIENT_LOCAL_STORAGE: String = "vital_client_local_storage"
-const val VITAL_ENCRYPTED_PERFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
+const val VITAL_ENCRYPTED_PREFS_FILE_NAME: String = "safe_vital_health_connect_prefs"
 
 @Suppress("unused")
 class VitalClient internal constructor(context: Context) {
     val sharedPreferences: SharedPreferences by lazy {
         context.getSharedPreferences(
-            VITAL_PERFS_FILE_NAME, MODE_PRIVATE
+            VITAL_PREFS_FILE_NAME, MODE_PRIVATE
         )
     }
 
@@ -335,7 +335,7 @@ internal fun createLocalStorage(context: Context): SharedPreferences = synchroni
 
     // If an EncryptedSharedPreferences exists (created by an earlier SDK version),
     // migrate it to the new SharedPreferences.
-    val oldPreferences = context.getSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME, MODE_PRIVATE)
+    val oldPreferences = context.getSharedPreferences(VITAL_ENCRYPTED_PREFS_FILE_NAME, MODE_PRIVATE)
     if (!oldPreferences.getString("__androidx_security_crypto_encrypted_prefs_key_keyset__", "").isNullOrBlank()) {
         val logger = VitalLogger.getOrCreate()
         logger.logI("EncryptedSharedPrefs migration: detected")
@@ -360,7 +360,7 @@ internal fun createLocalStorage(context: Context): SharedPreferences = synchroni
         } catch (e: Throwable) {
             VitalLogger.getOrCreate().logE("EncryptedSharedPrefs migration: failed", e)
         }
-        context.deleteSharedPreferences(VITAL_ENCRYPTED_PERFS_FILE_NAME)
+        context.deleteSharedPreferences(VITAL_ENCRYPTED_PREFS_FILE_NAME)
         logger.logI("EncryptedSharedPrefs migration: deleted old file")
     }
 
@@ -368,7 +368,7 @@ internal fun createLocalStorage(context: Context): SharedPreferences = synchroni
 }
 
 internal fun getDeprecatedEncryptedSharedPreferences(context: Context) = EncryptedSharedPreferences.create(
-    VITAL_ENCRYPTED_PERFS_FILE_NAME,
+    VITAL_ENCRYPTED_PREFS_FILE_NAME,
     MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC),
     context,
     EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
