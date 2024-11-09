@@ -171,9 +171,7 @@ value class RemappedVitalResource(val wrapped: VitalResource) {
  * compute Activity Day Summary & pull individual samples adaptively in accordance to the permission
  * state.
  */
-internal fun VitalResource.remapped(): RemappedVitalResource = when (this) {
-    else -> RemappedVitalResource(this)
-}
+internal fun VitalResource.remapped(): RemappedVitalResource = RemappedVitalResource(this)
 
 /**
  * VitalResource data dependencies on Health Connect record.

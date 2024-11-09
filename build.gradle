@@ -6,7 +6,6 @@ buildscript {
         // Linked with Kotlin compiler version
         compose_compiler = '1.4.8'
 
-        desugar_jdk_libs = '1.2.3'
         nav = '2.5.3'
         material3 = '1.0.1'
         activity_compose = '1.6.1'
