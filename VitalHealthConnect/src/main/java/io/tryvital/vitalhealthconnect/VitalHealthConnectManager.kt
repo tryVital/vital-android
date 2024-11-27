@@ -116,14 +116,16 @@ class VitalHealthConnectManager private constructor(
     // 2. cancelling the scope would cancel all running child jobs.
     internal var taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    var processLifecycleObserver: LifecycleObserver
+    lateinit var processLifecycleObserver: LifecycleObserver
 
     init {
         vitalLogger.logI("VitalHealthConnectManager initialized")
         _status.tryEmit(SyncStatus.Unknown)
 
-        processLifecycleObserver = processLifecycleObserver(this)
-            .also { ProcessLifecycleOwner.get().lifecycle.addObserver(it) }
+        taskScope.launch(Dispatchers.Main.immediate) {
+            processLifecycleObserver = processLifecycleObserver(this@VitalHealthConnectManager)
+                .also { ProcessLifecycleOwner.get().lifecycle.addObserver(it) }
+        }
 
         setupSyncWorkerObservation()
     }
