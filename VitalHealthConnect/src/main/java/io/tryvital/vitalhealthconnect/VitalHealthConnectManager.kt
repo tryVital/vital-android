@@ -41,7 +41,7 @@ import kotlin.reflect.KClass
 @Suppress("MemberVisibilityCanBePrivate")
 class VitalHealthConnectManager private constructor(
     internal val context: Context,
-    private val healthConnectClientProvider: HealthConnectClientProvider,
+    internal val healthConnectClientProvider: HealthConnectClientProvider,
     internal val vitalClient: VitalClient,
     private val recordReader: RecordReader,
     private val recordProcessor: RecordProcessor,
@@ -139,12 +139,19 @@ class VitalHealthConnectManager private constructor(
         taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
 
+    /**
+     * @param requestHistoryRead Request access to the entire history on Android 15+.
+     * Your app manifest must have declared `PERMISSION_READ_HEALTH_DATA_HISTORY`. This is a no-op
+     * on Android 14 or below.
+     */
     @Suppress("unused")
     fun createPermissionRequestContract(
         readResources: Set<VitalResource> = emptySet(),
         writeResources: Set<WritableVitalResource> = emptySet(),
+        requestHistoryRead: Boolean = false,
     ): ActivityResultContract<Unit, Deferred<PermissionOutcome>>
-        = VitalPermissionRequestContract(readResources, writeResources, this, taskScope)
+        = VitalPermissionRequestContract(readResources, writeResources, requestHistoryRead, this, taskScope)
+
 
     @Suppress("unused")
     fun hasAskedForPermission(resource: VitalResource): Boolean {

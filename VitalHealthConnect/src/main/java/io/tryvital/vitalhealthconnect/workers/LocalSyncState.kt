@@ -13,9 +13,13 @@ data class LocalSyncState(
     val ingestionEnd: Instant?,
     val perDeviceActivityTS: Boolean,
     val expiresAt: Instant,
+    val maximumNumberOfDaysToBackfill: Long = 30,
 ) {
 
     fun historicalStartDate(@Suppress("UNUSED_PARAMETER") resource: RemappedVitalResource): Instant {
-        return historicalStageAnchor.minus(defaultDaysToBackfill, ChronoUnit.DAYS)
+        return historicalStageAnchor.minus(
+            minOf(defaultDaysToBackfill, maximumNumberOfDaysToBackfill),
+            ChronoUnit.DAYS
+        )
     }
 }
