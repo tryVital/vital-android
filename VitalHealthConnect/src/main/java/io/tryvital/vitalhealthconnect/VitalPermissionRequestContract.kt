@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.PermissionController
 import androidx.health.connect.client.permission.HealthPermission
 import io.tryvital.client.VitalClient
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 class VitalPermissionRequestContract(
     private val readResources: Set<VitalResource>,
     private val writeResources: Set<WritableVitalResource>,
+    private val requestHistoryRead: Boolean,
     private val manager: VitalHealthConnectManager,
     private val taskScope: CoroutineScope,
 ): ActivityResultContract<Unit, Deferred<PermissionOutcome>>() {
@@ -164,12 +166,21 @@ class VitalPermissionRequestContract(
             PackageManager.GET_PERMISSIONS,
         )
 
+        val features = manager.healthConnectClientProvider.getHealthConnectClient(manager.context).features
+        val supportsHistoryRead = features.getFeatureStatus(HealthConnectFeatures.FEATURE_READ_HEALTH_DATA_HISTORY) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        val extraPermissions = if (requestHistoryRead && supportsHistoryRead) {
+            setOf(HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY)
+        } else {
+            emptySet()
+        }
+
         val permissionsDeclaredByHostApp = (hostAppPackageInfo.requestedPermissions ?: emptyArray()).toSet()
 
         // Only request permissions that the host app has declared in their AndroidManifest.xml
         return permissionsDeclaredByHostApp.intersect(
             manager.permissionsRequiredToWriteResources(this.writeResources) +
-                manager.readPermissionsToRequestForResources(this.readResources)
+                manager.readPermissionsToRequestForResources(this.readResources) +
+                extraPermissions
         )
     }
 }

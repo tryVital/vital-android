@@ -193,7 +193,10 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     private suspend fun computeSyncInstruction(): Pair<SyncInstruction, LocalSyncState> {
         val resourceSyncState = sharedPreferences.getJson<ResourceSyncState>(input.resource.wrapped.syncStateKey)
 
-        val localSyncState = localSyncStateManager.getLocalSyncState()
+        val controller = healthConnectClientProvider.getHealthConnectClient(applicationContext).permissionController
+        val historyReadGranted = HealthPermission.PERMISSION_READ_HEALTH_DATA_HISTORY in controller.getGrantedPermissions()
+
+        val localSyncState = localSyncStateManager.getLocalSyncState(historyReadGranted)
 
         val now = Instant.now()
         val reconciledStart = localSyncState.historicalStartDate(input.resource)

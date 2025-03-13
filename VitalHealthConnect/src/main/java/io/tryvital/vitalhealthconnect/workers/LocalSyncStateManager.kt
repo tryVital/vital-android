@@ -2,6 +2,7 @@ package io.tryvital.vitalhealthconnect.workers
 
 import UserSDKSyncStateBody
 import android.content.SharedPreferences
+import androidx.health.connect.client.HealthConnectFeatures
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.VitalPrivateApi
@@ -32,7 +33,7 @@ internal class LocalSyncStateManager(
     }
 
     @OptIn(VitalPrivateApi::class)
-    suspend fun getLocalSyncState(): LocalSyncState {
+    suspend fun getLocalSyncState(historyReadGranted: Boolean): LocalSyncState {
         // If we have a LocalSyncState with valid TTL, return it.
         val state = getPersistedLocalSyncState()
         if (state != null && state.expiresAt > Instant.now()) {
@@ -54,8 +55,17 @@ internal class LocalSyncStateManager(
 
             val now = Instant.now()
 
+            // Android 14 or below:
             // Health Connect limits historical query to first connection date mins 30 days.
-            val numberOfDaysToBackfill = minOf(preferences.getInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, 30).toLong(), 30)
+            // Android 15 or above with PERMISSION_READ_HEALTH_DATA_HISTORY granted:
+            // Unrestricted
+
+            val maximumNumberOfDaysToBackfill = if (historyReadGranted) { 365L } else { 30L }
+            val numberOfDaysToBackfill = minOf(
+                preferences.getInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, 30).toLong(),
+                maximumNumberOfDaysToBackfill
+            )
+
             val proposedStart = now.minus(numberOfDaysToBackfill, ChronoUnit.DAYS)
             val backendState = vitalClient.vitalPrivateService.healthConnectSdkSyncState(
                 VitalClient.checkUserId(),
@@ -78,6 +88,7 @@ internal class LocalSyncStateManager(
                 // ingestion start date takes precedence.
                 historicalStageAnchor = backendState.requestStartDate ?: previousState?.historicalStageAnchor ?: now,
                 defaultDaysToBackfill = previousState?.defaultDaysToBackfill ?: numberOfDaysToBackfill,
+                maximumNumberOfDaysToBackfill = maximumNumberOfDaysToBackfill,
 
                 // The query upper bound (end date for historical & daily) is normally open-ended.
                 // In other words, `ingestionEnd` is typically nil.
