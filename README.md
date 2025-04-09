@@ -15,7 +15,7 @@ repositories {
 Then include our Android SDK artifacts as dependencies of your modules as needed:
 
 ```groovy
-def vital_version = '4.0.1'
+def vital_version = '4.0.2'
 
 implementation 'io.tryvital:vital-client:$vital_version'
 implementation 'io.tryvital:vital-health-connect:$vital_version'
