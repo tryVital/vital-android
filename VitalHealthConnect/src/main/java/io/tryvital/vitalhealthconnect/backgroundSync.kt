@@ -24,23 +24,18 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-@ExperimentalVitalApi
 val AUTO_SYNC_THROTTLE_DEFAULT = 5.seconds
 
-@ExperimentalVitalApi
 private val BACKGROUND_SYNC_INTERVAL_DEFAULT = 1.hours
 
-@ExperimentalVitalApi
 val VitalHealthConnectManager.isBackgroundSyncEnabled: Boolean
     get() = sharedPreferences.getBoolean(UnSecurePrefKeys.useExactAlarmKey, false)
 
-@ExperimentalVitalApi
 val VitalHealthConnectManager.backgroundSyncScheduledAt: Instant?
     get() = sharedPreferences.getLong(UnSecurePrefKeys.nextAlarmAtKey, -1)
         .takeIf { it >= System.currentTimeMillis() }
         ?.let { Instant.ofEpochMilli(it) }
 
-@ExperimentalVitalApi
 var VitalHealthConnectManager.autoSyncThrottle: Duration
     get() = maxOf(
         sharedPreferences.getLong(UnSecurePrefKeys.autoSyncThrottleKey, 0).milliseconds,
@@ -52,7 +47,6 @@ var VitalHealthConnectManager.autoSyncThrottle: Duration
             .apply()
     }
 
-@ExperimentalVitalApi
 var VitalHealthConnectManager.backgroundSyncMinimumInterval: Duration
     get() = maxOf(
         sharedPreferences.getLong(UnSecurePrefKeys.backgroundSyncMinIntervalKey, 0).milliseconds,
@@ -106,7 +100,6 @@ internal fun VitalHealthConnectManager.markAutoSyncSuccess() {
  *
  * @return `true` if the background sync has been enabled successfully. `false` otherwise.
  */
-@ExperimentalVitalApi
 fun VitalHealthConnectManager.enableBackgroundSyncContract() = object: ActivityResultContract<Unit, Boolean>() {
     override fun getSynchronousResult(
         context: Context,
@@ -147,7 +140,6 @@ fun VitalHealthConnectManager.enableBackgroundSyncContract() = object: ActivityR
     }
 }
 
-@ExperimentalVitalApi
 fun VitalHealthConnectManager.disableBackgroundSync() {
     check(Looper.getMainLooper().isCurrentThread)
 

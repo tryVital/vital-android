@@ -12,7 +12,6 @@ import io.tryvital.vitalhealthconnect.workers.SyncOnExactAlarmService
 const val ACTION_SYNC_DATA = "io.tryvital.vitalhealthconnect.action.SYNC_DATA"
 private val ACTION_QUICKBOOT_POWERON = "android.intent.action.QUICKBOOT_POWERON"
 
-@ExperimentalVitalApi
 class SyncBroadcastReceiver: BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (val action = intent.action) {
