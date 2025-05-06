@@ -90,7 +90,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'io.tryvital'
             artifactId = 'vital-health-connect'
-            version = '4.0.2'
+            version = '4.1.0'
 
             afterEvaluate {
                 from components.release
