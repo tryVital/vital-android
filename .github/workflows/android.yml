@@ -24,13 +24,5 @@ jobs:
       - name: Run lint
         run: ./gradlew lint
 
-      - uses: yutailang0119/action-android-lint@v4
-        with:
-          report-path: build/reports/*.xml
-
       - name: Build with Gradle
         run: ./gradlew :VitalClient:testDebugUnitTest :VitalDevices:testDebugUnitTest :VitalHealthConnect:testDebugUnitTest
-
-      - name: Android Test Report
-        uses: asadmansr/android-test-report-action@v1.2.0
-        if: ${{ always() }}

@@ -81,6 +81,13 @@ fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
                 readOnly = true,
             )
 
+            TextField(
+                state.value.appSettings.sdkIdentifiedExternalUser ?: "null",
+                onValueChange = {},
+                label = { Text("Identified External User") },
+                readOnly = true,
+            )
+
             Text("Configuration")
 
             TextField(

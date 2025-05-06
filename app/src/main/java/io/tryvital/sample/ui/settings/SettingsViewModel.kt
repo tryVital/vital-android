@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.squareup.moshi.JsonClass
+import io.tryvital.client.AuthenticateRequest
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
@@ -19,6 +20,11 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okio.Buffer
+import okio.BufferedSource
+import okio.ByteString
+import okio.ByteString.Companion.encodeUtf8
+import okio.HashingSink
 import java.time.Instant
 import java.util.UUID
 
@@ -104,14 +110,29 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
 
     fun configureSDK(context: Context) {
         val state = uiState.value
-        VitalClient.configure(context, state.appSettings.region, state.appSettings.environment, state.appSettings.apiKey)
-        VitalClient.setUserId(context, state.appSettings.userId)
 
-        VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
-            logsEnabled = true
-        )
+        // Emulate an external user ID by taking SHA1(userId)[0:10]
+        // This should normally be a unique identifier from your own identity provider.
+        // e.g., your own user primary key, or a stable ID from IdP such as Firebase Auth or Auth0.
+        val shortHash = state.appSettings.userId.encodeUtf8().sha1().hex().substring(0, 10)
+        val externalUserId = "externalUserId:${shortHash}"
 
-        store.syncWithSDKStatus(context)
+        viewModelScope.launch {
+            VitalClient.identifyExternalUser(context, externalUserId) {
+                AuthenticateRequest.APIKey(
+                    userId = state.appSettings.userId,
+                    key = state.appSettings.apiKey,
+                    environment = state.appSettings.environment,
+                    region = state.appSettings.region
+                )
+            }
+
+            VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
+                logsEnabled = true
+            )
+
+            store.syncWithSDKStatus(context)
+        }
     }
 
     fun signInWithToken(context: Context) {
@@ -120,12 +141,23 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
 
         viewModelScope.launch {
             try {
-                // Emulate a backend-created Vital Sign-In Token.
-                val response = service.createSignInToken(settings.userId)
-                check(response.userId == settings.userId)
 
-                // Sign-in with the SDK using the created token.
-                VitalClient.signIn(context, response.signInToken)
+                // Sign-in with the SDK using the Sign In Token Scheme.
+
+                // Emulate an external user ID by taking SHA1(userId)[0:10]
+                // This should normally be a unique identifier from your own identity provider.
+                // e.g., your own user primary key, or a stable ID from IdP such as Firebase Auth or Auth0.
+                val shortHash = settings.userId.encodeUtf8().sha1().hex().substring(0, 10)
+                val externalUserId = "externalUserId:${shortHash}"
+
+                VitalClient.identifyExternalUser(context, externalUserId) {
+
+                    // Emulate a backend-created Vital Sign-In Token.
+                    val response = service.createSignInToken(settings.userId)
+                    check(response.userId == settings.userId)
+
+                    AuthenticateRequest.SignInToken(response.signInToken)
+                }
 
                 VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
                     logsEnabled = true

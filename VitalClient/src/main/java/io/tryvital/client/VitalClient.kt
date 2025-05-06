@@ -9,7 +9,9 @@ import androidx.security.crypto.MasterKeys
 import io.tryvital.client.dependencies.Dependencies
 import io.tryvital.client.jwt.VitalJWTAuth
 import io.tryvital.client.jwt.VitalJWTAuthChangeReason
+import io.tryvital.client.jwt.VitalJWTSignInError
 import io.tryvital.client.jwt.VitalSignInToken
+import io.tryvital.client.jwt.VitalSignInTokenClaims
 import io.tryvital.client.services.*
 import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.DelicateCoroutinesApi
@@ -22,6 +24,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 const val VITAL_PERFS_FILE_NAME: String = "vital_health_connect_prefs"
 const val VITAL_CLIENT_LOCAL_STORAGE: String = "vital_client_local_storage"
@@ -125,6 +129,7 @@ class VitalClient internal constructor(context: Context) {
         const val sdkVersion = "4.0.2"
 
         private var sharedInstance: VitalClient? = null
+        private val identifyMutex = Mutex()
 
         /**
          * The current status of the Vital SDK.
@@ -185,6 +190,19 @@ class VitalClient internal constructor(context: Context) {
                 }
             }
 
+        /**
+         * The currently identified External User ID of the Mobile SDK.
+         * This has meaning only if you have migrated to [identifyExternalUser].
+         *
+         * Note that this returns null if [VitalClient.getOrCreate] has never been called
+         * to initialize the [VitalClient].
+         */
+        val identifiedExternalUser: String?
+            get() {
+                val shared = synchronized(VitalClient) { sharedInstance } ?: return null
+                return shared.sharedPreferences.getString(VitalClientPrefKeys.externalUserId, null)
+            }
+
         fun checkUserId(): String {
             return currentUserId ?: throw IllegalStateException(
                 "The SDK does not have a signed-in user, or is not configured with an API Key for evaluation."
@@ -202,6 +220,119 @@ class VitalClient internal constructor(context: Context) {
             return instance
         }
 
+
+        /**
+         * Identify your user to the Vital Mobile SDK with an external user identifier from your system.
+         *
+         * This is _external_ with respect to the SDK. From your perspective, this would be your _internal_ user identifier.
+         *
+         * If the identified external user is not what the SDK has last seen, or has last successfully signed-in:
+         * 1. The SDK calls your supplied [authenticate] lambda.
+         * 2. Your lambda obtains a Vital Sign-In Token **from your backend service** and returns it.
+         * 3. The SDK performs the following actions:
+         *
+         * | SDK Signed-In User | The supplied Sign-In Token | Outcome |
+         * | ------ | ------ | ------ |
+         * | User A | User B | Sign out user A, then Sign in user B |
+         * | User A | User A | No-op |
+         * | None | User A | Sign In user A |
+         *
+         * Your [authenticate] lambda can throw CancellationError to abort the identify operation.
+         *
+         * You should identify at regular and significant moments in your app user lifecycle to ensure that it stays in sync with
+         * the Vital Mobile SDK user state. For example:
+         *
+         * 1. Identify your user after you signed in a new user.
+         * 2. Identify your user again after you have reloaded user state from persistent storage (e.g. [SharedPreferences]) post app launch.
+         *
+         * You can query the current identified user through [identifiedExternalUser].
+         *
+         * ## Notes on migrating from [signIn]
+         *
+         * [identifyExternalUser] does not perform any action or [VitalClient.signOut] when the Sign-In Token you supplied belongs
+         * to the already signed-in Vital User — regardless of whether the sign-in happened prior to or after the introduction of
+         * [identifyExternalUser].
+         *
+         * Because of this behaviour, you can migrate by simply replacing [signIn] with [identifyExternalUser].
+         * There is no precaution in SDK State — e.g., the Health SDK data sync state — being unintentionally reset.
+         */
+        suspend fun identifyExternalUser(
+            context: Context,
+            externalUserId: String,
+            authenticate: suspend (externalUserId: String) -> AuthenticateRequest
+        ): Unit = identifyMutex.withLock {
+            // ^ Only one `identify` is allowed to run at any given time.
+
+            // Make sure client has been setup & automaticConfiguration has been ran once
+            val client = getOrCreate(context)
+
+            val currentExternalUserId =
+                client.sharedPreferences.getString(VitalClientPrefKeys.externalUserId, null)
+
+            val logger = VitalLogger.getOrCreate()
+            logger.info { "Identify: input=<$externalUserId)> current=<$currentExternalUserId)>" }
+
+            if (currentExternalUserId == externalUserId) {
+                return
+            }
+
+            val resolvedUserId = when (val request = authenticate(externalUserId)) {
+                is AuthenticateRequest.APIKey -> {
+                    logger.info { "Identify: authenticating with API Key" }
+
+                    if (Status.Configured !in status){
+                        client.setConfiguration(
+                            VitalClientAuthStrategy.APIKey(request.key, request.environment, request.region)
+                        )
+                    }
+
+                    if (Status.SignedIn in status) {
+                        val existingUserId = currentUserId
+                        if (existingUserId != null && existingUserId.lowercase() != request.userId.lowercase()) {
+                            logger.info { "signing out current user $existingUserId" }
+                            client.signOut()
+                            client.setUserId(request.userId)
+                        } else {
+                            logger.info { "Identify: identified same user_id; no-op" }
+                        }
+                    } else {
+                        client.setUserId(request.userId)
+                    }
+
+                    request.userId
+                }
+
+                is AuthenticateRequest.SignInToken -> {
+                    logger.info { "Identify: authenticating with Sign In Token" }
+
+                    val claims = try {
+                        privateSignIn(context, client, request.rawToken)
+
+                    } catch (err: VitalJWTSignInError) {
+
+                        if (err.code != VitalJWTSignInError.Code.AlreadySignedIn) {
+                            throw err
+                        }
+
+                        logger.info { "Identify: signing out current user" }
+
+                        // Sign-out the current user, then sign-in again.
+                        client.signOut()
+
+                        privateSignIn(context, client, request.rawToken)
+                    }
+
+                    claims.userId
+                }
+            }
+
+            client.sharedPreferences.edit()
+                .putString(VitalClientPrefKeys.externalUserId, externalUserId)
+                .apply()
+
+            logger.info { "Identify: identified external user $externalUserId; user_id = $resolvedUserId" }
+        }
+
         /**
          * Sign-in the SDK with a User JWT — no API Key is needed.
          *
@@ -210,7 +341,12 @@ class VitalClient internal constructor(context: Context) {
          *
          * The environment and region is inferred from the User JWT. You need not specify them explicitly
          */
+        @Deprecated(message="Use `identifyExternalUser` with `AuthenticationRequest.SignInToken`.")
         suspend fun signIn(context: Context, token: String) {
+            privateSignIn(context, getOrCreate(context), token)
+        }
+
+        private suspend fun privateSignIn(context: Context, client: VitalClient, token: String): VitalSignInTokenClaims {
             val signInToken = VitalSignInToken.parse(token)
             val claims = signInToken.unverifiedClaims()
             val jwtAuth = VitalJWTAuth.getInstance(context)
@@ -218,10 +354,11 @@ class VitalClient internal constructor(context: Context) {
             jwtAuth.signIn(signInToken)
 
             // Configure the SDK only if we have signed in successfully.
-            val shared = getOrCreate(context)
-            shared.setConfiguration(
+            client.setConfiguration(
                 strategy = VitalClientAuthStrategy.JWT(claims.environment, claims.region),
             )
+
+            return claims
         }
 
         /**
@@ -231,6 +368,7 @@ class VitalClient internal constructor(context: Context) {
          * Prefer to use Vital Sign-In Token in your production apps, which allows your API Keys
          * to be kept fully as server-side secrets.
          */
+        @Deprecated(message="Use `identifyExternalUser` with `AuthenticationRequest.APIKey`.")
         fun configure(context: Context, region: Region, environment: Environment, apiKey: String) {
             getOrCreate(context).setConfiguration(
                 VitalClientAuthStrategy.APIKey(apiKey, environment, region)
@@ -244,8 +382,8 @@ class VitalClient internal constructor(context: Context) {
          * Prefer to use Vital Sign-In Token in your production apps, which allows your API Keys
          * to be kept fully as server-side secrets.
          */
+        @Deprecated(message="Use `identifyExternalUser` with `AuthenticationRequest.APIKey`.")
         fun setUserId(context: Context, userId: String) {
-            @Suppress("DEPRECATION")
             getOrCreate(context).setUserId(userId)
         }
 

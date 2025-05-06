@@ -42,7 +42,13 @@ class AppSettingsStore(
         val status = VitalClient.status
 
         val isConfigured = VitalClient.Status.Configured in status
-        update { it.copy(isSDKConfigured = isConfigured, sdkUserId = VitalClient.currentUserId) }
+        update {
+            it.copy(
+                isSDKConfigured = isConfigured,
+                sdkUserId = VitalClient.currentUserId,
+                sdkIdentifiedExternalUser = VitalClient.identifiedExternalUser
+            )
+        }
     }
 
     companion object {
@@ -71,6 +77,7 @@ data class AppSettings(
     val region: Region = Region.US,
     val userId: String = "",
     val sdkUserId: String? = null,
+    val sdkIdentifiedExternalUser: String? = null,
     val isSDKConfigured: Boolean = false,
 )
 
