@@ -17,6 +17,7 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Retrofit
+import java.time.Instant
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class UserServiceTest {
@@ -95,6 +96,7 @@ class UserServiceTest {
         val provider = response.providers[0]
         assertEquals(provider.name, "Fitbit")
         assertEquals(provider.slug, ProviderSlug.Fitbit)
+        assertEquals(provider.createdOn, Instant.parse("2023-12-31T11:22:33Z"))
     }
 
     @Test
@@ -230,6 +232,7 @@ class UserServiceTest {
                 "slug": "fitbit",
                 "logo": "https://storage.googleapis.com/vital-assets/fitbit.png",
                 "status": "connected",
+                "created_on": "2023-12-31T11:22:33+00:00",
                 "resource_availability": {
                     "activity": {
                         "status": "available",
