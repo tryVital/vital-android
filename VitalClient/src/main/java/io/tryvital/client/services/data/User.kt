@@ -33,6 +33,8 @@ data class UserConnection(
     val status: UserConnectionStatus,
     @Json(name = "resource_availability")
     val resourceAvailability: Map<VitalAPIResource, ResourceAvailability>,
+    @Json(name = "created_on")
+    val createdOn: Instant,
 )
 
 @JsonClass(generateAdapter = false)
