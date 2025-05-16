@@ -151,6 +151,15 @@ class VitalHealthConnectManager private constructor(
     }
 
     @Suppress("unused")
+    fun hasAskedForPermissions(resources: List<VitalResource>): Map<VitalResource, PermissionStatus> {
+        return resources.associateWith { resource ->
+            val hasAsked =
+                sharedPreferences.getBoolean(UnSecurePrefKeys.readResourceGrant(resource), false)
+            if (hasAsked) PermissionStatus.Asked else PermissionStatus.NotAsked
+        }
+    }
+
+    @Suppress("unused")
     fun hasAskedForPermission(resource: WritableVitalResource): Boolean {
         return sharedPreferences.getBoolean(UnSecurePrefKeys.writeResourceGrant(resource), false)
     }
