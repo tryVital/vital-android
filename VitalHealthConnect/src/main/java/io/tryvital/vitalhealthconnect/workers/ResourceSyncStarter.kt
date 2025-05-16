@@ -83,7 +83,7 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
     }
 
     private val syncNotificationBuilder: SyncNotificationBuilder by lazy {
-        VitalHealthConnectManager.getOrCreate(applicationContext).syncNotificationBuilder
+        VitalHealthConnectManager.syncNotificationBuilder(applicationContext)
     }
 
     override suspend fun doWork(): Result {

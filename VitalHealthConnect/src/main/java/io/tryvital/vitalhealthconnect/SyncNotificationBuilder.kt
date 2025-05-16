@@ -5,8 +5,10 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import com.squareup.moshi.JsonClass
+import io.tryvital.client.VITAL_PERFS_FILE_NAME
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.workers.getJson
 import io.tryvital.vitalhealthconnect.workers.putJson
@@ -71,6 +73,21 @@ class DefaultSyncNotificationBuilder(
                 channelName = "Health Data Sync",
                 channelDescription = "Notifies when $appName is synchronizing with Health Connect.",
             )
+        }
+    }
+
+    companion object {
+        private var shared: DefaultSyncNotificationBuilder? = null
+
+        fun getOrCreate(context: Context): DefaultSyncNotificationBuilder = synchronized(this) {
+            if (shared == null) {
+                shared = DefaultSyncNotificationBuilder(
+                    context.applicationContext.getSharedPreferences(
+                        VITAL_PERFS_FILE_NAME, MODE_PRIVATE
+                    )
+                )
+            }
+            return shared as DefaultSyncNotificationBuilder
         }
     }
 }

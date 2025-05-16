@@ -84,27 +84,10 @@ class VitalHealthConnectManager private constructor(
 
     private val vitalLogger = vitalClient.vitalLogger
 
-    /**
-     * When the Vital SDK launches a Foreground Service to handle data synchronization,
-     * it asks the current [SyncNotificationBuilder] to produce a user-facing notification
-     * indicating that such sync task is ongoing. This is **required** by the Android platform.
-     *
-     * Running as a Foreground Service ensures that Vital SDK can read from Health Connect, as well
-     * as synchronization not being interrupted when the user switches away from your app.
-     *
-     * In some cases, the system may grant a grace period of 10 seconds before notifying the user.
-     * This means if the SDK data sync ends within the grace period, the user may not be notified
-     * in the end.
-     *
-     * Ref: https://developer.android.com/develop/background-work/services/foreground-services
-     */
+    @Deprecated("Use `VitalHealthConnectManager.Companion.syncNotificationBuilder` and `VitalHealthConnectManager.Companion.setSyncNotificationBuilder` instead.")
     var syncNotificationBuilder: SyncNotificationBuilder
-        get() = _syncNotificationBuilder.get()
-        set(newValue) = _syncNotificationBuilder.set(newValue)
-
-    private val _syncNotificationBuilder = AtomicReference<SyncNotificationBuilder>(
-        DefaultSyncNotificationBuilder(vitalClient.sharedPreferences)
-    )
+        get() = syncNotificationBuilder(context)
+        set(newValue) = setSyncNotificationBuilder(newValue)
 
     // Unlimited buffering for slow subscribers.
     // https://github.com/Kotlin/kotlinx.coroutines/issues/2034#issuecomment-630381961
@@ -246,7 +229,7 @@ class VitalHealthConnectManager private constructor(
         }
 
         if (syncNotificationBuilder != null) {
-            this._syncNotificationBuilder.set(syncNotificationBuilder)
+            setSyncNotificationBuilder(syncNotificationBuilder)
         }
 
         vitalLogger.enabled = logsEnabled
@@ -494,6 +477,36 @@ class VitalHealthConnectManager private constructor(
 
     companion object {
         private const val packageName = "com.google.android.apps.healthdata"
+
+        private val _customSyncNotificationBuilder = AtomicReference<SyncNotificationBuilder?>(null)
+
+        /**
+         * When the Vital SDK launches a Foreground Service to handle data synchronization,
+         * it asks the current [SyncNotificationBuilder] to produce a user-facing notification
+         * indicating that such sync task is ongoing. This is **required** by the Android platform.
+         *
+         * Running as a Foreground Service ensures that Vital SDK can read from Health Connect, as well
+         * as synchronization not being interrupted when the user switches away from your app.
+         *
+         * In some cases, the system may grant a grace period of 10 seconds before notifying the user.
+         * This means if the SDK data sync ends within the grace period, the user may not be notified
+         * in the end.
+         *
+         * Ref: https://developer.android.com/develop/background-work/services/foreground-services
+         */
+        fun syncNotificationBuilder(context: Context): SyncNotificationBuilder {
+            // IMPORTANT: The logic here should be kept to the minimum.
+            //
+            // This runs between context.startForegroundService -> ServiceCompact.startForeground,
+            // so every additional call increases the chance of breaching the 5-second timeout
+            // imposed by the Android OS.
+            return _customSyncNotificationBuilder.get()
+                ?: DefaultSyncNotificationBuilder.getOrCreate(context)
+        }
+
+        fun setSyncNotificationBuilder(builder: SyncNotificationBuilder) {
+            _customSyncNotificationBuilder.set(builder)
+        }
 
         @SuppressLint("StaticFieldLeak")
         private var sharedInstance: VitalHealthConnectManager? = null

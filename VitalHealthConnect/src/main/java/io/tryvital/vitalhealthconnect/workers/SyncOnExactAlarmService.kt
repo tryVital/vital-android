@@ -16,15 +16,11 @@ class SyncOnExactAlarmService: Service() {
     override fun onBind(p0: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        VitalLogger.getOrCreate().info { "BgSync: started SyncOnExactAlarmService" }
-
-        val manager = VitalHealthConnectManager.getOrCreate(applicationContext)
-        val resources = manager.resourcesWithReadPermission()
 
         // This logic should be identical to that in ResourceSyncStarter
         // when input.startForeground is set to true.
-        val syncNotificationBuilder = manager.syncNotificationBuilder
-        val notification = syncNotificationBuilder.build(applicationContext, resources)
+        val syncNotificationBuilder = VitalHealthConnectManager.syncNotificationBuilder(applicationContext)
+        val notification = syncNotificationBuilder.build(applicationContext, emptySet())
 
         ServiceCompat.startForeground(
             this,
@@ -33,6 +29,9 @@ class SyncOnExactAlarmService: Service() {
             foregroundServiceType()
         )
 
+        VitalLogger.getOrCreate().info { "BgSync: started SyncOnExactAlarmService" }
+
+        val manager = VitalHealthConnectManager.getOrCreate(applicationContext)
         val launched = manager.launchAutoSyncWorker(startForeground = false) {
             VitalLogger.getOrCreate().info { "BgSync: sync triggered by SyncOnExactAlarmService" }
         }
