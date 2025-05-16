@@ -13,6 +13,7 @@ import io.tryvital.vitalhealthconnect.disableBackgroundSync
 import io.tryvital.vitalhealthconnect.enableBackgroundSyncContract
 import io.tryvital.vitalhealthconnect.isBackgroundSyncEnabled
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.model.PermissionStatus
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.WritableVitalResource
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,9 +82,14 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
             if (state.available != HealthConnectAvailability.Installed)
                 return@launch
 
-            val allResources = VitalResource.values().toSet()
-            val permissionsGranted = allResources.filter(vitalHealthConnectManager::hasAskedForPermission).toSet()
-            val permissionsMissing = allResources - permissionsGranted
+            val allResources = VitalResource.values().toList()
+            val permissionStatusMap = vitalHealthConnectManager.permissionStatus(allResources)
+
+            val permissionsGranted = permissionStatusMap
+                .filter { it.value == PermissionStatus.Asked }
+                .keys
+                .toSet()
+            val permissionsMissing = allResources.toSet() - permissionsGranted
 
             viewModelState.update {
                 it.copy(
