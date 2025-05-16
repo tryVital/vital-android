@@ -83,7 +83,7 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
                 return@launch
 
             val allResources = VitalResource.values().toList()
-            val permissionStatusMap = vitalHealthConnectManager.hasAskedForPermissions(allResources)
+            val permissionStatusMap = vitalHealthConnectManager.permissionStatus(allResources)
 
             val permissionsGranted = permissionStatusMap
                 .filter { it.value == PermissionStatus.Asked }
