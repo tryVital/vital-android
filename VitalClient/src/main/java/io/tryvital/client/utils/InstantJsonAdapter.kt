@@ -12,7 +12,7 @@ object InstantJsonAdapter: JsonAdapter<Instant>() {
         }
 
         val rawValue = reader.nextString()
-        return Instant.parse(rawValue)
+        return Instant.parse(rawValue.replace("+00:00", "Z"))
     }
 
     override fun toJson(writer: JsonWriter, value: Instant?) {
