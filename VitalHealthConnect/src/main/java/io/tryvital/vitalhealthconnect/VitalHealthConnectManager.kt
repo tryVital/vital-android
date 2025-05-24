@@ -13,6 +13,7 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectClient.Companion.ACTION_HEALTH_CONNECT_SETTINGS
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.*
+import androidx.health.connect.client.records.metadata.Metadata
 import androidx.health.connect.client.units.BloodGlucose
 import androidx.health.connect.client.units.Volume
 import androidx.lifecycle.LifecycleObserver
@@ -360,7 +361,8 @@ class VitalHealthConnectManager private constructor(
                             startZoneOffset = ZoneOffset.UTC,
                             endTime = if (startDate <= endDate) startDate.plusSeconds(1) else endDate,
                             endZoneOffset = ZoneOffset.UTC,
-                            volume = Volume.milliliters(value)
+                            volume = Volume.milliliters(value),
+                            metadata = Metadata.manualEntry(),
                         )
                     )
                 )
@@ -372,6 +374,7 @@ class VitalHealthConnectManager private constructor(
                             time = startDate,
                             zoneOffset = ZoneOffset.UTC,
                             level = BloodGlucose.milligramsPerDeciliter(value),
+                            metadata = Metadata.manualEntry(),
                         )
                     )
                 )
