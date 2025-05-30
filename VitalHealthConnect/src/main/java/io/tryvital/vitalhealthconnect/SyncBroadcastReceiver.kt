@@ -1,10 +1,12 @@
 package io.tryvital.vitalhealthconnect
 
 import android.app.AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED
+import android.app.ForegroundServiceStartNotAllowedException
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.Intent.ACTION_BOOT_COMPLETED
+import android.os.Build
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.workers.SyncOnExactAlarmService
@@ -67,8 +69,24 @@ class SyncBroadcastReceiver: BroadcastReceiver() {
         // [SyncOnExactAlarmService] bridges this abstraction gap. It starts as a FGS, then
         // asks WorkManager to start [ResourceSyncStarter] without an FGS. It then finally waits for
         // the enqueued work to complete, before stopping itself.
-        context.startForegroundService(
-            Intent(context, SyncOnExactAlarmService::class.java)
-        )
+        try {
+            context.startForegroundService(
+                Intent(context, SyncOnExactAlarmService::class.java)
+            )
+
+        } catch (exc: Throwable) {
+            // startForegroundService throws ForegroundServiceStartNotAllowedException in the wild
+            // for no good reason, despite handling exact alarm being an exempted case.
+            // https://issuetracker.google.com/issues/307329994
+            VitalLogger.getOrCreate().info { "BgSync: failed to start: ${exc::class.qualifiedName} ${exc.message}" }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && exc is ForegroundServiceStartNotAllowedException) {
+                // Bail out gracefully
+                return
+            }
+
+            // Rethrow the exception
+            throw exc
+        }
     }
 }
