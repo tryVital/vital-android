@@ -21,16 +21,16 @@ fun quantitySample(
         device.manufacturer?.let { deviceMetadata["_DMA"] = it }
         device.type.let { type ->
             deviceMetadata["_DTY"] = when (type) {
-                Device.TYPE_UNKNOWN -> "UNKNOWN"
-                Device.TYPE_WATCH -> "WATCH"
-                Device.TYPE_PHONE -> "PHONE"
-                Device.TYPE_SCALE -> "SCALE"
-                Device.TYPE_RING -> "RING"
-                Device.TYPE_HEAD_MOUNTED -> "HEAD_MOUNTED"
-                Device.TYPE_FITNESS_BAND -> "FITNESS_BAND"
-                Device.TYPE_CHEST_STRAP -> "CHEST_STRAP"
-                Device.TYPE_SMART_DISPLAY -> "SMART_DISPLAY"
-                else -> "UNKNOWN"
+                Device.TYPE_UNKNOWN -> "unknown"
+                Device.TYPE_WATCH -> "watch"
+                Device.TYPE_PHONE -> "phone"
+                Device.TYPE_SCALE -> "scale"
+                Device.TYPE_RING -> "ring"
+                Device.TYPE_HEAD_MOUNTED -> "head_mounted"
+                Device.TYPE_FITNESS_BAND -> "fitness_band"
+                Device.TYPE_CHEST_STRAP -> "chest_strap"
+                Device.TYPE_SMART_DISPLAY -> "smart_display"
+                else -> "unknown"
             }
         }
     }
