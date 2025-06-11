@@ -13,6 +13,7 @@ data class LocalSyncState(
     val ingestionEnd: Instant?,
     val perDeviceActivityTS: Boolean,
     val expiresAt: Instant,
+    val reportingInterval: Long? = null,
 ) {
 
     fun historicalStartDate(@Suppress("UNUSED_PARAMETER") resource: RemappedVitalResource): Instant {

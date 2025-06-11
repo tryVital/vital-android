@@ -16,12 +16,12 @@ import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.ManualMealCreation
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
+import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.Retrofit
 import retrofit2.http.Body
 import retrofit2.http.POST
 import retrofit2.http.Path
-import java.util.*
 
 @Suppress("unused")
 @VitalPrivateApi
@@ -93,6 +93,12 @@ interface VitalPrivateService {
     suspend fun bloodPressureTimeseriesPost(
         @Path("user_id") userId: String,
         @Body payload: TimeseriesPayload<List<LocalBloodPressureSample>>
+    ): Response<Unit>
+
+    @POST("user/{user_id}/sdk_sync_progress/health_connect")
+    suspend fun reportSyncProgress(
+        @Path("user_id") userId: String,
+        @Body payload: RequestBody
     ): Response<Unit>
 
     companion object {
