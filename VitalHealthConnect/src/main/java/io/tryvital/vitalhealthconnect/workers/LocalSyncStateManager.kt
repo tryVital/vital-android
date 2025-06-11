@@ -22,7 +22,7 @@ internal class LocalSyncStateManager(
     private val preferences: SharedPreferences,
 ) {
 
-    private fun getPersistedLocalSyncState(): LocalSyncState?
+    internal fun getPersistedLocalSyncState(): LocalSyncState?
         = preferences.getJson(UnSecurePrefKeys.localSyncStateKey)
 
     private fun setPersistedLocalSyncState(newValue: LocalSyncState) {
