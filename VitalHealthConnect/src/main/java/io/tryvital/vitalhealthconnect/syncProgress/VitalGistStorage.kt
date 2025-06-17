@@ -2,6 +2,9 @@ package io.tryvital.vitalhealthconnect.syncProgress
 
 import android.content.Context
 import androidx.core.util.AtomicFile
+import com.squareup.moshi.JsonAdapter
+import com.squareup.moshi.JsonReader
+import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.adapter
 import io.tryvital.client.utils.InstantJsonAdapter
@@ -75,7 +78,31 @@ internal class VitalGistStorage(private val applicationDataDir: File) {
         val moshi: Moshi by lazy {
             Moshi.Builder()
                 .add(Instant::class.java, InstantJsonAdapter)
+                .add(SyncProgress.SyncStatus::class.java, IntEnumAdapter(SyncProgress.SyncStatus.Companion::of))
+                .add(SyncProgress.SystemEventType::class.java, IntEnumAdapter(SyncProgress.SystemEventType.Companion::of))
+                .add(SyncProgress.SyncContextTag::class.java, IntEnumAdapter(SyncProgress.SyncContextTag.Companion::of))
                 .build()
+        }
+    }
+}
+
+internal interface RawIntRepresentable {
+    val rawValue: Int
+}
+
+internal inline fun <reified Enum: RawIntRepresentable> IntEnumAdapter(
+    crossinline create: (Int) -> Enum
+): JsonAdapter<Enum> = object:
+    JsonAdapter<Enum>() {
+    override fun fromJson(reader: JsonReader): Enum {
+        return create(reader.nextInt())
+    }
+
+    override fun toJson(writer: JsonWriter, value: Enum?) {
+        if (value != null) {
+            writer.value(value.rawValue)
+        } else {
+            writer.nullValue()
         }
     }
 }

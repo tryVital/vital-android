@@ -4,7 +4,7 @@ import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import io.tryvital.vitalhealthconnect.model.BackfillType
 import io.tryvital.vitalhealthconnect.model.VitalResource
-import java.util.Date
+import java.time.Instant
 
 
 @JsonClass(generateAdapter = true)
@@ -14,27 +14,33 @@ internal data class SyncProgress(
 ) {
 
     @JsonClass(generateAdapter = false)
-    enum class SystemEventType(val raw: Int) {
+    enum class SystemEventType(override val rawValue: Int): RawIntRepresentable {
         healthConnectCalloutBackground(0),
         healthConnectCalloutForeground(1),
         backgroundProcessingTask(2),
         healthConnectCalloutAppLaunching(3),
         healthConnectCalloutAppTerminating(4);
+
+        companion object {
+            fun of(value: Int): SystemEventType {
+                return SystemEventType.values().first { it.rawValue == value }
+            }
+        }
     }
 
     @JsonClass(generateAdapter = true)
     data class Event<T>(
-        val timestamp: Date,
+        val timestamp: Instant,
         val type: T,
         var count: Int = 1,
         @Json(name = "error_details")
         val errorDetails: String? = null
     ) {
-        val id: Date get() = timestamp
+        val id: Instant get() = timestamp
     }
 
     @JsonClass(generateAdapter = false)
-    enum class SyncStatus(val raw: Int) {
+    enum class SyncStatus(override val rawValue: Int): RawIntRepresentable {
         deprioritized(0),
         started(1),
         readChunk(2),
@@ -54,21 +60,27 @@ internal data class SyncProgress(
                 deprioritized, started, readChunk, uploadedChunk, revalidatingSyncState -> true
                 else -> false
             }
+
+        companion object {
+            fun of(value: Int): SyncStatus {
+                return values().first { it.rawValue == value }
+            }
+        }
     }
 
     @JsonClass(generateAdapter = true)
     data class Sync(
-        val start: Date,
-        var end: Date? = null,
+        val start: Instant,
+        var end: Instant? = null,
         val tags: MutableSet<SyncContextTag> = mutableSetOf(),
         val statuses: MutableList<Event<SyncStatus>> = mutableListOf(),
         @Json(name = "data_count")
         var dataCount: Int = 0
     ) {
-        val id: Date get() = start
+        val id: Instant get() = start
         val lastStatus: SyncStatus get() = statuses.last().type
 
-        fun append(status: SyncStatus, timestamp: Date = Date(), errorDetails: String? = null) {
+        fun append(status: SyncStatus, timestamp: Instant = Instant.now(), errorDetails: String? = null) {
             statuses += Event(timestamp, status, errorDetails = errorDetails)
         }
 
@@ -87,7 +99,7 @@ internal data class SyncProgress(
     @JsonClass(generateAdapter = true)
     data class SyncID(
         val resource: VitalResource,
-        val start: Date = Date(),
+        val start: Instant = Instant.now(),
         val tags: MutableSet<SyncContextTag> = mutableSetOf()
     )
 
@@ -99,14 +111,14 @@ internal data class SyncProgress(
         @Json(name = "data_count")
         var dataCount: Int = 0,
         @Json(name = "first_asked")
-        var firstAsked: Date? = null
+        var firstAsked: Instant? = null
     ) {
         val latestSync: Sync? get() = syncs.lastOrNull()
         inline fun with(action: Resource.() -> Unit) = action()
     }
 
     @JsonClass(generateAdapter = false)
-    enum class SyncContextTag(val raw: Int) {
+    enum class SyncContextTag(override val rawValue: Int): RawIntRepresentable {
         foreground(0),
         background(1),
         healthKit(2),
@@ -117,7 +129,13 @@ internal data class SyncProgress(
         maintenanceTask(7),
         manual(8),
         appLaunching(9),
-        appTerminating(10),
+        appTerminating(10);
+
+        companion object {
+            fun of(value: Int): SyncContextTag {
+                return SyncContextTag.values().first { it.rawValue == value }
+            }
+        }
     }
 }
 

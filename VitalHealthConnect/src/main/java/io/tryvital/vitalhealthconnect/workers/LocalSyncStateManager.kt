@@ -32,7 +32,7 @@ internal class LocalSyncStateManager(
     }
 
     @OptIn(VitalPrivateApi::class)
-    suspend fun getLocalSyncState(): LocalSyncState {
+    suspend fun getLocalSyncState(onRevalidation: () -> Unit): LocalSyncState {
         // If we have a LocalSyncState with valid TTL, return it.
         val state = getPersistedLocalSyncState()
         if (state != null && state.expiresAt > Instant.now()) {
@@ -48,6 +48,7 @@ internal class LocalSyncStateManager(
             }
 
             vitalLogger.info { "LocalSyncState: revalidating" }
+            onRevalidation()
 
             /// Make sure the user has a connected source set up
             vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
