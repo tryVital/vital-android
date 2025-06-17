@@ -6,6 +6,7 @@ import android.os.IBinder
 import androidx.core.app.ServiceCompat
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
+import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -32,7 +33,10 @@ class SyncOnExactAlarmService: Service() {
         VitalLogger.getOrCreate().info { "BgSync: started SyncOnExactAlarmService" }
 
         val manager = VitalHealthConnectManager.getOrCreate(applicationContext)
-        val launched = manager.launchAutoSyncWorker(startForeground = false) {
+        val launched = manager.launchAutoSyncWorker(
+            startForeground = false,
+            systemEventType = SyncProgress.SystemEventType.healthConnectCalloutBackground,
+        ) {
             VitalLogger.getOrCreate().info { "BgSync: sync triggered by SyncOnExactAlarmService" }
         }
 

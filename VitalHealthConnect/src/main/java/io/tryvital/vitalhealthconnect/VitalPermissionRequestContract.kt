@@ -129,6 +129,8 @@ class VitalPermissionRequestContract(
             val allNewGrants = readGrants + discoveredNewGrants
 
             if (allNewGrants.isNotEmpty()) {
+                manager.syncProgressStore.recordAsk(allNewGrants.map { it.remapped() }.toSet())
+
                 // Asynchronously start syncing the newly granted read resources
                 taskScope.launch {
                     manager.syncData(allNewGrants)

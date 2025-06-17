@@ -26,6 +26,7 @@ import kotlin.time.Duration.Companion.seconds
 
 val AUTO_SYNC_THROTTLE_DEFAULT = 5.seconds
 
+private val BACKGROUND_SYNC_INTERVAL_MINIMUM = 15.minutes
 private val BACKGROUND_SYNC_INTERVAL_DEFAULT = 1.hours
 
 val VitalHealthConnectManager.isBackgroundSyncEnabled: Boolean
@@ -49,8 +50,14 @@ var VitalHealthConnectManager.autoSyncThrottle: Duration
 
 var VitalHealthConnectManager.backgroundSyncMinimumInterval: Duration
     get() = maxOf(
-        sharedPreferences.getLong(UnSecurePrefKeys.backgroundSyncMinIntervalKey, 0).milliseconds,
-        BACKGROUND_SYNC_INTERVAL_DEFAULT,
+        sharedPreferences.getLong(UnSecurePrefKeys.backgroundSyncMinIntervalKey, -1).let {
+            if (it > 0) {
+                it.milliseconds
+            } else {
+                BACKGROUND_SYNC_INTERVAL_DEFAULT
+            }
+        },
+        BACKGROUND_SYNC_INTERVAL_MINIMUM,
     )
     set(newValue) {
         sharedPreferences.edit()

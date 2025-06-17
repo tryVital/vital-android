@@ -23,6 +23,7 @@ import io.tryvital.vitalhealthconnect.isConnectedToInternet
 import io.tryvital.vitalhealthconnect.markAutoSyncSuccess
 import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -46,10 +47,13 @@ internal data class ResourceSyncStarterInput(
      * violates the short service FGS requirement.
      */
     val startForeground: Boolean,
+
+    val tags: List<SyncProgress.SyncContextTag> = emptyList(),
 ) {
     fun toData(): Data = Data.Builder().run {
         putStringArray("resources", resources.map { it.wrapped.toString() }.toTypedArray())
         putBoolean("startForeground", startForeground)
+        putIntArray("tags", tags.map { it.rawValue }.toIntArray())
         build()
     }
 
@@ -59,6 +63,7 @@ internal data class ResourceSyncStarterInput(
                 RemappedVitalResource(VitalResource.valueOf(it))
             } ?: emptySet(),
             startForeground = data.getBoolean("startForeground", true),
+            tags = data.getIntArray("tags")?.map(SyncProgress.SyncContextTag.Companion::of) ?: emptyList()
         )
     }
 }
@@ -143,8 +148,13 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
         val prioritizedResources = input.resources.sortedBy { it.wrapped.priority }
 
         for (resource in prioritizedResources) {
+            val input = ResourceSyncWorkerInput(
+                resource = resource,
+                tags = input.tags,
+            )
+
             val workRequest = OneTimeWorkRequestBuilder<ResourceSyncWorker>()
-                .setInputData(ResourceSyncWorkerInput(resource = resource).toData())
+                .setInputData(input.toData())
                 .addTag(resource.wrapped.name)
                 .build()
 

@@ -49,9 +49,11 @@ internal val moshi by lazy {
 
 internal data class ResourceSyncWorkerInput(
     val resource: RemappedVitalResource,
+    val tags: List<SyncProgress.SyncContextTag> = emptyList(),
 ) {
     fun toData(): Data = Data.Builder().run {
         putString("resource", resource.toString())
+        putIntArray("tags", tags.map { it.rawValue }.toIntArray())
         build()
     }
 
@@ -62,6 +64,7 @@ internal data class ResourceSyncWorkerInput(
                     data.getString("resource") ?: throw IllegalArgumentException("Missing resource")
                 )
             ),
+            tags = data.getIntArray("tags")?.map(SyncProgress.SyncContextTag.Companion::of) ?: emptyList()
         )
     }
 }
@@ -123,7 +126,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     private val vitalLogger = VitalLogger.getOrCreate()
 
     private val syncID by lazy {
-        SyncProgress.SyncID(input.resource.wrapped)
+        SyncProgress.SyncID(resource = input.resource.wrapped, tags = input.tags.toSet())
     }
 
     override suspend fun doWork(): Result {
