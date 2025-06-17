@@ -100,7 +100,7 @@ internal data class SyncProgress(
     data class SyncID(
         val resource: VitalResource,
         val start: Instant = Instant.now(),
-        val tags: MutableSet<SyncContextTag> = mutableSetOf()
+        val tags: Set<SyncContextTag> = emptySet()
     )
 
     @JsonClass(generateAdapter = true)

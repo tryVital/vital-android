@@ -25,6 +25,7 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.records.*
+import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
 import io.tryvital.vitalhealthconnect.syncProgress.SyncProgressReporter
 import io.tryvital.vitalhealthconnect.syncProgress.SyncProgressStore
 import io.tryvital.vitalhealthconnect.workers.*
@@ -288,7 +289,11 @@ class VitalHealthConnectManager private constructor(
 
             // Sync each resource one by one for now to lower the possibility of
             // triggering rate limit
-            startSyncWorker(remappedCandidates, startForeground = true)
+            startSyncWorker(
+                remappedCandidates,
+                startForeground = true,
+                tags = listOf(SyncProgress.SyncContextTag.manual)
+            )
 
             // Wait until the sync worker completes.
             observeSyncWorkerCompleted()
@@ -310,7 +315,11 @@ class VitalHealthConnectManager private constructor(
      * @param beforeEnqueue Block to invoke before enqueuing the work. Will not be invoke if we
      * are not going to spawn a sync worker, e.g., due to [pauseSynchronization].
      */
-    internal fun launchAutoSyncWorker(startForeground: Boolean, beforeEnqueue: () -> Unit): Boolean {
+    internal fun launchAutoSyncWorker(
+        startForeground: Boolean,
+        systemEventType: SyncProgress.SystemEventType? = null,
+        beforeEnqueue: () -> Unit
+    ): Boolean {
         check(Looper.getMainLooper().isCurrentThread)
 
         // We assume:
@@ -345,7 +354,11 @@ class VitalHealthConnectManager private constructor(
         // e.g. (Activity | ActiveEnergyBurned | BasalEnergyBurned) => Activity
         val remappedCandidates = candidates.mapTo(mutableSetOf()) { it.remapped() }
 
-        startSyncWorker(remappedCandidates, startForeground, beforeEnqueue)
+        if (systemEventType != null) {
+            syncProgressStore.recordSystem(remappedCandidates, systemEventType)
+        }
+
+        startSyncWorker(remappedCandidates, startForeground, emptyList(), beforeEnqueue)
         return true
     }
 
@@ -419,9 +432,10 @@ class VitalHealthConnectManager private constructor(
     private fun startSyncWorker(
         resources: Set<RemappedVitalResource>,
         startForeground: Boolean,
+        tags: List<SyncProgress.SyncContextTag> = emptyList(),
         beforeEnqueue: (() -> Unit)? = null
     ) {
-        val input = ResourceSyncStarterInput(resources = resources, startForeground = startForeground)
+        val input = ResourceSyncStarterInput(resources = resources, startForeground = startForeground, tags = tags)
         val workRequest = OneTimeWorkRequestBuilder<ResourceSyncStarter>()
             .setInputData(input.toData())
             .build()

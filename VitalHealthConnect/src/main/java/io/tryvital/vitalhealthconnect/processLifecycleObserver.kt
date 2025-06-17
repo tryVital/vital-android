@@ -9,6 +9,7 @@ import androidx.lifecycle.lifecycleScope
 import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
@@ -37,7 +38,10 @@ internal fun processLifecycleObserver(
                 return@launch
             }
 
-            manager.launchAutoSyncWorker(startForeground = true) {
+            manager.launchAutoSyncWorker(
+                startForeground = true,
+                systemEventType = SyncProgress.SystemEventType.healthConnectCalloutAppLaunching,
+            ) {
                 VitalLogger.getOrCreate().info { "BgSync: sync triggered by process ON_START" }
             }
         }
