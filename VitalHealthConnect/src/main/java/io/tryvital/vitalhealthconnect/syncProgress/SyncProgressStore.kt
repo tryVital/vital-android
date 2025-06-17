@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.util.Date
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
@@ -82,7 +83,7 @@ internal class SyncProgressStore private constructor(private val storage: VitalG
     ) {
         val augmentedTags = id.tags.toMutableSet().also(::insertAppStateTags)
         mutate(listOf(id.resource.backfillType)) { res ->
-            val now = Date()
+            val now = Instant.now()
             val latest = res.syncs.lastOrNull()
             val appendsToLatest = latest?.start == id.start ||
                     (status == SyncProgress.SyncStatus.deprioritized &&
@@ -121,7 +122,7 @@ internal class SyncProgressStore private constructor(private val storage: VitalG
     }
 
     fun recordAsk(resources: Collection<RemappedVitalResource>) {
-        val date = Date()
+        val date = Instant.now()
         mutate(resources.map { it.wrapped.backfillType }) { it.firstAsked = date }
     }
 
@@ -130,11 +131,11 @@ internal class SyncProgressStore private constructor(private val storage: VitalG
         eventType: SyncProgress.SystemEventType
     ) {
         mutate(resources.map { it.wrapped.backfillType }) { res ->
-            val now = Date()
+            val now = Instant.now()
             val last = res.systemEvents.lastOrNull()
             val within5Seconds = last != null &&
                     last.type == eventType &&
-                    now.time - last.timestamp.time <= 5_000
+                    now.epochSecond - last.timestamp.epochSecond <= 5
 
             if (within5Seconds) {
                 last!!.count += 1

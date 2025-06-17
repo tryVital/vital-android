@@ -25,6 +25,8 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.records.*
+import io.tryvital.vitalhealthconnect.syncProgress.SyncProgressReporter
+import io.tryvital.vitalhealthconnect.syncProgress.SyncProgressStore
 import io.tryvital.vitalhealthconnect.workers.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -40,10 +42,14 @@ import kotlin.reflect.KClass
 @Suppress("MemberVisibilityCanBePrivate")
 class VitalHealthConnectManager private constructor(
     internal val context: Context,
-    private val healthConnectClientProvider: HealthConnectClientProvider,
+    internal val healthConnectClientProvider: HealthConnectClientProvider,
     internal val vitalClient: VitalClient,
-    private val recordReader: RecordReader,
-    private val recordProcessor: RecordProcessor,
+    internal val recordReader: RecordReader,
+    internal val recordProcessor: RecordProcessor,
+    internal val recordUploader: RecordUploader,
+    internal val localSyncStateManager: LocalSyncStateManager,
+    internal val syncProgressReporter: SyncProgressReporter,
+    internal val syncProgressStore: SyncProgressStore,
 ) {
     val sharedPreferences get() = vitalClient.sharedPreferences
     private val permissionMutex = Mutex()
@@ -554,6 +560,9 @@ class VitalHealthConnectManager private constructor(
                 val coreClient = VitalClient.getOrCreate(appContext)
                 val healthConnectClientProvider = HealthConnectClientProvider()
 
+                val localSyncStateManager = LocalSyncStateManager(coreClient, VitalLogger.getOrCreate(), coreClient.sharedPreferences)
+                val syncProgressStore = SyncProgressStore.getOrCreate(appContext)
+
                 instance = VitalHealthConnectManager(
                     appContext,
                     healthConnectClientProvider,
@@ -562,7 +571,11 @@ class VitalHealthConnectManager private constructor(
                     HealthConnectRecordProcessor(
                         HealthConnectRecordReader(appContext, healthConnectClientProvider),
                         HealthConnectRecordAggregator(appContext, healthConnectClientProvider),
-                    )
+                    ),
+                    VitalClientRecordUploader(coreClient),
+                    localSyncStateManager,
+                    SyncProgressReporter(syncProgressStore, coreClient, localSyncStateManager),
+                    syncProgressStore,
                 )
                 sharedInstance = instance
                 bind(instance, coreClient)

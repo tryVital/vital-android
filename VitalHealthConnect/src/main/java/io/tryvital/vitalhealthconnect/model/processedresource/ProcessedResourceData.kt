@@ -36,11 +36,17 @@ sealed class ProcessedResourceData {
         is Summary -> this.summaryData.isNotEmpty()
         is TimeSeries -> this.timeSeriesData.isNotEmpty()
     }
+
+    val count: Int get() = when (this) {
+        is Summary -> summaryData.count
+        is TimeSeries -> timeSeriesData.count
+    }
 }
 
 sealed class TimeSeriesData {
     abstract fun merge(other: TimeSeriesData): TimeSeriesData
     abstract fun isNotEmpty(): Boolean
+    abstract val count: Int
 
     data class BloodPressure(val samples: List<LocalBloodPressureSample>) : TimeSeriesData() {
         override fun merge(other: TimeSeriesData): TimeSeriesData {
@@ -48,6 +54,7 @@ sealed class TimeSeriesData {
             return BloodPressure(samples + other.samples)
         }
         override fun isNotEmpty(): Boolean = samples.isNotEmpty()
+        override val count: Int get() = samples.size
     }
 
     data class QuantitySamples(val resource: IngestibleTimeseriesResource, val samples: List<LocalQuantitySample>) : TimeSeriesData() {
@@ -56,12 +63,14 @@ sealed class TimeSeriesData {
             return QuantitySamples(resource, samples + other.samples)
         }
         override fun isNotEmpty(): Boolean = samples.isNotEmpty()
+        override val count: Int get() = samples.size
     }
 }
 
 sealed class SummaryData {
     abstract fun merge(other: SummaryData): SummaryData
     abstract fun isNotEmpty(): Boolean
+    abstract val count: Int
 
     data class Profile(
         val biologicalSex: String?,
@@ -84,6 +93,7 @@ sealed class SummaryData {
         }
 
         override fun isNotEmpty(): Boolean = true
+        override val count: Int get() = 1
     }
 
     data class Body(
@@ -105,6 +115,7 @@ sealed class SummaryData {
         }
 
         override fun isNotEmpty(): Boolean = bodyMass.isNotEmpty() || bodyFatPercentage.isNotEmpty()
+        override val count: Int get() = bodyMass.size + bodyFatPercentage.size
     }
 
     data class Activities(
@@ -115,6 +126,7 @@ sealed class SummaryData {
             return Activities(activities + other.activities)
         }
         override fun isNotEmpty(): Boolean = activities.isNotEmpty()
+        override val count: Int get() = activities.size
     }
 
     data class Sleeps(
@@ -125,6 +137,7 @@ sealed class SummaryData {
             return Sleeps(samples + other.samples)
         }
         override fun isNotEmpty(): Boolean = samples.isNotEmpty()
+        override val count: Int get() = samples.size
     }
 
     data class Workouts(
@@ -135,6 +148,7 @@ sealed class SummaryData {
             return Workouts(samples + other.samples)
         }
         override fun isNotEmpty(): Boolean = samples.isNotEmpty()
+        override val count: Int get() = samples.size
     }
 
     data class MenstrualCycles(
@@ -145,6 +159,7 @@ sealed class SummaryData {
             return MenstrualCycles(cycles + other.cycles)
         }
         override fun isNotEmpty(): Boolean = cycles.isNotEmpty()
+        override val count: Int get() = cycles.size
     }
 
     data class Meals(
@@ -155,6 +170,7 @@ sealed class SummaryData {
             return Meals(meals + other.meals )
         }
         override fun isNotEmpty(): Boolean = meals.isNotEmpty()
+        override val count: Int get() = meals.size
     }
 }
 

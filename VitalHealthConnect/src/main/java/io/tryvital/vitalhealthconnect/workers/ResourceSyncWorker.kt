@@ -18,6 +18,7 @@ import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
+import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -31,6 +32,8 @@ import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
 import io.tryvital.vitalhealthconnect.records.RecordUploader
 import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
+import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
+import kotlinx.coroutines.CancellationException
 import java.time.Instant
 import java.util.TimeZone
 import kotlin.reflect.KClass
@@ -106,29 +109,52 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     private val vitalClient: VitalClient by lazy {
         VitalClient.getOrCreate(applicationContext)
     }
+    private val manager: VitalHealthConnectManager by lazy {
+        VitalHealthConnectManager.getOrCreate(applicationContext)
+    }
     private val sharedPreferences: SharedPreferences get() = vitalClient.sharedPreferences
-    private val healthConnectClientProvider by lazy { HealthConnectClientProvider() }
-
-    private val recordReader: RecordReader by lazy {
-        HealthConnectRecordReader(applicationContext, healthConnectClientProvider)
-    }
-
-    private val recordProcessor: RecordProcessor by lazy {
-        HealthConnectRecordProcessor(
-            recordReader,
-            HealthConnectRecordAggregator(applicationContext, healthConnectClientProvider),
-        )
-    }
-
-    private val recordUploader: RecordUploader by lazy {
-        VitalClientRecordUploader(vitalClient)
-    }
-
-    private val localSyncStateManager: LocalSyncStateManager by lazy {
-        LocalSyncStateManager(vitalClient, vitalLogger, sharedPreferences)
-    }
-
+    private val healthConnectClientProvider get() = manager.healthConnectClientProvider
+    private val recordReader: RecordReader get() = manager.recordReader
+    private val recordProcessor: RecordProcessor get() = manager.recordProcessor
+    private val recordUploader: RecordUploader get() = manager.recordUploader
+    private val localSyncStateManager: LocalSyncStateManager get() = manager.localSyncStateManager
+    private val syncProgressStore get() = manager.syncProgressStore
+    private val syncProgressReporter get() = manager.syncProgressReporter
     private val vitalLogger = VitalLogger.getOrCreate()
+
+    private val syncID by lazy {
+        SyncProgress.SyncID(input.resource.wrapped)
+    }
+
+    override suspend fun doWork(): Result {
+        syncProgressReporter.syncBegin(syncID)
+
+        try {
+            val result = doActualWork()
+            syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.completed)
+
+            return result
+
+        } catch (exc: CancellationException) {
+            syncProgressStore.recordSync(
+                syncID,
+                SyncProgress.SyncStatus.cancelled,
+            )
+            throw exc
+
+        } catch (exc: Throwable) {
+            syncProgressStore.recordSync(
+                syncID,
+                SyncProgress.SyncStatus.error,
+                errorDetails = exc.stackTraceToString()
+            )
+            throw exc
+
+        } finally {
+            syncProgressStore.flush()
+            syncProgressReporter.syncEnded(applicationContext, syncID)
+        }
+    }
 
     /**
      * Each instance of ResourceSyncWorker is responsible to sync one specific VitalResource type.
@@ -164,7 +190,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
      *     a. Fetch the maximum timestamp of the resource type as `max`.
      *     b. `generic_backfill(stage="daily", start=max(), end=now())`
      */
-    override suspend fun doWork(): Result {
+    private suspend fun doActualWork(): Result {
         val timeZone = TimeZone.getDefault()
 
         val (instruction, localSyncState) = try {
@@ -193,7 +219,11 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     private suspend fun computeSyncInstruction(): Pair<SyncInstruction, LocalSyncState> {
         val resourceSyncState = sharedPreferences.getJson<ResourceSyncState>(input.resource.wrapped.syncStateKey)
 
-        val localSyncState = localSyncStateManager.getLocalSyncState()
+        val localSyncState = localSyncStateManager.getLocalSyncState(
+            onRevalidation = {
+                syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.revalidatingSyncState)
+            }
+        )
 
         val now = Instant.now()
         val reconciledStart = localSyncState.historicalStartDate(input.resource)
@@ -301,6 +331,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                     end = state.end,
                 )
 
+                syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.readChunk)
+
                 // Skip empty POST requests
                 if (delta.isNotEmpty()) {
                     uploadResources(
@@ -310,7 +342,12 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                         timeZoneId = timeZone.id,
                         userId = userId,
                     )
+                    syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.uploadedChunk, dataCount = delta.count)
+
+                } else {
+                    syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.noData)
                 }
+
             } else {
                 vitalLogger.info { "${input.resource}: found no change" }
             }

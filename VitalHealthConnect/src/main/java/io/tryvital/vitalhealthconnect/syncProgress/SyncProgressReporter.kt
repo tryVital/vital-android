@@ -21,6 +21,7 @@ import kotlin.concurrent.withLock
 private const val SCHEDULE_KEY = "SyncReportSchedule"
 
 internal class SyncProgressReporter(
+    private val store: SyncProgressStore,
     private val client: VitalClient,
     private val localSyncStateManager: LocalSyncStateManager
 ) {
@@ -69,7 +70,7 @@ internal class SyncProgressReporter(
 
         val userId = VitalClient.currentUserId ?: return@withLock
 
-        val progress = SyncProgressStore.getOrCreate(context).get()
+        val progress = store.get()
         try {
             val deviceInfo = captureDeviceInfo(context)
             val report = SyncProgressReport(progress, deviceInfo)
