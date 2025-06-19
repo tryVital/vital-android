@@ -19,20 +19,7 @@ fun quantitySample(
     metadata?.device?.let { device ->
         device.model?.let { deviceMetadata["_DMO"] = it }
         device.manufacturer?.let { deviceMetadata["_DMA"] = it }
-        device.type.let { type ->
-            deviceMetadata["_DTY"] = when (type) {
-                Device.TYPE_UNKNOWN -> "unknown"
-                Device.TYPE_WATCH -> "watch"
-                Device.TYPE_PHONE -> "phone"
-                Device.TYPE_SCALE -> "scale"
-                Device.TYPE_RING -> "ring"
-                Device.TYPE_HEAD_MOUNTED -> "head_mounted"
-                Device.TYPE_FITNESS_BAND -> "fitness_band"
-                Device.TYPE_CHEST_STRAP -> "chest_strap"
-                Device.TYPE_SMART_DISPLAY -> "smart_display"
-                else -> "unknown"
-            }
-        }
+        deviceMetadata["_DTY"] = device.sourceType.rawValue
     }
 
     return LocalQuantitySample(
@@ -67,5 +54,6 @@ internal val Device.sourceType get() = when (this.type) {
     Device.TYPE_PHONE -> SourceType.Phone
     Device.TYPE_RING -> SourceType.Ring
     Device.TYPE_SCALE -> SourceType.Scale
+    Device.TYPE_FITNESS_BAND -> SourceType.Watch
     else -> SourceType.Unknown
 }
