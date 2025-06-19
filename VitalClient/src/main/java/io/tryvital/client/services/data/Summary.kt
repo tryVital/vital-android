@@ -184,6 +184,8 @@ data class LocalQuantitySample(
     val deviceModel: String? = null,
     @Json(name = "type")
     val type: SourceType? = null,
+    @Json(name = "metadata")
+    val metadata: Map<String, String> = emptyMap()
 )
 
 @JsonClass(generateAdapter = true)
