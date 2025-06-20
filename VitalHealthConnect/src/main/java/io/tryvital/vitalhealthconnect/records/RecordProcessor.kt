@@ -38,6 +38,7 @@ import io.tryvital.vitalhealthconnect.model.inferredSourceType
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.model.quantitySample
+import io.tryvital.vitalhealthconnect.model.toMetadataMap
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
 import java.time.LocalDate
@@ -274,8 +275,9 @@ internal class HealthConnectRecordProcessor(
                     heartRateZone5 = summary.heartRateZone5,
                     heartRateZone6 = summary.heartRateZone6,
                     sourceBundle = exercise.metadata.dataOrigin.packageName,
-                    deviceModel = exercise.metadata.device?.model,
+                    deviceModel = null,
                     sourceType = exercise.metadata.inferredSourceType,
+                    metadata = exercise.metadata.device?.toMetadataMap() ?: emptyMap()
                 )
             }
         )
@@ -338,7 +340,8 @@ internal class HealthConnectRecordProcessor(
                 startDate = sleepSession.startTime,
                 endDate = sleepSession.endTime,
                 sourceBundle = sleepSession.metadata.dataOrigin.packageName,
-                deviceModel = sleepSession.metadata.device?.model,
+                deviceModel = null,
+                metadata = sleepSession.metadata.device?.toMetadataMap() ?: emptyMap(),
                 sourceType = sleepSession.metadata.inferredSourceType,
                 heartRateMean = statistics.heartRateMean,
                 heartRateMaximum = statistics.heartRateMaximum,

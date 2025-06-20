@@ -14,14 +14,6 @@ fun quantitySample(
     metadata: Metadata? = null,
     sourceType: SourceType? = null,
 ): LocalQuantitySample {
-    val deviceMetadata = mutableMapOf<String, String>()
-
-    metadata?.device?.let { device ->
-        device.model?.let { deviceMetadata["_DMO"] = it }
-        device.manufacturer?.let { deviceMetadata["_DMA"] = it }
-        deviceMetadata["_DTY"] = device.sourceType.rawValue
-    }
-
     return LocalQuantitySample(
         id = metadata?.id,
         value = value,
@@ -30,8 +22,8 @@ fun quantitySample(
         endDate = endDate,
         type = sourceType ?: metadata?.inferredSourceType,
         sourceBundle = metadata?.dataOrigin?.packageName,
-        deviceModel = metadata?.device?.model,
-        metadata = deviceMetadata
+        deviceModel = null,
+        metadata = metadata?.device?.toMetadataMap() ?: emptyMap()
     )
 }
 
