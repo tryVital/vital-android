@@ -61,6 +61,8 @@ data class LocalWorkout(
     val heartRateZone5: Int? = null,
     @Json(name = "heart_rate_zone_6")
     val heartRateZone6: Int? = null,
+    @Json(name = "metadata")
+    val metadata: Map<String, String> = emptyMap(),
 )
 
 // @VitalPrivateApi
@@ -129,6 +131,8 @@ data class LocalSleep(
     val respiratoryRateMean: Double? = null,
     @Json(name = "sleep_stages")
     val sleepStages: Stages,
+    @Json(name = "metadata")
+    val metadata: Map<String, String> = emptyMap(),
 ) {
 
     @JsonClass(generateAdapter = true)
