@@ -63,7 +63,7 @@ subprojects {
         repositories {
             maven {
                 name = "SonatypeOSS"
-                url = uri("https://s01.oss.sonatype.org/content/repositories/releases/")
+                url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
                 credentials {
                     username = localProperties.getProperty("sonatype.user") ?: System.getenv("MAVEN_USER")
                     password = localProperties.getProperty("sonatype.key") ?: System.getenv("MAVEN_PASSWORD")
