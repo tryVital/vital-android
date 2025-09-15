@@ -1,6 +1,5 @@
 package io.tryvital.client
 
-import ManualProviderRequest
 import android.content.Context
 import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.*

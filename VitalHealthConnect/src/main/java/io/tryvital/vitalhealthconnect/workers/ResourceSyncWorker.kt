@@ -19,6 +19,8 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
+import io.tryvital.vitalhealthconnect.exceptions.ConnectionDestroyed
+import io.tryvital.vitalhealthconnect.exceptions.ConnectionPaused
 import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
@@ -138,6 +140,22 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
             return result
 
+        } catch (e: ConnectionPaused) {
+            syncProgressStore.recordSync(
+                syncID,
+                SyncProgress.SyncStatus.connectionPaused,
+            )
+            vitalLogger.logI("${input.resource}: skipped because backend reported connection pause")
+            return Result.success()
+
+        } catch (e: ConnectionDestroyed) {
+            syncProgressStore.recordSync(
+                syncID,
+                SyncProgress.SyncStatus.connectionDestroyed,
+            )
+            vitalLogger.logI("${input.resource}: skipped because backend reported connection destroyed")
+            return Result.success()
+
         } catch (exc: CancellationException) {
             syncProgressStore.recordSync(
                 syncID,
@@ -196,12 +214,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
     private suspend fun doActualWork(): Result {
         val timeZone = TimeZone.getDefault()
 
-        val (instruction, localSyncState) = try {
-            computeSyncInstruction()
-        } catch (e: ConnectionPaused) {
-            vitalLogger.logI("${input.resource}: skipped because backend reported connection pause")
-            return Result.success()
-        }
+        val (instruction, localSyncState) = computeSyncInstruction()
 
         vitalLogger.logI("${input.resource}: $instruction")
 

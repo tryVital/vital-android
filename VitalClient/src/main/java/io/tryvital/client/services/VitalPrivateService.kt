@@ -1,9 +1,5 @@
 package io.tryvital.client.services
 
-import ManualProviderRequest
-import ManualProviderResponse
-import UserSDKSyncStateBody
-import UserSDKSyncStateResponse
 import io.tryvital.client.services.data.LocalActivity
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalBody
@@ -14,8 +10,12 @@ import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.ManualMealCreation
+import io.tryvital.client.services.data.ManualProviderRequest
+import io.tryvital.client.services.data.ManualProviderResponse
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
+import io.tryvital.client.services.data.UserSDKSyncStateBody
+import io.tryvital.client.services.data.UserSDKSyncStateResponse
 import okhttp3.RequestBody
 import retrofit2.Response
 import retrofit2.Retrofit

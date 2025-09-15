@@ -8,9 +8,12 @@ import android.widget.ToggleButton
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.InstallMobile
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Login
+import androidx.compose.material.icons.outlined.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.tryvital.vitalhealthconnect.enableBackgroundSyncContract
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.model.HealthConnectConnectionStatus
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.WritableVitalResource
 import kotlinx.coroutines.launch
@@ -51,9 +55,46 @@ fun HealthConnectCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            ConnectionStatusInfo(state.connectionStatus, state.isPerformingConnectionAction, viewModel)
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             if (state.available == HealthConnectAvailability.Installed) {
                 Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 PermissionInfo(state.permissionsGranted, state.permissionsMissing, viewModel)
+            }
+        }
+    }
+}
+
+@Composable
+fun ConnectionStatusInfo(
+    connectionStatus: HealthConnectConnectionStatus,
+    isPerformingAction: Boolean,
+    viewModel: HealthConnectViewModel
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text("Connection Status", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text(connectionStatus.name)
+    }
+
+    if (connectionStatus != HealthConnectConnectionStatus.AutoConnect) {
+        Button(
+            onClick = { viewModel.toggleConnection() },
+            contentPadding = ButtonDefaults.TextButtonContentPadding,
+            enabled = !isPerformingAction,
+        ) {
+            if (isPerformingAction) {
+                CircularProgressIndicator()
+
+            } else {
+                Icon(
+                    if (connectionStatus == HealthConnectConnectionStatus.Disconnected) Icons.Outlined.Login else Icons.Outlined.Logout,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text(if (connectionStatus == HealthConnectConnectionStatus.Disconnected) "Connect" else "Disconnect")
             }
         }
     }

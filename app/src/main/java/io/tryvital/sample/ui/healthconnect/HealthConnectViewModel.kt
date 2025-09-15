@@ -13,9 +13,11 @@ import io.tryvital.vitalhealthconnect.disableBackgroundSync
 import io.tryvital.vitalhealthconnect.enableBackgroundSyncContract
 import io.tryvital.vitalhealthconnect.isBackgroundSyncEnabled
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthconnect.model.HealthConnectConnectionStatus
 import io.tryvital.vitalhealthconnect.model.PermissionStatus
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.WritableVitalResource
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -28,11 +30,12 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
 
     private val viewModelState = MutableStateFlow(HealthConnectViewModelState())
 
+    private var currentConnectionAction: Job? = null
+
     var pauseSync: Boolean
         get() = vitalHealthConnectManager.pauseSynchronization
         set(newValue) { vitalHealthConnectManager.pauseSynchronization = newValue }
 
-    @OptIn(ExperimentalVitalApi::class)
     val isBackgroundSyncEnabled: Boolean
         get() = vitalHealthConnectManager.isBackgroundSyncEnabled
 
@@ -45,6 +48,13 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
             vitalHealthConnectManager.status.collect {
                 viewModelState.update { state ->
                     state.copy(syncStatus = state.syncStatus.plus("\n${it}"))
+                }
+            }
+        }
+        viewModelScope.launch {
+            vitalHealthConnectManager.connectionStatus.collect {
+                viewModelState.update { state ->
+                    state.copy(connectionStatus = it)
                 }
             }
         }
@@ -96,6 +106,31 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
                     permissionsGranted = permissionsGranted.sortedBy(VitalResource::name),
                     permissionsMissing = permissionsMissing.sortedBy(VitalResource::name),
                 )
+            }
+        }
+    }
+
+    fun toggleConnection() {
+        check(viewModelState.value.connectionStatus != HealthConnectConnectionStatus.AutoConnect)
+
+        if (currentConnectionAction != null) {
+            return
+        }
+
+        currentConnectionAction = viewModelScope.launch {
+            viewModelState.update { it.copy(isPerformingConnectionAction = true) }
+
+            val status = viewModelState.value.connectionStatus
+
+            try {
+                if (status == HealthConnectConnectionStatus.Disconnected) {
+                    vitalHealthConnectManager.connect()
+                } else {
+                    vitalHealthConnectManager.disconnect()
+                }
+            } finally {
+                viewModelState.update { it.copy(isPerformingConnectionAction = false) }
+                currentConnectionAction = null
             }
         }
     }
@@ -158,4 +193,6 @@ data class HealthConnectViewModelState(
     val permissionsGranted: List<VitalResource> = listOf(),
     val permissionsMissing: List<VitalResource> = listOf(),
     val syncStatus: String = "",
+    val connectionStatus: HealthConnectConnectionStatus = HealthConnectConnectionStatus.AutoConnect,
+    val isPerformingConnectionAction: Boolean = false,
 )

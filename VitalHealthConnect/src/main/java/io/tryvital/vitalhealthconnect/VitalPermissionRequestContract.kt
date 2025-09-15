@@ -107,20 +107,21 @@ class VitalPermissionRequestContract(
 
         VitalLogger.getOrCreate().logI("[processGrantedPermissions] Saved read grants: ${readGrants.joinToString(", ")}; write grants = ${writeGrants.joinToString(", ")}")
 
-        // User has gone through the Ask flow successfully.
-        // Irrespective of the permission state, we proactively create the CS here (if not already
-        // exists).
-        taskScope.launch {
-            try {
-                manager.vitalClient
-                    .createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
-
-            } catch (e: Throwable) {
-                VitalLogger.getOrCreate().logE("[Ask] proactive CS creation failed", e)
-            }
-        }
-
         return taskScope.async {
+
+            if (manager.localSyncStateManager.connectionPolicy == ConnectionPolicy.AutoConnect) {
+                // User has gone through the Ask flow successfully.
+                // Irrespective of the permission state, we proactively create the CS here (if not already
+                // exists).
+                try {
+                    manager.vitalClient
+                        .createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
+
+                } catch (e: Throwable) {
+                    VitalLogger.getOrCreate().logE("[Ask] proactive CS creation failed", e)
+                }
+            }
+
             // The activity result reports only permissions granted in this UI interaction.
             // Since we have VitalResources that are an aggregate of multiple record types, we need
             // to recompute based on the full set of permissions.

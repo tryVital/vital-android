@@ -122,6 +122,13 @@ fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
                 onSelectionChange = viewModel::setAuthMode,
             )
 
+            SettingsDropdownMenu(
+                title = "Connection Policy",
+                items = viewModel.connectionPolicies,
+                selectedId = state.value.appSettings.connectionPolicy,
+                onSelectionChange = viewModel::setConnectionPolicy,
+            )
+
             Text("Actions")
 
             OutlinedButton(onClick = { viewModel.generateUserID(context) }, enabled = state.value.canGenerateUserId) {
