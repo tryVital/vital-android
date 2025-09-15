@@ -40,9 +40,9 @@ data class LocalWorkout(
     @Json(name = "sport")
     val sport: String,
     @Json(name = "calories")
-    val calories: Double,
+    val calories: Double?,
     @Json(name = "distance")
-    val distance: Double,
+    val distance: Double?,
     @Json(name = "heart_rate_maximum")
     val heartRateMaximum: Int? = null,
     @Json(name = "heart_rate_minimum")
