@@ -44,7 +44,7 @@ internal class LocalSyncStateManager(
         connectionStatusDidChange()
     }
 
-    private fun setPersistedLocalSyncState(newValue: LocalSyncState) {
+    internal fun setPersistedLocalSyncState(newValue: LocalSyncState?) {
         preferences.edit()
             .putJson(UnSecurePrefKeys.localSyncStateKey, newValue)
             .apply()

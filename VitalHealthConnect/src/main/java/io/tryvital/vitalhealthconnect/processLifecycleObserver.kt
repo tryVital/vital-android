@@ -33,8 +33,9 @@ internal fun processLifecycleObserver(
 
         source.lifecycleScope.launch(start = CoroutineStart.UNDISPATCHED) {
             manager.checkAndUpdatePermissions()
+            val connectionActive = manager.checkConnectionActive()
 
-            if (!isSignedIn) {
+            if (!isSignedIn || !connectionActive) {
                 return@launch
             }
 
