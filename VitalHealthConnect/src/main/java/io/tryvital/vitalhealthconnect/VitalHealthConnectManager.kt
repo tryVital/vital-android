@@ -57,6 +57,7 @@ class VitalHealthConnectManager private constructor(
 ) {
     val sharedPreferences get() = vitalClient.sharedPreferences
     private val permissionMutex = Mutex()
+    private val connectionMutex = Mutex()
 
     /**
      * Pause all synchronization, both automatic syncs and any manual [syncData] calls.
@@ -178,6 +179,19 @@ class VitalHealthConnectManager private constructor(
             editor.remove(UnSecurePrefKeys.monitoringTypesKey(resource))
         }
         editor.apply()
+        localSyncStateManager.setPersistedLocalSyncState(null)
+    }
+
+    internal suspend fun checkConnectionActive(): Boolean {
+        // Try to revalidate the LocalSyncState if a revalidation is due.
+        // Gracefully ignore the exception thrown by getLocalSyncState().
+        runCatching {
+            localSyncStateManager.getLocalSyncState()
+        }
+
+        return localSyncStateManager.connectionStatus.value.let {
+            it == HealthConnectConnectionStatus.AutoConnect || it == HealthConnectConnectionStatus.Connected
+        }
     }
 
     internal suspend fun checkAndUpdatePermissions(): Pair<Set<VitalResource>, Set<VitalResource>> = permissionMutex.withLock {
@@ -272,6 +286,14 @@ class VitalHealthConnectManager private constructor(
             .putBoolean(UnSecurePrefKeys.syncOnAppStartKey, syncOnAppStart)
             .putInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, numberOfDaysToBackFill)
             .apply()
+
+        taskScope.launch {
+            // Try to revalidate the LocalSyncState if a revalidation is due.
+            // Gracefully ignore the exception thrown by getLocalSyncState().
+            runCatching {
+                localSyncStateManager.getLocalSyncState()
+            }
+        }
     }
 
     /**
@@ -279,7 +301,7 @@ class VitalHealthConnectManager private constructor(
      *
      * @precondition You must configure the Health SDK to use [ConnectionPolicy.Explicit].
      */
-    suspend fun connect() {
+    suspend fun connect(): Unit = connectionMutex.withLock {
         if (localSyncStateManager.connectionPolicy == ConnectionPolicy.AutoConnect) {
             throw IllegalStateException("connect() only works with ConnectionPolicy.Explicit.")
         }
@@ -309,7 +331,7 @@ class VitalHealthConnectManager private constructor(
      *
      * @precondition You must configure the Health SDK to use [ConnectionPolicy.Explicit].
      */
-    suspend fun disconnect() {
+    suspend fun disconnect(): Unit = connectionMutex.withLock {
         if (localSyncStateManager.connectionPolicy == ConnectionPolicy.AutoConnect) {
             throw IllegalStateException("connect() only works with ConnectionPolicy.Explicit.")
         }
