@@ -1,13 +1,14 @@
 package io.tryvital.vitalhealthconnect.workers
 
 import com.squareup.moshi.JsonClass
+import io.tryvital.client.services.data.UserSDKSyncStatus
 import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
-import io.tryvital.vitalhealthconnect.model.VitalResource
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
 @JsonClass(generateAdapter = true)
 data class LocalSyncState(
+    val status: UserSDKSyncStatus? = null,
     val historicalStageAnchor: Instant,
     val defaultDaysToBackfill: Long,
     val ingestionEnd: Instant?,

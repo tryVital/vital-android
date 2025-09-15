@@ -17,6 +17,7 @@ object UnSecurePrefKeys {
     internal const val autoSyncThrottleKey = "autoSyncThrottle"
     internal const val backgroundSyncMinIntervalKey = "backgroundSyncMinInterval"
     internal const val localSyncStateKey = "localSyncState"
+    internal const val connectionPolicyKey = "connectionPolicyKey"
 
     internal const val currentAskRequest = "currentAskRequest"
 

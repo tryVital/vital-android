@@ -53,7 +53,10 @@ internal data class SyncProgress(
         timedOut(9),
 
         /** Expected/transient error (e.g. iOS data‑protection lock). */
-        expectedError(10);
+        expectedError(10),
+
+        connectionPaused(11),
+        connectionDestroyed(12);
 
         val isInProgress: Boolean
             get() = when (this) {

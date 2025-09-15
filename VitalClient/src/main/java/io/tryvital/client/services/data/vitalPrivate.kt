@@ -1,8 +1,8 @@
+package io.tryvital.client.services.data
+
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
-import io.tryvital.client.services.data.DataStage
 import java.time.Instant
-import java.util.Date
 
 
 @JsonClass(generateAdapter = true)

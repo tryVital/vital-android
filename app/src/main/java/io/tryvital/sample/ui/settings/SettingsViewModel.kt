@@ -14,6 +14,7 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.sample.AppSettings
 import io.tryvital.sample.AppSettingsStore
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
+import io.tryvital.vitalhealthconnect.model.ConnectionPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -45,6 +46,11 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
         Pair(SettingsAuthMode.SignInTokenDemo, "Sign-in Token Demo"),
     )
 
+    val connectionPolicies = listOf(
+        Pair(ConnectionPolicy.AutoConnect, "Auto Connect"),
+        Pair(ConnectionPolicy.Explicit, "Explicit"),
+    )
+
     val environments = listOf(
         Pair(Pair(Environment.Sandbox, Region.US), "sandbox - us"),
         Pair(Pair(Environment.Sandbox, Region.EU), "sandbox - eu"),
@@ -66,6 +72,11 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     fun setAuthMode(mode: SettingsAuthMode) {
         // viewModelState will be indirectly updated as an observer
         store.update { it.copy(authMode = mode) }
+    }
+
+    fun setConnectionPolicy(policy: ConnectionPolicy) {
+        // viewModelState will be indirectly updated as an observer
+        store.update { it.copy(connectionPolicy = policy) }
     }
 
     fun setApiKey(value: String) {
@@ -128,7 +139,8 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
             }
 
             VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
-                logsEnabled = true
+                logsEnabled = true,
+                connectionPolicy = state.appSettings.connectionPolicy,
             )
 
             store.syncWithSDKStatus(context)
@@ -160,7 +172,8 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
                 }
 
                 VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
-                    logsEnabled = true
+                    logsEnabled = true,
+                    connectionPolicy = settings.connectionPolicy,
                 )
 
                 store.syncWithSDKStatus(context)

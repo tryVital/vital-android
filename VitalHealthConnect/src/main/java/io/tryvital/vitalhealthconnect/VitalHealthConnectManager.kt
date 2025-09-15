@@ -20,8 +20,11 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.work.*
 import io.tryvital.client.VitalClient
+import io.tryvital.client.createConnectedSourceIfNotExist
+import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.*
 import io.tryvital.client.utils.VitalLogger
+import io.tryvital.vitalhealthconnect.exceptions.ConnectionDestroyed
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.records.*
@@ -89,6 +92,8 @@ class VitalHealthConnectManager private constructor(
             }
         }
 
+    val connectionStatus get() = localSyncStateManager.connectionStatus
+
     private val vitalLogger = vitalClient.vitalLogger
 
     @Deprecated("Use `VitalHealthConnectManager.Companion.syncNotificationBuilder` and `VitalHealthConnectManager.Companion.setSyncNotificationBuilder` instead.")
@@ -120,10 +125,11 @@ class VitalHealthConnectManager private constructor(
         setupSyncWorkerObservation()
     }
 
-    @OptIn(ExperimentalVitalApi::class)
-    private fun resetAutoSync() {
-        cancelSyncWorker()
+    private suspend fun resetAutoSync() {
+        cancelSyncWorker().await()
+        resetSyncProgress()
         disableBackgroundSync()
+        syncProgressStore.clear()
         taskScope.cancel()
         taskScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
@@ -163,6 +169,15 @@ class VitalHealthConnectManager private constructor(
     @Suppress("unused")
     suspend fun reloadPermissions() {
         checkAndUpdatePermissions()
+    }
+
+    internal fun resetSyncProgress() {
+        val editor = sharedPreferences.edit()
+        for (resource in VitalResource.values()) {
+            editor.remove(UnSecurePrefKeys.syncStateKey(resource))
+            editor.remove(UnSecurePrefKeys.monitoringTypesKey(resource))
+        }
+        editor.apply()
     }
 
     internal suspend fun checkAndUpdatePermissions(): Pair<Set<VitalResource>, Set<VitalResource>> = permissionMutex.withLock {
@@ -239,6 +254,7 @@ class VitalHealthConnectManager private constructor(
         syncOnAppStart: Boolean = true,
         numberOfDaysToBackFill: Int = 30,
         syncNotificationBuilder: SyncNotificationBuilder? = null,
+        connectionPolicy: ConnectionPolicy = ConnectionPolicy.AutoConnect,
     ) {
         if (VitalClient.Status.Configured !in VitalClient.status) {
             throw IllegalStateException("VitalClient has not been configured.")
@@ -250,11 +266,67 @@ class VitalHealthConnectManager private constructor(
 
         vitalLogger.enabled = logsEnabled
 
+        localSyncStateManager.setConnectionPolicy(connectionPolicy)
         sharedPreferences.edit()
             .putBoolean(UnSecurePrefKeys.loggerEnabledKey, logsEnabled)
             .putBoolean(UnSecurePrefKeys.syncOnAppStartKey, syncOnAppStart)
             .putInt(UnSecurePrefKeys.numberOfDaysToBackFillKey, numberOfDaysToBackFill)
-            .commit()
+            .apply()
+    }
+
+    /**
+     * Setup a Health Connect connection with this device.
+     *
+     * @precondition You must configure the Health SDK to use [ConnectionPolicy.Explicit].
+     */
+    suspend fun connect() {
+        if (localSyncStateManager.connectionPolicy == ConnectionPolicy.AutoConnect) {
+            throw IllegalStateException("connect() only works with ConnectionPolicy.Explicit.")
+        }
+
+        @OptIn(VitalPrivateApi::class)
+        vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
+
+        try {
+            localSyncStateManager.getLocalSyncState(forceRemoteCheck = true)
+
+            // Check if there are already granted read permissions.
+            // If so, trigger a data sync immediately.
+            val (granted, _) = checkAndUpdatePermissions()
+            if (granted.isNotEmpty()) {
+                taskScope.launch {
+                    syncData()
+                }
+            }
+
+        } catch (e: ConnectionDestroyed) {
+            throw IllegalStateException("connection has been destroyed concurrently through the Junction API")
+        }
+    }
+
+    /**
+     * Disconnect the active Health Connect connection on this device.
+     *
+     * @precondition You must configure the Health SDK to use [ConnectionPolicy.Explicit].
+     */
+    suspend fun disconnect() {
+        if (localSyncStateManager.connectionPolicy == ConnectionPolicy.AutoConnect) {
+            throw IllegalStateException("connect() only works with ConnectionPolicy.Explicit.")
+        }
+
+        vitalClient.userService.deregisterProvider(provider = ProviderSlug.HealthConnect)
+
+        try {
+            localSyncStateManager.getLocalSyncState(forceRemoteCheck = true)
+
+            // Connection is still active unexpectedly.
+            throw IllegalStateException("connection has been re-instated concurrently by another SDK installation")
+
+        } catch (e: ConnectionDestroyed) {
+            // Connection is destroyed as expected
+            resetAutoSync()
+            return
+        }
     }
 
     suspend fun syncData(resources: Set<VitalResource>? = null) {
@@ -451,8 +523,8 @@ class VitalHealthConnectManager private constructor(
         work.enqueue()
     }
 
-    private fun cancelSyncWorker() {
-        WorkManager.getInstance(context)
+    private fun cancelSyncWorker(): Operation {
+        return WorkManager.getInstance(context)
             .cancelUniqueWork("ResourceSyncStarter")
     }
 
