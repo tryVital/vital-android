@@ -22,8 +22,10 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
       - name: Publish
-        run: ./gradlew publish
+        run: doppler -p maven-central -c prod run -- ./gradlew publish
         env:
-          MAVEN_USER: ${{ secrets.MAVEN_USER }}
-          MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
