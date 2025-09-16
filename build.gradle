@@ -1,3 +1,5 @@
+import groovy.json.JsonOutput
+
 buildscript {
     ext {
         core = '1.9.0'
@@ -49,6 +51,8 @@ plugins {
     id 'com.android.library' version '8.2.0' apply false
 
     id 'org.jetbrains.kotlin.android' version '1.8.22' apply false
+
+    id 'org.jreleaser' version '1.18.0'
 }
 
 def localProperties = new Properties()
@@ -58,17 +62,43 @@ if (localPropertiesFile.exists()) {
 }
 
 subprojects {
-    apply plugin: "maven-publish"
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
+
     publishing {
         repositories {
             maven {
-                name = "SonatypeOSS"
-                url = uri("https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/")
-                credentials {
-                    username = localProperties.getProperty("sonatype.user") ?: System.getenv("MAVEN_USER")
-                    password = localProperties.getProperty("sonatype.key") ?: System.getenv("MAVEN_PASSWORD")
+                url = rootProject.layout.buildDirectory.dir('staging-deploy')
+            }
+        }
+    }
+
+    jreleaser {
+        signing {
+            active = 'ALWAYS'
+            armored = true
+        }
+        deploy {
+            maven {
+                mavenCentral {
+                    sonatype {
+                        active = 'ALWAYS'
+                        url = 'https://central.sonatype.com/api/v1/publisher'
+                        stagingRepository('build/staging-deploy')
+                        verifyPom = false
+                    }
                 }
             }
+        }
+    }
+
+    afterEvaluate {
+        signing {
+            useInMemoryPgpKeys(
+                (localProperties.getProperty("signing.secretKey") ?: System.getenv("JRELEASER_GPG_SECRET_KEY"))?.replace("\\n", "\n"),
+                localProperties.getProperty("signing.password") ?: System.getenv("JRELEASER_GPG_PASSPHRASE")
+            )
+            sign publishing.publications
         }
     }
 }
