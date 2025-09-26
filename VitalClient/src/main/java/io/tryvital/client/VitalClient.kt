@@ -85,7 +85,7 @@ class VitalClient internal constructor(context: Context) {
     }
 
     val vitalLogger get() = dependencies.vitalLogger
-    private val jwtAuth get() = dependencies.jwtAuth
+    internal val jwtAuth get() = dependencies.jwtAuth
 
     /** Moments which can materially change VitalClient.Companion.status */
     private val statusChanged = MutableSharedFlow<Unit>(extraBufferCapacity = Int.MAX_VALUE)
@@ -215,7 +215,7 @@ class VitalClient internal constructor(context: Context) {
             if (instance == null) {
                 instance = VitalClient(appContext)
                 sharedInstance = instance
-                bind(instance, VitalJWTAuth.getInstance(appContext), context)
+                bind(instance, context)
             }
             return instance
         }
@@ -349,7 +349,7 @@ class VitalClient internal constructor(context: Context) {
         private suspend fun privateSignIn(context: Context, client: VitalClient, token: String): VitalSignInTokenClaims {
             val signInToken = VitalSignInToken.parse(token)
             val claims = signInToken.unverifiedClaims()
-            val jwtAuth = VitalJWTAuth.getInstance(context)
+            val jwtAuth = client.jwtAuth
 
             jwtAuth.signIn(signInToken)
 
@@ -406,23 +406,15 @@ class VitalClient internal constructor(context: Context) {
         }
 
         suspend fun debugForceTokenRefresh(context: Context) {
-            VitalJWTAuth.getInstance(context).refreshToken()
+            getOrCreate(context).jwtAuth.refreshToken()
         }
 
         /**
          * Must be called exactly once after Core SDK is initialized.
          */
         @OptIn(DelicateCoroutinesApi::class)
-        private fun bind(client: VitalClient, jwtAuth: VitalJWTAuth, context: Context) {
+        private fun bind(client: VitalClient, context: Context) {
             client.resetSharedPreferencesOnReinstallation(context)
-
-            jwtAuth.statusChanged
-                .filter { it == VitalJWTAuthChangeReason.UserNoLongerValid }
-                .onEach {
-                    client.signOut()
-                }
-                .launchIn(GlobalScope)
-
 
             statuses(context)
                 .onEach { statuses ->

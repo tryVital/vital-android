@@ -58,7 +58,7 @@ internal class Dependencies(
         createRetrofit(resolveUrl(configurationReader), httpClient, moshi)
     }
 
-    val jwtAuth: VitalJWTAuth = VitalJWTAuth.getInstance(context)
+    val jwtAuth: VitalJWTAuth = VitalJWTAuth.getInstance(context, configurationReader)
 
     companion object {
         internal fun createHttpClient(context: Context? = null, configurationReader: ConfigurationReader, jwtAuth: AbstractVitalJWTAuth): OkHttpClient {
@@ -120,19 +120,7 @@ internal class Dependencies(
         internal fun resolveUrl(configurationReader: ConfigurationReader): String {
             val authStrategy = configurationReader.authStrategy ?: throw VitalClientUnconfigured()
 
-            val urls = mapOf(
-                Region.EU to mapOf(
-                    Environment.Production to "https://api.eu.tryvital.io",
-                    Environment.Dev to "https://api.dev.eu.tryvital.io",
-                    Environment.Sandbox to "https://api.sandbox.eu.tryvital.io"
-                ),
-                Region.US to mapOf(
-                    Environment.Production to "https://api.tryvital.io",
-                    Environment.Dev to "https://api.dev.tryvital.io",
-                    Environment.Sandbox to "https://api.sandbox.tryvital.io"
-                )
-            )
-            return "${urls[authStrategy.region]!![authStrategy.environment]!!}/v2/"
+            return apiBaseUrl(authStrategy.region, authStrategy.environment) + "/v2/"
         }
     }
 
