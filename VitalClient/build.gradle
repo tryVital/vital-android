@@ -87,7 +87,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'io.tryvital'
             artifactId = 'vital-client'
-            version = '4.2.0'
+            version = '4.2.1'
 
             pom {
                 packaging = 'aar'
