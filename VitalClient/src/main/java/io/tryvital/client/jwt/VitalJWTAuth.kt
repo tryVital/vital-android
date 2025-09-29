@@ -4,10 +4,14 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
+import com.squareup.moshi.JsonReader
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
+import io.tryvital.client.ConfigurationReader
 import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.createLocalStorage
+import io.tryvital.client.dependencies.tokenEndpoint
 import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalLogger
 import kotlinx.coroutines.coroutineScope
@@ -82,12 +86,13 @@ internal interface AbstractVitalJWTAuth {
 }
 
 internal class VitalJWTAuth(
-    val preferences: SharedPreferences
+    val preferences: SharedPreferences,
+    val configurationReader: ConfigurationReader,
 ): AbstractVitalJWTAuth {
     companion object {
         private var shared: VitalJWTAuth? = null
 
-        fun getInstance(context: Context): VitalJWTAuth = synchronized(VitalJWTAuth) {
+        fun getInstance(context: Context, configurationReader: ConfigurationReader): VitalJWTAuth = synchronized(VitalJWTAuth) {
             val appContext = context.applicationContext
             val shared = this.shared
             if (shared != null) {
@@ -97,7 +102,8 @@ internal class VitalJWTAuth(
             val sharedPreferences = createLocalStorage(appContext)
 
             this.shared = VitalJWTAuth(
-                preferences = sharedPreferences
+                preferences = sharedPreferences,
+                configurationReader = configurationReader,
             )
             return this.shared!!
         }
@@ -129,33 +135,31 @@ internal class VitalJWTAuth(
             }
         }
 
-        val exchangeRequest = FirebaseTokenExchangeRequest(token = signInToken. userToken, tenantId = claims.gcipTenantId)
-        val adapter = moshi.adapter(FirebaseTokenExchangeRequest::class.java)
         val request = Request.Builder()
-            .url(
-                "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken".toHttpUrlOrNull()!!
-                    .newBuilder()
-                    .addQueryParameter("key", signInToken.publicKey)
-                    .build()
-            )
+            .url(tokenEndpoint(claims.region, claims.environment).toHttpUrlOrNull()!!)
             .post(
-                adapter.toJson(exchangeRequest).toRequestBody("application/json".toMediaType())
+                FormBody.Builder()
+                    .add("grant_type", "urn:ietf:params:oauth:grant-type:token-exchange")
+                    .add("subject_token_type", "urn:junction:sign-in-token")
+                    .add("subject_token", signInToken.userToken)
+                    .build()
             )
             .build()
 
         httpClient.startRequest(request).use {
             when (it.code) {
                 in 200 until 300 -> {
-                    val exchangeResponse = moshi.adapter(FirebaseTokenExchangeResponse::class.java)
+                    val exchangeResponse = moshi.adapter(JunctionTokenResponse::class.java)
                         .fromJson(it.body?.string() ?: "")!!
 
                     val newRecord = VitalJWTAuthRecord(
                         environment = claims.environment,
+                        region = claims.region,
                         userId = claims.userId,
                         teamId = claims.teamId,
                         gcipTenantId = claims.gcipTenantId,
                         publicApiKey = signInToken.publicKey,
-                        accessToken = exchangeResponse.idToken,
+                        accessToken = exchangeResponse.accessToken,
                         refreshToken = exchangeResponse.refreshToken,
                         expiry = Instant.now().plusSeconds(exchangeResponse.expiresIn.toLong())
                     )
@@ -164,13 +168,17 @@ internal class VitalJWTAuth(
                     VitalLogger.getOrCreate()
                         .logI("sign-in success; expiresIn = ${exchangeResponse.expiresIn}")
                 }
-
-                401 -> {
-                    VitalLogger.getOrCreate().logE("sign-in failed (401)")
-                    throw VitalJWTSignInError(VitalJWTSignInError.Code.InvalidSignInToken)
-                }
-
                 else -> {
+                    if (it.code in 400 until 500) {
+                        val adapter = moshi.adapter(JunctionTokenErrorResponse::class.java)
+                        val response = adapter.fromJson(it.body?.string() ?: "")!!
+
+                        if (response.details.errorType == JunctionTokenError.ErrorType.InvalidToken) {
+                            VitalLogger.getOrCreate().logE("sign-in failed (401)")
+                            throw VitalJWTSignInError(VitalJWTSignInError.Code.InvalidSignInToken)
+                        }
+                    }
+
                     VitalLogger.getOrCreate()
                         .logE("sign-in failed ${it.code}; data = ${it.body?.string()}")
                     throw VitalJWTAuthError(VitalJWTAuthError.Code.NetworkError)
@@ -232,12 +240,7 @@ internal class VitalJWTAuth(
             }
 
             val request = Request.Builder()
-                .url(
-                    "https://securetoken.googleapis.com/v1/token".toHttpUrlOrNull()!!
-                        .newBuilder()
-                        .addQueryParameter("key", record.publicApiKey)
-                        .build()
-                )
+                .url(tokenEndpoint(record.region, record.environment).toHttpUrlOrNull()!!)
                 .post(
                     FormBody.Builder()
                         .add("grant_type", "refresh_token")
@@ -249,12 +252,12 @@ internal class VitalJWTAuth(
             httpClient.startRequest(request).use {
                 when (it.code) {
                     in 200 until 300 -> {
-                        val adapter = moshi.adapter(FirebaseTokenRefreshResponse::class.java)
+                        val adapter = moshi.adapter(JunctionTokenResponse::class.java)
                         val refreshResponse = adapter.fromJson(it.body?.string() ?: "")!!
 
                         val newRecord = record.copy(
                             refreshToken = refreshResponse.refreshToken,
-                            accessToken = refreshResponse.idToken,
+                            accessToken = refreshResponse.accessToken,
                             expiry = Instant.now().plusSeconds(refreshResponse.expiresIn.toLong()),
                         )
 
@@ -265,15 +268,15 @@ internal class VitalJWTAuth(
 
                     else -> {
                         if (it.code in 400 until 500) {
-                            val adapter = moshi.adapter(FirebaseTokenRefreshErrorResponse::class.java)
+                            val adapter = moshi.adapter(JunctionTokenErrorResponse::class.java)
                             val response = adapter.fromJson(it.body?.string() ?: "")!!
 
-                            if (response.error.isInvalidUser) {
+                            if (response.details.errorType == JunctionTokenError.ErrorType.InvalidToken) {
                                 setRecord(null, VitalJWTAuthChangeReason.UserNoLongerValid)
                                 throw VitalJWTAuthError(VitalJWTAuthError.Code.InvalidUser)
                             }
 
-                            if (response.error.needsReauthentication) {
+                            if (response.details.errorType == JunctionTokenError.ErrorType.ReauthenticationRequired) {
                                 setRecord(
                                     record.copy(pendingReauthentication = true),
                                     VitalJWTAuthChangeReason.Update,
@@ -308,12 +311,34 @@ internal class VitalJWTAuth(
 
         // Backfill from SharedPreferences
         val recordJson = preferences.getString(AUTH_RECORD_KEY, null) ?: return null
+        val jsonObjAdapter = moshi.adapter<Map<String, Any>>(
+            Types.newParameterizedType(Map::class.java, String::class.java, Any::class.java)
+        )
+        val adapter = moshi.adapter(VitalJWTAuthRecord::class.java)
 
         try {
-            val adapter = moshi.adapter(VitalJWTAuthRecord::class.java)
-            val record = adapter.fromJson(recordJson)!!
+            var recordJsonValue = jsonObjAdapter.fromJson(recordJson)!!
+
+            val record = if (!recordJsonValue.containsKey("region")) {
+                VitalLogger.getOrCreate().logI("jwt: missing region in auth record; attempting to backfill from sdk config")
+
+                // Try to backfill region from configuration reader
+                recordJsonValue = recordJsonValue.toMutableMap().also {
+                    val authStrategy = configurationReader.authStrategy
+                        ?: throw IllegalStateException("has jwt session but no auth strategy")
+                    it["region"] = authStrategy.region.name
+                }
+
+                val record = adapter.fromJsonValue(recordJsonValue)!!
+                setRecord(record, VitalJWTAuthChangeReason.Update)
+                record
+            } else {
+                adapter.fromJsonValue(recordJsonValue)!!
+            }
+
             this.cachedRecord = record
             return record
+
         } catch (e: Throwable) {
             VitalLogger.getOrCreate().logE("auto signout: failed to decode keychain auth record", e)
             setRecord(null, VitalJWTAuthChangeReason.UserNoLongerValid)
@@ -341,6 +366,7 @@ internal class VitalJWTAuth(
 @JsonClass(generateAdapter = true)
 internal data class VitalJWTAuthRecord(
     val environment: Environment,
+    val region: Region,
     val userId: String,
     val teamId: String,
     val gcipTenantId: String,
@@ -354,45 +380,33 @@ internal data class VitalJWTAuthRecord(
 }
 
 @JsonClass(generateAdapter = true)
-internal data class FirebaseTokenRefreshResponse(
+internal data class JunctionTokenResponse(
     @Json(name = "expires_in")
     val expiresIn: String,
     @Json(name = "refresh_token")
     val refreshToken: String,
-    @Json(name = "id_token")
-    val idToken: String,
+    @Json(name = "access_token")
+    val accessToken: String,
 )
 
 @JsonClass(generateAdapter = true)
-internal data class FirebaseTokenRefreshErrorResponse(
-    val error: FirebaseTokenRefreshError
+internal data class JunctionTokenErrorResponse(
+    val details: JunctionTokenError
 )
 
 @JsonClass(generateAdapter = true)
-internal data class FirebaseTokenRefreshError(
-    val message: String,
-    val status: String,
+internal data class JunctionTokenError(
+    @Json(name = "errorType")
+    val errorType: ErrorType,
 ) {
-    val isInvalidUser: Boolean
-        get() = arrayOf("USER_DISABLED", "USER_NOT_FOUND").contains(message)
-
-    val needsReauthentication: Boolean
-        get() = arrayOf("TOKEN_EXPIRED", "INVALID_REFRESH_TOKEN").contains(message)
+    @JvmInline
+    value class ErrorType(val rawValue: String) {
+        companion object {
+            val InvalidToken = ErrorType("invalid_token")
+            val ReauthenticationRequired = ErrorType("reauthentication_required")
+        }
+    }
 }
-
-@JsonClass(generateAdapter = true)
-internal data class FirebaseTokenExchangeRequest(
-    val returnSecureToken: Boolean = true,
-    val token: String,
-    val tenantId: String,
-)
-
-@JsonClass(generateAdapter = true)
-internal data class FirebaseTokenExchangeResponse(
-    val expiresIn: String,
-    val refreshToken: String,
-    val idToken: String,
-)
 
 @JsonClass(generateAdapter = true)
 internal data class VitalSignInToken(
