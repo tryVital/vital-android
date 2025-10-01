@@ -25,7 +25,12 @@ jobs:
       - name: Install Doppler CLI
         uses: dopplerhq/cli-action@v3
 
-      - name: Publish
+      - name: Publish locally
         run: doppler -p maven-central -c prod run -- ./gradlew publish
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Upload
+        run: doppler -p maven-central -c prod run -- ./gradlew jreleaserDeploy
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
