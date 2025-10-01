@@ -7,6 +7,7 @@ import io.tryvital.client.jwt.AbstractVitalJWTAuth
 import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
 import okhttp3.Response
+import okhttp3.internal.closeQuietly
 import okio.IOException
 
 data class VitalRequestError(val wrapped: Throwable): IOException()
@@ -40,6 +41,11 @@ internal class ApiKeyInterceptor(
         val response = chain.proceed(request)
 
         return if (response.code == 401 && authStrategy is VitalClientAuthStrategy.JWT) {
+            // Close this 401 response, so the subsequent retry request would not throw IllegalStateException:
+            // > cannot make a new request because the previous response is still open: please call response.close().
+            // https://github.com/square/retrofit/issues/3478
+            response.close()
+
             val token = try {
                 runBlocking {
                     jwtAuth.refreshToken()
