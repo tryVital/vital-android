@@ -3,8 +3,10 @@ package io.tryvital.client.jwt
 import android.content.Context
 import android.content.SharedPreferences
 import com.squareup.moshi.Json
+import com.squareup.moshi.JsonAdapter
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.JsonReader
+import com.squareup.moshi.JsonWriter
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.Types
 import io.tryvital.client.ConfigurationReader
@@ -24,10 +26,8 @@ import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.FormBody
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.ByteString.Companion.decodeBase64
 import java.io.IOException
@@ -38,9 +38,10 @@ import kotlin.coroutines.resumeWithException
 
 const val AUTH_RECORD_KEY = "auth_record"
 
-private val moshi by lazy {
+internal val moshi by lazy {
     Moshi.Builder()
         .add(Instant::class.java, InstantJsonAdapter)
+        .add(JunctionTokenError.ErrorType::class.java, JunctionTokenError.ErrorType.Companion.Adapter)
         .build()
 }
 
@@ -55,7 +56,7 @@ class VitalJWTSignInError(val code: Code): Throwable("VitalJWTSignInError: $code
 }
 
 @Suppress("MemberVisibilityCanBePrivate")
-class VitalJWTAuthError(val code: Code): Throwable("VitalJWTAuthError: $code") {
+class VitalJWTAuthError(val code: Code, message: String = ""): Throwable("VitalJWTAuthError: $code: ${message}") {
     @JvmInline value class Code(val rawValue: String) {
         companion object {
             /// There is no active SDK sign-in.
@@ -66,6 +67,8 @@ class VitalJWTAuthError(val code: Code): Throwable("VitalJWTAuthError: $code") {
 
             /// The refresh token is invalid, and the user must be signed in again with a new Vital Sign-In Token.
             val NeedsReauthentication = Code("needsReauthentication")
+
+            val UnknownError = Code("unknownError")
 
             val NetworkError = Code("networkError")
         }
@@ -171,9 +174,17 @@ internal class VitalJWTAuth(
                 else -> {
                     if (it.code in 400 until 500) {
                         val adapter = moshi.adapter(JunctionTokenErrorResponse::class.java)
-                        val response = adapter.fromJson(it.body?.string() ?: "")!!
+                        val body = try {
+                            adapter.fromJson(it.body?.string() ?: "")!!
 
-                        if (response.details.errorType == JunctionTokenError.ErrorType.InvalidToken) {
+                        } catch (e: Throwable) {
+                            throw VitalJWTAuthError(
+                                VitalJWTAuthError.Code.UnknownError,
+                                "${e::class.java.name}: ${e.message}"
+                            )
+                        }
+
+                        if (body.detail.errorType == JunctionTokenError.ErrorType.InvalidToken) {
                             VitalLogger.getOrCreate().logE("sign-in failed (401)")
                             throw VitalJWTSignInError(VitalJWTSignInError.Code.InvalidSignInToken)
                         }
@@ -181,7 +192,10 @@ internal class VitalJWTAuth(
 
                     VitalLogger.getOrCreate()
                         .logE("sign-in failed ${it.code}; data = ${it.body?.string()}")
-                    throw VitalJWTAuthError(VitalJWTAuthError.Code.NetworkError)
+                    throw VitalJWTAuthError(
+                        VitalJWTAuthError.Code.NetworkError,
+                        "status = ${it.code}"
+                    )
                 }
             }
 
@@ -269,14 +283,22 @@ internal class VitalJWTAuth(
                     else -> {
                         if (it.code in 400 until 500) {
                             val adapter = moshi.adapter(JunctionTokenErrorResponse::class.java)
-                            val response = adapter.fromJson(it.body?.string() ?: "")!!
 
-                            if (response.details.errorType == JunctionTokenError.ErrorType.InvalidToken) {
+                            val body = try {
+                                adapter.fromJson(it.body?.string() ?: "")!!
+                            } catch (e: Throwable) {
+                                throw VitalJWTAuthError(
+                                    VitalJWTAuthError.Code.UnknownError,
+                                    "${e::class.java.name}: ${e.message}"
+                                )
+                            }
+
+                            if (body.detail.errorType == JunctionTokenError.ErrorType.InvalidToken) {
                                 setRecord(null, VitalJWTAuthChangeReason.UserNoLongerValid)
                                 throw VitalJWTAuthError(VitalJWTAuthError.Code.InvalidUser)
                             }
 
-                            if (response.details.errorType == JunctionTokenError.ErrorType.ReauthenticationRequired) {
+                            if (body.detail.errorType == JunctionTokenError.ErrorType.ReauthenticationRequired) {
                                 setRecord(
                                     record.copy(pendingReauthentication = true),
                                     VitalJWTAuthChangeReason.Update,
@@ -287,7 +309,11 @@ internal class VitalJWTAuth(
 
                         VitalLogger.getOrCreate()
                             .logE("refresh failed ${it.code}; data = ${it.body?.string()}")
-                        throw VitalJWTAuthError(VitalJWTAuthError.Code.NetworkError)
+
+                        throw VitalJWTAuthError(
+                            VitalJWTAuthError.Code.NetworkError,
+                            "status = ${it.code}"
+                        )
                     }
                 }
             }
@@ -391,19 +417,27 @@ internal data class JunctionTokenResponse(
 
 @JsonClass(generateAdapter = true)
 internal data class JunctionTokenErrorResponse(
-    val details: JunctionTokenError
+    val detail: JunctionTokenError
 )
 
 @JsonClass(generateAdapter = true)
 internal data class JunctionTokenError(
-    @Json(name = "errorType")
+    @Json(name = "error_type")
     val errorType: ErrorType,
 ) {
+    @JsonClass(generateAdapter = false)
     @JvmInline
     value class ErrorType(val rawValue: String) {
         companion object {
             val InvalidToken = ErrorType("invalid_token")
             val ReauthenticationRequired = ErrorType("reauthentication_required")
+
+            object Adapter: JsonAdapter<ErrorType>() {
+                override fun fromJson(reader: JsonReader): ErrorType? = ErrorType(reader.nextString())
+                override fun toJson(writer: JsonWriter, value: ErrorType?) {
+                    writer.value(value?.rawValue)
+                }
+            }
         }
     }
 }
