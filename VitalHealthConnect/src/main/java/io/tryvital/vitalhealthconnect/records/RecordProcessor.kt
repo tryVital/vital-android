@@ -1,5 +1,6 @@
 package io.tryvital.vitalhealthconnect.records
 
+import android.annotation.SuppressLint
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
 import androidx.health.connect.client.records.BloodGlucoseRecord
@@ -250,6 +251,7 @@ internal class HealthConnectRecordProcessor(
         )
     }
 
+    @SuppressLint("RestrictedApi")
     override suspend fun processWorkoutsFromRecords(
         exerciseRecords: List<ExerciseSessionRecord>
     ): SummaryData.Workouts {
