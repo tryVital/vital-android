@@ -5,16 +5,16 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 36
 
     namespace 'io.tryvital.client'
 
     defaultConfig {
         minSdk 26
-        targetSdk 34
+        targetSdk 36
 
         aarMetadata {
-            minCompileSdk = 34
+            minCompileSdk = 36
         }
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"

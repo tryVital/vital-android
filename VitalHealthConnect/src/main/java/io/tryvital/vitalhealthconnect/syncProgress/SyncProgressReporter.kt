@@ -108,7 +108,7 @@ internal class SyncProgressReporter(
             osVersion = "${Build.VERSION.RELEASE} (API Level ${Build.VERSION.SDK_INT})",
             model = "${Build.MANUFACTURER} ${Build.MODEL}",
             appBundle = appContext.packageName,
-            appVersion = packageInfo.versionName,
+            appVersion = packageInfo.versionName ?: "",
             appBuild = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 packageInfo.longVersionCode.toString()
             } else {

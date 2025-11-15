@@ -92,8 +92,8 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <data
-                    android:path="/callback"
-                    android:scheme="vitalexample" />
+                    android:scheme="vitalexample"
+                    android:host="callback" />
             </intent-filter>
         </activity>
 

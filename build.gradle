@@ -28,7 +28,7 @@ buildscript {
         mockito_inline = "4.6.1"
         mockwebserver = "4.10.0"
         kotlinx_coroutines_test = "1.6.4"
-        health_connect = "1.1.0-alpha06"
+        health_connect = "1.1.0"
         coil_compose = "2.0.0"
         ble = "2.5.1"
         annotation = "1.5.0"
@@ -46,9 +46,9 @@ plugins {
     // id 'com.android.application' version '7.3.0' apply false
     // id 'com.android.library' version '7.3.0' apply false
 
-    // Android Gradle Plugin 8.2.0
-    id 'com.android.application' version '8.2.0' apply false
-    id 'com.android.library' version '8.2.0' apply false
+    // API Level 36 - min. Android Gradle Plugin 8.9.1
+    id 'com.android.application' version '8.9.1' apply false
+    id 'com.android.library' version '8.9.1' apply false
 
     id 'org.jetbrains.kotlin.android' version '1.8.22' apply false
 
