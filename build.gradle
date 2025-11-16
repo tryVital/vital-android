@@ -37,7 +37,7 @@ buildscript {
         kotlin = '1.8.22'
         ksp = '1.8.22-1.0.11'
         kotlinx_coroutines = "1.6.4"
-        work_runtime = "2.7.1"
+        work_runtime = "2.8.0"
     }
 }
 
