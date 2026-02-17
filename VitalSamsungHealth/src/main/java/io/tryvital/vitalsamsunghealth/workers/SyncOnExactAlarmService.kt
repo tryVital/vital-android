@@ -5,7 +5,8 @@ import android.content.Intent
 import android.os.IBinder
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager
-import io.tryvital.vitalsamsunghealth.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SystemEventType
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch

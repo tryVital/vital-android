@@ -78,9 +78,9 @@ internal fun recordTypeToSamsungDataType(recordType: KClass<out Record>): DataTy
     else -> null
 }
 
-internal fun writableResourceToSamsungDataType(resource: io.tryvital.vitalsamsunghealth.model.WritableVitalResource): DataType = when (resource) {
-    io.tryvital.vitalsamsunghealth.model.WritableVitalResource.Water -> DataTypes.WATER_INTAKE
-    io.tryvital.vitalsamsunghealth.model.WritableVitalResource.Glucose -> DataTypes.BLOOD_GLUCOSE
+internal fun writableResourceToSamsungDataType(resource: io.tryvital.vitalhealthcore.model.WritableVitalResource): DataType = when (resource) {
+    io.tryvital.vitalhealthcore.model.WritableVitalResource.Water -> DataTypes.WATER_INTAKE
+    io.tryvital.vitalhealthcore.model.WritableVitalResource.Glucose -> DataTypes.BLOOD_GLUCOSE
 }
 
 internal fun permissionKey(dataType: DataType, accessType: AccessType): String {

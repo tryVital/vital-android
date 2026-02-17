@@ -8,10 +8,12 @@ import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.services.data.UserSDKSyncStateBody
 import io.tryvital.client.services.data.UserSDKSyncStatus
 import io.tryvital.client.utils.VitalLogger
+import io.tryvital.vitalhealthcore.workers.LocalSyncStateProvider
 import io.tryvital.vitalhealthconnect.exceptions.ConnectionPaused
 import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.exceptions.ConnectionDestroyed
-import io.tryvital.vitalhealthconnect.model.ConnectionPolicy
+import io.tryvital.vitalhealthcore.model.ConnectionPolicy
+import io.tryvital.vitalhealthcore.workers.LocalSyncState
 import io.tryvital.vitalhealthconnect.model.HealthConnectConnectionStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,9 +27,9 @@ internal class LocalSyncStateManager(
     private val vitalClient: VitalClient,
     private val vitalLogger: VitalLogger,
     private val preferences: SharedPreferences,
-) {
+) : LocalSyncStateProvider {
 
-    internal fun getPersistedLocalSyncState(): LocalSyncState?
+    override fun getPersistedLocalSyncState(): LocalSyncState?
         = preferences.getJson(UnSecurePrefKeys.localSyncStateKey)
 
     @Suppress("unused")

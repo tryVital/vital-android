@@ -14,18 +14,14 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.sample.AppSettings
 import io.tryvital.sample.AppSettingsStore
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
-import io.tryvital.vitalhealthconnect.model.ConnectionPolicy
+import io.tryvital.vitalhealthcore.model.ConnectionPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import okio.Buffer
-import okio.BufferedSource
-import okio.ByteString
 import okio.ByteString.Companion.encodeUtf8
-import okio.HashingSink
 import java.time.Instant
 import java.util.UUID
 

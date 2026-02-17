@@ -22,8 +22,8 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.response.ChangesResponse
-import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
-import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthcore.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.records.ProcessorOptions

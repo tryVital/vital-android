@@ -10,12 +10,12 @@ import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.utils.VitalLogger
-import io.tryvital.vitalsamsunghealth.model.ConnectionPolicy
+import io.tryvital.vitalhealthcore.model.ConnectionPolicy
 import io.tryvital.vitalsamsunghealth.model.HealthConnectAvailability
 import io.tryvital.vitalsamsunghealth.model.PermissionOutcome
-import io.tryvital.vitalsamsunghealth.model.RemappedVitalResource
-import io.tryvital.vitalsamsunghealth.model.VitalResource
-import io.tryvital.vitalsamsunghealth.model.WritableVitalResource
+import io.tryvital.vitalhealthcore.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
+import io.tryvital.vitalhealthcore.model.WritableVitalResource
 import io.tryvital.vitalsamsunghealth.model.recordTypeDependencies
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope

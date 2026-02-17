@@ -1,6 +1,6 @@
 package io.tryvital.vitalhealthconnect.exceptions
 
-import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
 
 class RecordWriteUnsupported(resource: VitalResource): Throwable(
     message = "This SDK version does not support writing $resource."

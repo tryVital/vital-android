@@ -26,10 +26,10 @@ import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SourceType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
-import io.tryvital.vitalhealthconnect.model.HCActivityHourlyTotals
-import io.tryvital.vitalhealthconnect.model.HCActivitySummary
-import io.tryvital.vitalhealthconnect.model.HCSleepSummary
-import io.tryvital.vitalhealthconnect.model.HCWorkoutSummary
+import io.tryvital.vitalhealthcore.model.HCActivityHourlyTotals
+import io.tryvital.vitalhealthcore.model.HCActivitySummary
+import io.tryvital.vitalhealthcore.model.HCSleepSummary
+import io.tryvital.vitalhealthcore.model.HCWorkoutSummary
 import io.tryvital.vitalhealthconnect.model.quantitySample
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll

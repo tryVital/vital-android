@@ -3,8 +3,8 @@ package io.tryvital.vitalsamsunghealth
 import android.content.Context
 import com.samsung.android.sdk.health.data.permission.AccessType
 import com.samsung.android.sdk.health.data.permission.Permission
-import io.tryvital.vitalsamsunghealth.model.VitalResource
-import io.tryvital.vitalsamsunghealth.model.WritableVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
+import io.tryvital.vitalhealthcore.model.WritableVitalResource
 import io.tryvital.vitalsamsunghealth.model.recordTypeDependencies
 
 object UnSecurePrefKeys {

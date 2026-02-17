@@ -9,7 +9,7 @@ import android.content.Context.MODE_PRIVATE
 import android.content.SharedPreferences
 import com.squareup.moshi.JsonClass
 import io.tryvital.client.VITAL_PERFS_FILE_NAME
-import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthconnect.workers.getJson
 import io.tryvital.vitalhealthconnect.workers.putJson
 

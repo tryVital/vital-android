@@ -7,8 +7,8 @@ import io.tryvital.vitalsamsunghealth.healthconnect.client.records.FloorsClimbed
 import io.tryvital.vitalsamsunghealth.healthconnect.client.records.StepsRecord
 import io.tryvital.vitalsamsunghealth.healthconnect.client.records.Vo2MaxRecord
 import io.tryvital.client.services.data.DataStage
-import io.tryvital.vitalsamsunghealth.model.RemappedVitalResource
-import io.tryvital.vitalsamsunghealth.model.VitalResource
+import io.tryvital.vitalhealthcore.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalsamsunghealth.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalsamsunghealth.model.processedresource.TimeSeriesData
 import io.tryvital.vitalsamsunghealth.records.ProcessorOptions

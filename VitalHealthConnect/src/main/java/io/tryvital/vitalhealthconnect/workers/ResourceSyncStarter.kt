@@ -21,9 +21,10 @@ import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.isConnectedToInternet
 import io.tryvital.vitalhealthconnect.markAutoSyncSuccess
-import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
-import io.tryvital.vitalhealthconnect.model.VitalResource
-import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SyncContextTag
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -63,7 +64,7 @@ internal data class ResourceSyncStarterInput(
                 RemappedVitalResource(VitalResource.valueOf(it))
             } ?: emptySet(),
             startForeground = data.getBoolean("startForeground", true),
-            tags = data.getIntArray("tags")?.map(SyncProgress.SyncContextTag.Companion::of) ?: emptyList()
+            tags = data.getIntArray("tags")?.map(SyncProgress.SyncContextTag::of) ?: emptyList()
         )
     }
 }

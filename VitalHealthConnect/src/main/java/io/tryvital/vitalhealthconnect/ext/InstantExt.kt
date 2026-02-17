@@ -1,8 +1,7 @@
 package io.tryvital.vitalhealthconnect.ext
 
+import io.tryvital.vitalhealthcore.ext.toDate as coreToDate
 import java.time.Instant
 import java.util.Date
 
-fun Instant.toDate(): Date {
-    return Date.from(this)
-}
+fun Instant.toDate(): Date = this.coreToDate()

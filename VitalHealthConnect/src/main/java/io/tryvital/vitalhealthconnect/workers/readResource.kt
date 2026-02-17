@@ -7,8 +7,8 @@ import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.Vo2MaxRecord
 import io.tryvital.client.services.data.DataStage
-import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
-import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthcore.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
 import io.tryvital.vitalhealthconnect.records.ProcessorOptions

@@ -10,7 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
-import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
 
 @Composable
 fun ReadDataCard(
