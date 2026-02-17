@@ -7,6 +7,7 @@ import android.os.Build
 import com.squareup.moshi.adapter
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.VitalPrivateApi
+import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthcore.workers.LocalSyncStateProvider
@@ -18,12 +19,11 @@ import java.time.Instant
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-private const val SCHEDULE_KEY = "SyncReportSchedule"
-
 class SyncProgressReporter(
     private val store: SyncProgressStore,
     private val client: VitalClient,
     private val localSyncStateProvider: LocalSyncStateProvider,
+    private val providerSlug: ManualProviderSlug = ManualProviderSlug.HealthConnect,
 ) {
     private val preferences get() = client.sharedPreferences
     private val active: MutableSet<SyncProgress.SyncID> = mutableSetOf()
@@ -50,10 +50,10 @@ class SyncProgressReporter(
         reportIfNeeded(context, force = true)
     }
 
-    fun nextSchedule(): Instant? = preferences.getString(SCHEDULE_KEY, null)?.let(Instant::parse)
+    fun nextSchedule(): Instant? = preferences.getString(scheduleKey, null)?.let(Instant::parse)
 
     private suspend fun reportIfNeeded(context: Context, force: Boolean) = reportMutex.withLock {
-        val schedule = preferences.getString(SCHEDULE_KEY, null)?.let(Instant::parse) ?: Instant.MIN
+        val schedule = preferences.getString(scheduleKey, null)?.let(Instant::parse) ?: Instant.MIN
         val shouldReport = force || Instant.now().isAfter(schedule)
         if (!shouldReport) {
             VitalLogger.getOrCreate().info { "SyncProgressReporter: skipped; next at $schedule" }
@@ -67,14 +67,14 @@ class SyncProgressReporter(
             val report = SyncProgressReport(progress, captureDeviceInfo(context))
             val reportBody = VitalGistStorage.moshi.adapter<SyncProgressReport>().toJson(report)
                 .toRequestBody("application/json".toMediaTypeOrNull())
-            client.vitalPrivateService.reportSyncProgress(userId, reportBody)
+            client.vitalPrivateService.reportSyncProgress(userId, providerSlug, reportBody)
         } catch (t: Throwable) {
             VitalLogger.getOrCreate().info { "SyncProgressReporter: failed to report sync progress: $t" }
         }
 
         val reportingInterval = localSyncStateProvider.getPersistedLocalSyncState()?.reportingInterval ?: 3_600
         val newSchedule = Instant.now().plusSeconds(reportingInterval)
-        preferences.edit().putString(SCHEDULE_KEY, newSchedule.toString()).apply()
+        preferences.edit().putString(scheduleKey, newSchedule.toString()).apply()
 
         VitalLogger.getOrCreate().info { "SyncProgressReporter: done; next at $newSchedule" }
     }
@@ -95,4 +95,14 @@ class SyncProgressReporter(
             }
         )
     }
+
+    private val scheduleKey: String
+        get() = when (providerSlug) {
+            // Keep Health Connect schedule key unchanged.
+            ManualProviderSlug.HealthConnect -> "SyncReportSchedule"
+            ManualProviderSlug.SamsungHealth -> "SyncReportScheduleSamsungHealth"
+            else -> throw IllegalArgumentException(
+                "Unsupported provider slug for sync progress reporting: $providerSlug"
+            )
+        }
 }
