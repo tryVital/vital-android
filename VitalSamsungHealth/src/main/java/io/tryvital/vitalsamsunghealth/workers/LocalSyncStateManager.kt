@@ -10,9 +10,9 @@ import io.tryvital.vitalhealthcore.workers.BaseLocalSyncStateManager
 import io.tryvital.vitalhealthcore.workers.LocalSyncState
 import io.tryvital.vitalhealthcore.workers.LocalSyncStateProvider
 import io.tryvital.vitalsamsunghealth.UnSecurePrefKeys
-import io.tryvital.vitalsamsunghealth.exceptions.ConnectionDestroyed
-import io.tryvital.vitalsamsunghealth.exceptions.ConnectionPaused
-import io.tryvital.vitalsamsunghealth.model.HealthConnectConnectionStatus
+import io.tryvital.vitalhealthcore.exceptions.ConnectionDestroyed
+import io.tryvital.vitalhealthcore.exceptions.ConnectionPaused
+import io.tryvital.vitalhealthcore.model.ConnectionStatus
 import kotlinx.coroutines.flow.StateFlow
 
 internal class LocalSyncStateManager(
@@ -31,11 +31,11 @@ internal class LocalSyncStateManager(
         numberOfDaysToBackfillKey = UnSecurePrefKeys.numberOfDaysToBackFillKey,
         statusMapper = { connectionPolicy, syncStatus ->
             when (connectionPolicy) {
-                ConnectionPolicy.AutoConnect -> HealthConnectConnectionStatus.AutoConnect
+                ConnectionPolicy.AutoConnect -> ConnectionStatus.AutoConnect
                 ConnectionPolicy.Explicit -> when (syncStatus) {
-                    UserSDKSyncStatus.Active -> HealthConnectConnectionStatus.Connected
-                    UserSDKSyncStatus.Paused -> HealthConnectConnectionStatus.ConnectionPaused
-                    UserSDKSyncStatus.Error, null -> HealthConnectConnectionStatus.Disconnected
+                    UserSDKSyncStatus.Active -> ConnectionStatus.Connected
+                    UserSDKSyncStatus.Paused -> ConnectionStatus.ConnectionPaused
+                    UserSDKSyncStatus.Error, null -> ConnectionStatus.Disconnected
                 }
             }
         },
@@ -45,7 +45,7 @@ internal class LocalSyncStateManager(
 
     override fun getPersistedLocalSyncState(): LocalSyncState? = delegate.getPersistedLocalSyncState()
 
-    val connectionStatus: StateFlow<HealthConnectConnectionStatus> get() = delegate.connectionStatus
+    val connectionStatus: StateFlow<ConnectionStatus> get() = delegate.connectionStatus
 
     val connectionPolicy: ConnectionPolicy get() = delegate.connectionPolicy
 

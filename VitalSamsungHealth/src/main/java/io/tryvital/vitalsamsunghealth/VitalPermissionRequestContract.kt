@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import androidx.activity.result.contract.ActivityResultContract
+import com.samsung.android.sdk.health.data.error.AuthorizationException
 import com.samsung.android.sdk.health.data.permission.AccessType
 import com.samsung.android.sdk.health.data.permission.Permission
 import io.tryvital.client.createConnectedSourceIfNotExist
@@ -11,7 +12,7 @@ import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthcore.model.ConnectionPolicy
-import io.tryvital.vitalsamsunghealth.model.HealthConnectAvailability
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
 import io.tryvital.vitalsamsunghealth.model.PermissionOutcome
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
 import io.tryvital.vitalhealthcore.model.VitalResource
@@ -25,7 +26,6 @@ import kotlinx.coroutines.launch
 
 class VitalPermissionRequestContract(
     private val readResources: Set<VitalResource>,
-    private val writeResources: Set<WritableVitalResource>,
     private val manager: VitalSamsungHealthManager,
     private val taskScope: CoroutineScope,
 ): ActivityResultContract<Unit, Deferred<PermissionOutcome>>() {
@@ -34,7 +34,7 @@ class VitalPermissionRequestContract(
         context: Context,
         input: Unit
     ): SynchronousResult<Deferred<PermissionOutcome>> {
-        if (VitalSamsungHealthManager.isAvailable(context) != HealthConnectAvailability.Installed) {
+         if (VitalSamsungHealthManager.isAvailable(context) != ProviderAvailability.Installed) {
             return SynchronousResult(CompletableDeferred(PermissionOutcome.HealthConnectUnavailable))
         }
 
@@ -91,22 +91,17 @@ class VitalPermissionRequestContract(
                 }
                 .toSet()
 
-            val writeGrants = writeResources
-                .filter { grantedKeys.containsAll(manager.permissionsRequiredToWriteResources(setOf(it))) }
-                .toSet()
-
             manager.sharedPreferences.edit().run {
                 readGrants.forEach { putBoolean(UnSecurePrefKeys.readResourceGrant(it), true) }
-                writeGrants.forEach { putBoolean(UnSecurePrefKeys.writeResourceGrant(it), true) }
                 apply()
             }
 
-            VitalLogger.getOrCreate().logI("[processGrantedPermissions] Saved read grants: ${readGrants.joinToString(", ")}; write grants = ${writeGrants.joinToString(", ")}")
+            VitalLogger.getOrCreate().logI("[processGrantedPermissions] Saved read grants: ${readGrants.joinToString(", ")}")
 
             if (manager.localSyncStateManager.connectionPolicy == ConnectionPolicy.AutoConnect) {
                 try {
                     manager.vitalClient
-                        .createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
+                        .createConnectedSourceIfNotExist(ManualProviderSlug.SamsungHealth)
                 } catch (e: Throwable) {
                     VitalLogger.getOrCreate().logE("[Ask] proactive CS creation failed", e)
                 }
@@ -146,10 +141,6 @@ class VitalPermissionRequestContract(
             for (recordType in resource.recordTypeDependencies().allRecordTypes) {
                 permissionForRecordType(recordType, AccessType.READ)?.let(permissions::add)
             }
-        }
-
-        for (resource in writeResources) {
-            permissions += Permission.of(writableResourceToSamsungDataType(resource), AccessType.WRITE)
         }
 
         return permissions

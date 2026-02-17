@@ -36,7 +36,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.addSleeps(
             userId, SummaryPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -56,7 +56,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.addBody(
             userId, SummaryPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -76,7 +76,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.addProfile(
             userId, SummaryPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -96,7 +96,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.addActivities(
             userId, SummaryPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -116,7 +116,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.addWorkouts(
             userId, SummaryPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -136,7 +136,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.addMenstrualCycles(
             userId, SummaryPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -156,7 +156,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.addMeals(
             userId, SummaryPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -177,7 +177,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.timeseriesPost(
             userId, resource.toString(), TimeseriesPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,
@@ -197,7 +197,7 @@ class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUp
         vitalClient.vitalPrivateService.bloodPressureTimeseriesPost(
             userId, TimeseriesPayload(
                 stage = stage,
-                provider = ManualProviderSlug.HealthConnect,
+                provider = ManualProviderSlug.SamsungHealth,
                 startDate = startDate,
                 endDate = endDate,
                 timeZoneId = timeZoneId,

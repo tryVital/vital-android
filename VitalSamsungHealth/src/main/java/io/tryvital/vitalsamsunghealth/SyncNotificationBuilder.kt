@@ -57,7 +57,7 @@ class DefaultSyncNotificationBuilder(
     private fun createChannel(context: Context, content: DefaultSyncNotificationContent): String {
         // We cannot use IMPORTANT_MIN for FGS, or else Android will coerce it to IMPORTANT_HIGH
         val importance = NotificationManager.IMPORTANCE_LOW
-        val mChannel = NotificationChannel("VitalHealthConnectSync", content.channelName, importance)
+        val mChannel = NotificationChannel("VitalSamsungHealthSync", content.channelName, importance)
         mChannel.description = content.channelDescription
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         notificationManager.createNotificationChannel(mChannel)

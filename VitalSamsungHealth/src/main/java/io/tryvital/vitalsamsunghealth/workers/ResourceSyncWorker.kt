@@ -23,8 +23,8 @@ import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalsamsunghealth.UnSecurePrefKeys
 import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager
-import io.tryvital.vitalsamsunghealth.exceptions.ConnectionDestroyed
-import io.tryvital.vitalsamsunghealth.exceptions.ConnectionPaused
+import io.tryvital.vitalhealthcore.exceptions.ConnectionDestroyed
+import io.tryvital.vitalhealthcore.exceptions.ConnectionPaused
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
 import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalsamsunghealth.model.dataTypeChangesToTriggerSync

@@ -19,8 +19,8 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
 import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
-import io.tryvital.vitalhealthconnect.exceptions.ConnectionDestroyed
-import io.tryvital.vitalhealthconnect.exceptions.ConnectionPaused
+import io.tryvital.vitalhealthcore.exceptions.ConnectionDestroyed
+import io.tryvital.vitalhealthcore.exceptions.ConnectionPaused
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
 import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData

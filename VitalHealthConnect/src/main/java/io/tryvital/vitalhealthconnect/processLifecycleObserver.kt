@@ -8,7 +8,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
-import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
 import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
 import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SystemEventType
 import kotlinx.coroutines.CoroutineStart
@@ -24,7 +24,7 @@ internal fun processLifecycleObserver(
 
         val isSignedIn = VitalClient.Status.SignedIn in VitalClient.status
 
-        if (VitalHealthConnectManager.isAvailable(manager.context) != HealthConnectAvailability.Installed) {
+        if (VitalHealthConnectManager.isAvailable(manager.context) != ProviderAvailability.Installed) {
             return
         }
 

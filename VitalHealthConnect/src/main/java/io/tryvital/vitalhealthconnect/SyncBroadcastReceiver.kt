@@ -8,7 +8,7 @@ import android.content.Intent
 import android.content.Intent.ACTION_BOOT_COMPLETED
 import android.os.Build
 import io.tryvital.client.utils.VitalLogger
-import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
 import io.tryvital.vitalhealthconnect.workers.SyncOnExactAlarmService
 
 const val ACTION_SYNC_DATA = "io.tryvital.vitalhealthconnect.action.SYNC_DATA"
@@ -34,7 +34,7 @@ class SyncBroadcastReceiver: BroadcastReceiver() {
 
         // Just in case we are on an earlier Android OS version, in which one can uninstall
         // Health Connect.
-        if (VitalHealthConnectManager.isAvailable(manager.context) != HealthConnectAvailability.Installed) {
+        if (VitalHealthConnectManager.isAvailable(manager.context) != ProviderAvailability.Installed) {
             return VitalLogger.getOrCreate().info { "BgSync: HealthConnect gone" }
         }
 
@@ -53,7 +53,7 @@ class SyncBroadcastReceiver: BroadcastReceiver() {
 
         // Just in case we are on an earlier Android OS version, in which one can uninstall
         // Health Connect.
-        if (VitalHealthConnectManager.isAvailable(manager.context) != HealthConnectAvailability.Installed) {
+        if (VitalHealthConnectManager.isAvailable(manager.context) != ProviderAvailability.Installed) {
             return VitalLogger.getOrCreate().info { "BgSync: HealthConnect gone" }
         }
 

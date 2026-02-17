@@ -12,8 +12,8 @@ import io.tryvital.vitalhealthconnect.VitalHealthConnectManager.Companion.openHe
 import io.tryvital.vitalhealthconnect.disableBackgroundSync
 import io.tryvital.vitalhealthconnect.enableBackgroundSyncContract
 import io.tryvital.vitalhealthconnect.isBackgroundSyncEnabled
-import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
-import io.tryvital.vitalhealthconnect.model.HealthConnectConnectionStatus
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
+import io.tryvital.vitalhealthcore.model.ConnectionStatus
 import io.tryvital.vitalhealthcore.model.PermissionStatus
 import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthcore.model.WritableVitalResource
@@ -93,7 +93,7 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
     fun checkPermissions() {
         viewModelScope.launch {
             val state = viewModelState.value
-            if (state.available != HealthConnectAvailability.Installed)
+            if (state.available != ProviderAvailability.Installed)
                 return@launch
 
             val allResources = VitalResource.values().toList()
@@ -115,7 +115,7 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
     }
 
     fun toggleConnection() {
-        check(viewModelState.value.connectionStatus != HealthConnectConnectionStatus.AutoConnect)
+        check(viewModelState.value.connectionStatus != ConnectionStatus.AutoConnect)
 
         if (currentConnectionAction != null) {
             return
@@ -127,7 +127,7 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
             val status = viewModelState.value.connectionStatus
 
             try {
-                if (status == HealthConnectConnectionStatus.Disconnected) {
+                if (status == ConnectionStatus.Disconnected) {
                     vitalHealthConnectManager.connect()
                 } else {
                     vitalHealthConnectManager.disconnect()
@@ -196,11 +196,11 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
 }
 
 data class HealthConnectViewModelState(
-    val available: HealthConnectAvailability? = null,
+    val available: ProviderAvailability? = null,
     val permissionsGranted: List<VitalResource> = listOf(),
     val permissionsMissing: List<VitalResource> = listOf(),
     val syncStatus: String = "",
-    val connectionStatus: HealthConnectConnectionStatus = HealthConnectConnectionStatus.AutoConnect,
+    val connectionStatus: ConnectionStatus = ConnectionStatus.AutoConnect,
     val isPerformingConnectionAction: Boolean = false,
     val errorMessage: String? = null,
 )

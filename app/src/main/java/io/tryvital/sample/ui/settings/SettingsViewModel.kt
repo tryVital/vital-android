@@ -15,6 +15,7 @@ import io.tryvital.sample.AppSettings
 import io.tryvital.sample.AppSettingsStore
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthcore.model.ConnectionPolicy
+import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
@@ -135,6 +136,11 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
             }
 
             VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
+                logsEnabled = true,
+                connectionPolicy = state.appSettings.connectionPolicy,
+            )
+
+            VitalSamsungHealthManager.getOrCreate(context).configureSamsungHealthClient(
                 logsEnabled = true,
                 connectionPolicy = state.appSettings.connectionPolicy,
             )
