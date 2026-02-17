@@ -34,9 +34,9 @@ buildscript {
         annotation = "1.5.0"
         startup_runtime = "1.1.1"
         security_crypto = "1.0.0"
-        kotlin = '1.8.22'
-        ksp = '1.8.22-1.0.11'
-        kotlinx_coroutines = "1.6.4"
+        kotlin = '2.1.21'
+        ksp = '2.1.21-2.0.2'
+        kotlinx_coroutines = "1.10.2"
         work_runtime = "2.7.1"
     }
 }
@@ -50,7 +50,8 @@ plugins {
     id 'com.android.application' version '8.9.1' apply false
     id 'com.android.library' version '8.9.1' apply false
 
-    id 'org.jetbrains.kotlin.android' version '1.8.22' apply false
+    id 'org.jetbrains.kotlin.android' version '2.1.21' apply false
+    id 'org.jetbrains.kotlin.plugin.compose' version '2.1.21' apply false
 
     id 'org.jreleaser' version '1.18.0'
 }
