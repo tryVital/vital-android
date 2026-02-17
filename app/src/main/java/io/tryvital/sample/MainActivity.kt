@@ -31,6 +31,7 @@ import io.tryvital.client.utils.VitalLogger
 import io.tryvital.sample.ui.device.DeviceScreen
 import io.tryvital.sample.ui.devices.DevicesScreen
 import io.tryvital.sample.ui.healthconnect.HealthConnectScreen
+import io.tryvital.sample.ui.healthconnect.SamsungHealthScreen
 import io.tryvital.sample.ui.settings.SettingsScreen
 import io.tryvital.sample.ui.theme.VitalSampleTheme
 import io.tryvital.sample.ui.users.UsersScreen
@@ -87,6 +88,9 @@ class MainActivity : ComponentActivity() {
                         composable(Screen.HealthConnect.route) {
                             HealthConnectScreen(navController)
                         }
+                        composable(Screen.SamsungHealth.route) {
+                            SamsungHealthScreen(navController)
+                        }
                         composable(Screen.Device.route + "{deviceId}") {
                             DeviceScreen(vitalDeviceManager, navController)
                         }
@@ -106,6 +110,7 @@ class MainActivity : ComponentActivity() {
 sealed class Screen(val route: String) {
     object Users : Screen("users")
     object HealthConnect : Screen("healthConnect")
+    object SamsungHealth : Screen("samsungHealth")
     object Devices : Screen("devices")
     object Device : Screen("device")
     object Settings : Screen("settings")

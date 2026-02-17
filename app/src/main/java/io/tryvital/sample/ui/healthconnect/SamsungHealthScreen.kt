@@ -1,13 +1,22 @@
 package io.tryvital.sample.ui.healthconnect
 
-import androidx.compose.animation.*
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -19,11 +28,11 @@ import androidx.navigation.NavHostController
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun HealthConnectScreen(
-    navController: NavHostController
+fun SamsungHealthScreen(
+    navController: NavHostController,
 ) {
-    val viewModel: HealthConnectViewModel = viewModel(
-        factory = HealthConnectViewModel.provideFactory(LocalContext.current)
+    val viewModel: SamsungHealthViewModel = viewModel(
+        factory = SamsungHealthViewModel.provideFactory(LocalContext.current),
     )
 
     val context = LocalContext.current
@@ -47,13 +56,12 @@ fun HealthConnectScreen(
         }
     }
 
-
     val state = viewModel.uiState.collectAsState().value
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Health Connect") },
+                title = { Text("Samsung Health") },
                 colors = TopAppBarDefaults.smallTopAppBarColors(containerColor = Color(0xFFE0E0E0)),
                 navigationIcon = {
                     IconButton(onClick = {
@@ -61,8 +69,7 @@ fun HealthConnectScreen(
                     }) {
                         Icon(Icons.Filled.ArrowBack, "backIcon")
                     }
-                }
-
+                },
             )
         },
     ) { padding ->
@@ -70,10 +77,10 @@ fun HealthConnectScreen(
             modifier = Modifier
                 .padding(padding)
                 .verticalScroll(rememberScrollState()),
-            content = {
-                UserDetailsCard(state, viewModel)
-                HealthConnectCard(state, viewModel)
-                ReadDataCard(state, viewModel)
-            })
+        ) {
+            SamsungUserDetailsCard(state, viewModel)
+            SamsungHealthCard(state, viewModel)
+            SamsungReadDataCard(state, viewModel)
+        }
     }
 }

@@ -22,6 +22,7 @@ import androidx.navigation.NavController
 import io.tryvital.client.services.data.User
 import io.tryvital.sample.Screen
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun UserListItem(
     user: User,
@@ -84,7 +85,7 @@ fun UserListItem(
             Text("Current SDK User")
         }
 
-        Row(
+        FlowRow(
             horizontalArrangement = Arrangement.Start,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
@@ -112,6 +113,20 @@ fun UserListItem(
                 )
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                 Text("Health Connect")
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            OutlinedButton(
+                onClick = { navController.navigate(Screen.SamsungHealth.route) }
+            ) {
+                Icon(
+                    Icons.Outlined.Sync,
+                    contentDescription = null,
+                    modifier = Modifier.size(ButtonDefaults.IconSize)
+                )
+                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                Text("Samsung Health")
             }
         }
     }
