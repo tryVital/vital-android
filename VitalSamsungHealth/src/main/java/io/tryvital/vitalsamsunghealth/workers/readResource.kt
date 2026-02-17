@@ -1,11 +1,11 @@
 package io.tryvital.vitalsamsunghealth.workers
 
-import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
-import androidx.health.connect.client.records.BasalMetabolicRateRecord
-import androidx.health.connect.client.records.DistanceRecord
-import androidx.health.connect.client.records.FloorsClimbedRecord
-import androidx.health.connect.client.records.StepsRecord
-import androidx.health.connect.client.records.Vo2MaxRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.ActiveCaloriesBurnedRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.BasalMetabolicRateRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.DistanceRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.FloorsClimbedRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.StepsRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.Vo2MaxRecord
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.vitalsamsunghealth.model.RemappedVitalResource
 import io.tryvital.vitalsamsunghealth.model.VitalResource

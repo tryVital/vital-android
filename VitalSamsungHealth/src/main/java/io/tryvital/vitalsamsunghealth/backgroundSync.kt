@@ -109,7 +109,7 @@ internal fun VitalSamsungHealthManager.markAutoSyncSuccess() {
 fun VitalSamsungHealthManager.enableBackgroundSyncContract() = object: ActivityResultContract<Unit, Boolean>() {
     override fun getSynchronousResult(
         context: Context,
-        input: Unit?
+        input: Unit
     ): SynchronousResult<Boolean>? {
         val alarmManager = context.getSystemService(AlarmManager::class.java)
 
@@ -125,7 +125,7 @@ fun VitalSamsungHealthManager.enableBackgroundSyncContract() = object: ActivityR
     }
 
     @SuppressLint("InlinedApi")
-    override fun createIntent(context: Context, input: Unit?): Intent {
+    override fun createIntent(context: Context, input: Unit): Intent {
         check(Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
 
         VitalLogger.getOrCreate().info { "BgSync: will request explicit exact alarm permission" }

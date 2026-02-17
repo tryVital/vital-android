@@ -5,20 +5,20 @@ package io.tryvital.vitalsamsunghealth
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Looper
 import androidx.activity.result.contract.ActivityResultContract
-import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.HealthConnectClient.Companion.ACTION_HEALTH_CONNECT_SETTINGS
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.*
-import androidx.health.connect.client.records.metadata.Metadata
-import androidx.health.connect.client.units.BloodGlucose
-import androidx.health.connect.client.units.Volume
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.*
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.work.*
+import com.samsung.android.sdk.health.data.data.HealthDataPoint
+import com.samsung.android.sdk.health.data.permission.AccessType
+import com.samsung.android.sdk.health.data.permission.Permission
+import com.samsung.android.sdk.health.data.request.DataType
+import com.samsung.android.sdk.health.data.request.DataTypes
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.VitalPrivateApi
@@ -158,6 +158,7 @@ class VitalSamsungHealthManager private constructor(
 
     fun resourcesWithReadPermission(): Set<VitalResource> {
         return VitalResource.values()
+            .filter { it.supportedBySamsungDataApi() }
             .filter { sharedPreferences.getBoolean(UnSecurePrefKeys.readResourceGrant(it), false) }
             .toSet()
     }
@@ -198,8 +199,13 @@ class VitalSamsungHealthManager private constructor(
         val currentGrants = getGrantedPermissions(context)
 
         val readResourcesByStatus = VitalResource.values().groupBy { resource ->
+            if (!resource.supportedBySamsungDataApi()) {
+                return@groupBy false
+            }
             return@groupBy resource.recordTypeDependencies().isResourceActive { recordType ->
-                val readPermission = HealthPermission.getReadPermission(recordType)
+                val readPermission = permissionForRecordType(recordType, AccessType.READ)
+                    ?.let { permissionKey(it.dataType, it.accessType) }
+                    ?: return@isResourceActive false
                 return@isResourceActive readPermission in currentGrants
             }
         }
@@ -234,20 +240,32 @@ class VitalSamsungHealthManager private constructor(
             recordTypes.addAll(records)
         }
 
-        return recordTypes.map { HealthPermission.getWritePermission(it) }.toSet()
+        return recordTypes.mapNotNullTo(mutableSetOf()) {
+            permissionForRecordType(it, AccessType.WRITE)?.let { permission ->
+                permissionKey(permission.dataType, permission.accessType)
+            }
+        }
     }
 
     internal fun readPermissionsRequiredByResources(resources: Set<VitalResource>): Set<String> {
         return resources
             .flatMapTo(mutableSetOf()) { it.recordTypeDependencies().required }
-            .map { HealthPermission.getReadPermission(it) }
+            .mapNotNull {
+                permissionForRecordType(it, AccessType.READ)?.let { permission ->
+                    permissionKey(permission.dataType, permission.accessType)
+                }
+            }
             .toSet()
     }
 
     internal fun readPermissionsToRequestForResources(resources: Set<VitalResource>): Set<String> {
         return resources
             .flatMapTo(mutableSetOf()) { it.recordTypeDependencies().allRecordTypes }
-            .map { HealthPermission.getReadPermission(it) }
+            .mapNotNull {
+                permissionForRecordType(it, AccessType.READ)?.let { permission ->
+                    permissionKey(permission.dataType, permission.accessType)
+                }
+            }
             .toSet()
     }
 
@@ -457,34 +475,33 @@ class VitalSamsungHealthManager private constructor(
         endDate: Instant,
         value: Double
     ) {
-        val healthConnectClient = samsungHealthClientProvider.getSamsungHealthClient(context)
+        val healthDataStore = samsungHealthClientProvider.getHealthDataStore(context)
+        val end = if (startDate <= endDate) startDate.plusSeconds(1) else endDate
 
         when (resource) {
             WritableVitalResource.Water -> {
-                healthConnectClient.insertRecords(
-                    listOf(
-                        HydrationRecord(
-                            startTime = startDate,
-                            startZoneOffset = ZoneOffset.UTC,
-                            endTime = if (startDate <= endDate) startDate.plusSeconds(1) else endDate,
-                            endZoneOffset = ZoneOffset.UTC,
-                            volume = Volume.milliliters(value),
-                            metadata = Metadata.manualEntry(),
-                        )
-                    )
-                )
+                val dataPoint = HealthDataPoint.builder()
+                    .setStartTime(startDate, ZoneOffset.UTC)
+                    .setEndTime(end, ZoneOffset.UTC)
+                    .addFieldData(DataType.WaterIntakeType.AMOUNT, value.toFloat())
+                    .build()
+
+                val insertRequest = DataTypes.WATER_INTAKE.insertDataRequestBuilder
+                    .addData(dataPoint)
+                    .build()
+                healthDataStore.insertData(insertRequest)
             }
             WritableVitalResource.Glucose -> {
-                healthConnectClient.insertRecords(
-                    listOf(
-                        BloodGlucoseRecord(
-                            time = startDate,
-                            zoneOffset = ZoneOffset.UTC,
-                            level = BloodGlucose.milligramsPerDeciliter(value),
-                            metadata = Metadata.manualEntry(),
-                        )
-                    )
-                )
+                val dataPoint = HealthDataPoint.builder()
+                    .setStartTime(startDate, ZoneOffset.UTC)
+                    .setEndTime(end, ZoneOffset.UTC)
+                    .addFieldData(DataType.BloodGlucoseType.GLUCOSE_LEVEL, value.toFloat())
+                    .build()
+
+                val insertRequest = DataTypes.BLOOD_GLUCOSE.insertDataRequestBuilder
+                    .addData(dataPoint)
+                    .build()
+                healthDataStore.insertData(insertRequest)
             }
         }
 
@@ -498,6 +515,9 @@ class VitalSamsungHealthManager private constructor(
         endTime: Instant,
         processorOptions: ProcessorOptions = ProcessorOptions(),
     ): ProcessedResourceData {
+        require(resource.supportedBySamsungDataApi()) {
+            "Resource ${resource.name} is not supported by Samsung Health Data API."
+        }
         return readResourceByTimeRange(
             resource.remapped(),
             startTime = startTime,
@@ -596,7 +616,7 @@ class VitalSamsungHealthManager private constructor(
     }
 
     companion object {
-        private const val packageName = "com.google.android.apps.healthdata"
+        private const val samsungHealthPackageName = "com.sec.android.app.shealth"
 
         private val _customSyncNotificationBuilder = AtomicReference<SyncNotificationBuilder?>(null)
 
@@ -633,11 +653,13 @@ class VitalSamsungHealthManager private constructor(
 
         @Suppress("unused")
         fun isAvailable(context: Context): HealthConnectAvailability {
-            return when (HealthConnectClient.getSdkStatus(context, packageName)) {
-                HealthConnectClient.SDK_UNAVAILABLE -> HealthConnectAvailability.NotSupportedSDK
-                HealthConnectClient.SDK_AVAILABLE -> HealthConnectAvailability.Installed
-                HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> HealthConnectAvailability.NotInstalled
-                else -> HealthConnectAvailability.NotSupportedSDK
+            if (context.packageManager == null) return HealthConnectAvailability.NotSupportedSDK
+            return try {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(samsungHealthPackageName, 0)
+                HealthConnectAvailability.Installed
+            } catch (_: PackageManager.NameNotFoundException) {
+                HealthConnectAvailability.NotInstalled
             }
         }
 
@@ -647,12 +669,12 @@ class VitalSamsungHealthManager private constructor(
                 HealthConnectAvailability.NotSupportedSDK -> null
                 HealthConnectAvailability.NotInstalled -> {
                     Intent(Intent.ACTION_VIEW).apply {
-                        data = Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")
+                        data = Uri.parse("https://play.google.com/store/apps/details?id=$samsungHealthPackageName")
                         setPackage("com.android.vending")
                     }
                 }
                 HealthConnectAvailability.Installed -> {
-                    Intent(ACTION_HEALTH_CONNECT_SETTINGS)
+                    context.packageManager.getLaunchIntentForPackage(samsungHealthPackageName)
                 }
             }
         }

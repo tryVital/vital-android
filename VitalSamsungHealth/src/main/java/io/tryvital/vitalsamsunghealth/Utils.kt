@@ -1,8 +1,11 @@
 package io.tryvital.vitalsamsunghealth
 
 import android.content.Context
+import com.samsung.android.sdk.health.data.permission.AccessType
+import com.samsung.android.sdk.health.data.permission.Permission
 import io.tryvital.vitalsamsunghealth.model.VitalResource
 import io.tryvital.vitalsamsunghealth.model.WritableVitalResource
+import io.tryvital.vitalsamsunghealth.model.recordTypeDependencies
 
 object UnSecurePrefKeys {
     internal const val loggerEnabledKey = "loggerEnabled"
@@ -29,5 +32,18 @@ object UnSecurePrefKeys {
 }
 
 internal suspend fun getGrantedPermissions(context: Context) =
-    SamsungHealthClientProvider().getSamsungHealthClient(context)
-        .permissionController.getGrantedPermissions()
+    SamsungHealthClientProvider().getHealthDataStore(context).let { store ->
+        val candidates = mutableSetOf<Permission>()
+
+        for (resource in VitalResource.values()) {
+            for (recordType in resource.recordTypeDependencies().allRecordTypes) {
+                permissionForRecordType(recordType, AccessType.READ)?.let(candidates::add)
+            }
+        }
+        for (resource in WritableVitalResource.values()) {
+            candidates += Permission.of(writableResourceToSamsungDataType(resource), AccessType.WRITE)
+        }
+
+        store.getGrantedPermissions(candidates)
+            .mapTo(mutableSetOf()) { permissionKey(it.dataType, it.accessType) }
+    }

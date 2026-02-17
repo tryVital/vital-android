@@ -1,6 +1,8 @@
 package io.tryvital.vitalsamsunghealth.model
 
-import androidx.health.connect.client.records.*
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.*
+import com.samsung.android.sdk.health.data.request.DataType
+import com.samsung.android.sdk.health.data.request.DataTypes
 
 import kotlin.reflect.KClass
 
@@ -260,6 +262,14 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
     )
 }
 
+internal fun VitalResource.supportedBySamsungDataApi(): Boolean = when (this) {
+    VitalResource.HeartRateVariability -> false
+    VitalResource.MenstrualCycle -> false
+    VitalResource.RespiratoryRate -> false
+    VitalResource.Meal -> false
+    else -> true
+}
+
 /**
  * Health Connect record types whose changes should trigger sync of a given VitalResource.
  *
@@ -300,4 +310,28 @@ internal fun VitalResource.recordTypeChangesToTriggerSync(): List<KClass<out Rec
     )
     VitalResource.RespiratoryRate -> listOf(RespiratoryRateRecord::class)
     VitalResource.Temperature -> listOf(BodyTemperatureRecord::class)
+}
+
+internal fun VitalResource.dataTypeChangesToTriggerSync(): List<DataType> = when (this) {
+    VitalResource.Water -> listOf(DataTypes.WATER_INTAKE)
+    VitalResource.ActiveEnergyBurned -> emptyList()
+    VitalResource.BasalEnergyBurned -> listOf(DataTypes.BODY_COMPOSITION)
+    VitalResource.DistanceWalkingRunning -> emptyList()
+    VitalResource.FloorsClimbed -> listOf(DataTypes.FLOORS_CLIMBED)
+    VitalResource.Steps -> emptyList()
+    VitalResource.Vo2Max -> listOf(DataTypes.EXERCISE)
+    VitalResource.BloodOxygen -> listOf(DataTypes.BLOOD_OXYGEN)
+    VitalResource.BloodPressure -> listOf(DataTypes.BLOOD_PRESSURE)
+    VitalResource.Body -> listOf(DataTypes.BODY_COMPOSITION)
+    VitalResource.Glucose -> listOf(DataTypes.BLOOD_GLUCOSE)
+    VitalResource.HeartRate -> listOf(DataTypes.HEART_RATE)
+    VitalResource.HeartRateVariability -> emptyList()
+    VitalResource.Profile -> listOf(DataTypes.BODY_COMPOSITION)
+    VitalResource.Sleep -> listOf(DataTypes.SLEEP)
+    VitalResource.Workout -> listOf(DataTypes.EXERCISE)
+    VitalResource.MenstrualCycle -> emptyList()
+    VitalResource.RespiratoryRate -> emptyList()
+    VitalResource.Temperature -> listOf(DataTypes.BODY_TEMPERATURE)
+    VitalResource.Activity -> emptyList()
+    VitalResource.Meal -> emptyList()
 }

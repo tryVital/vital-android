@@ -1,11 +1,11 @@
 package io.tryvital.vitalsamsunghealth.records
 
-import androidx.health.connect.client.records.CervicalMucusRecord
-import androidx.health.connect.client.records.IntermenstrualBleedingRecord
-import androidx.health.connect.client.records.MenstruationFlowRecord
-import androidx.health.connect.client.records.MenstruationPeriodRecord
-import androidx.health.connect.client.records.OvulationTestRecord
-import androidx.health.connect.client.records.SexualActivityRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.CervicalMucusRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.IntermenstrualBleedingRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.MenstruationFlowRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.MenstruationPeriodRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.OvulationTestRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.SexualActivityRecord
 import io.tryvital.client.services.data.LocalMenstrualCycle
 import io.tryvital.client.services.data.MenstrualCycle
 import io.tryvital.client.services.data.ProviderSlug

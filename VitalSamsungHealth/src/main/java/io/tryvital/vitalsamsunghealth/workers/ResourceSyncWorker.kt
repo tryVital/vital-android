@@ -2,16 +2,21 @@ package io.tryvital.vitalsamsunghealth.workers
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.health.connect.client.permission.HealthPermission
-import androidx.health.connect.client.records.Record
-import androidx.health.connect.client.request.ChangesTokenRequest
-import androidx.health.connect.client.response.ChangesResponse
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
+import com.samsung.android.sdk.health.data.data.Change
+import com.samsung.android.sdk.health.data.data.HealthDataPoint
+import com.samsung.android.sdk.health.data.permission.AccessType
+import com.samsung.android.sdk.health.data.permission.Permission
+import com.samsung.android.sdk.health.data.request.ChangedDataRequest
+import com.samsung.android.sdk.health.data.request.DataType
+import com.samsung.android.sdk.health.data.request.InstantTimeFilter
+import com.samsung.android.sdk.health.data.response.DataResponse
 import io.tryvital.client.VitalClient
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.client.utils.InstantJsonAdapter
@@ -22,9 +27,9 @@ import io.tryvital.vitalsamsunghealth.exceptions.ConnectionDestroyed
 import io.tryvital.vitalsamsunghealth.exceptions.ConnectionPaused
 import io.tryvital.vitalsamsunghealth.model.RemappedVitalResource
 import io.tryvital.vitalsamsunghealth.model.VitalResource
+import io.tryvital.vitalsamsunghealth.model.dataTypeChangesToTriggerSync
 import io.tryvital.vitalsamsunghealth.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalsamsunghealth.model.processedresource.merged
-import io.tryvital.vitalsamsunghealth.model.recordTypeChangesToTriggerSync
 import io.tryvital.vitalsamsunghealth.records.ProcessorOptions
 import io.tryvital.vitalsamsunghealth.records.RecordProcessor
 import io.tryvital.vitalsamsunghealth.records.RecordReader
@@ -33,7 +38,6 @@ import io.tryvital.vitalsamsunghealth.syncProgress.SyncProgress
 import kotlinx.coroutines.CancellationException
 import java.time.Instant
 import java.util.TimeZone
-import kotlin.reflect.KClass
 
 const val VITAL_SYNC_NOTIFICATION_ID = 123
 
@@ -279,97 +283,103 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         timeZone: TimeZone,
         processorOptions: ProcessorOptions,
     ) {
+        val end = minOf(Instant.now(), state.end ?: Instant.now())
+        val monitoredTypes = dataTypesToMonitor()
+
+        // No change-readable data types mapped for this resource, fall back to range-based sync.
+        if (!useRecordChangesForIncrementalBackfill || monitoredTypes.isEmpty()) {
+            return genericBackfill(
+                stage = DataStage.Daily,
+                start = state.lastSync,
+                end = end,
+                timeZone = timeZone,
+                processorOptions = processorOptions,
+            )
+        }
+
+        val monitoredTypeNames = monitoredTypes.mapTo(mutableSetOf()) { it.name }
+        val monitoredTypesInState = monitoringDataTypes()
+        val tokenByType = decodeChangesTokenMap(state.changesToken)
+
+        val isStateCompatible = monitoredTypeNames == monitoredTypesInState &&
+            monitoredTypeNames.all { tokenByType.containsKey(it) }
+
+        if (!isStateCompatible) {
+            vitalLogger.info { "${input.resource}: incompatible change token state; fallback to generic backfill" }
+            return genericBackfill(
+                stage = DataStage.Daily,
+                start = state.lastSync,
+                end = end,
+                timeZone = timeZone,
+                processorOptions = processorOptions,
+            )
+        }
+
         val userId = VitalClient.checkUserId()
-        val client = SamsungHealthClientProvider.getSamsungHealthClient(applicationContext)
+        val allData = mutableListOf<ProcessedResourceData>()
+        val nextTokens = tokenByType.toMutableMap()
 
-        // If the resource does not use record changes monitoring,
-        // use the generic backfill path
-        if (!useRecordChangesForIncrementalBackfill) {
-            return genericBackfill(
-                stage = DataStage.Daily,
-                start = state.lastSync,
-                end = minOf(Instant.now(), state.end ?: Instant.now()),
-                timeZone = timeZone,
-                processorOptions = processorOptions,
-            )
-        }
+        try {
+            monitoredTypes.forEach { dataType ->
+                var token = checkNotNull(nextTokens[dataType.name])
 
-        val recordTypesToMonitor = recordTypesToMonitor().toSimpleNameSet()
-        val monitoringTypes = monitoringRecordTypes()
-
-        // The types being monitored by the current `changesToken` no longer match the set
-        // we want to monitor, probably due to permission changes.
-        // Treat this as if the changesToken has expired.
-        if (state.changesToken == null || recordTypesToMonitor != monitoringTypes) {
-            vitalLogger.info { "${input.resource}: types to monitor have changed from $monitoringTypes to $recordTypesToMonitor" }
-
-            return genericBackfill(
-                stage = DataStage.Daily,
-                start = state.lastSync,
-                end = minOf(Instant.now(), state.end ?: Instant.now()),
-                timeZone = timeZone,
-                processorOptions = processorOptions,
-            )
-        }
-
-        var token = checkNotNull(state.changesToken)
-        var changes: ChangesResponse
-
-        do {
-            changes = client.getChanges(token)
-
-            if (changes.changesTokenExpired) {
-                vitalLogger.info { "${input.resource}: changesToken expired" }
-
-                return genericBackfill(
-                    stage = DataStage.Daily,
-                    start = state.lastSync,
-                    end = minOf(Instant.now(), state.end ?: Instant.now()),
-                    timeZone = timeZone,
-                    processorOptions = processorOptions,
-                )
-            }
-
-            if (changes.changes.isNotEmpty()) {
-                vitalLogger.info { "${input.resource}: found ${changes.changes.count()} changes" }
-
-                val delta = processChangesResponse(
-                    resource = input.resource,
-                    responses = changes,
-                    timeZone = timeZone,
-                    processor = recordProcessor,
-                    processorOptions = processorOptions,
-                    end = state.end,
-                )
-
-                syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.readChunk)
-
-                // Skip empty POST requests
-                if (delta.isNotEmpty()) {
-                    uploadResources(
-                        delta,
-                        uploader = recordUploader,
-                        stage = DataStage.Daily,
-                        timeZoneId = timeZone.id,
-                        userId = userId,
+                while (true) {
+                    val response = readChanges(
+                        dataType = dataType,
+                        pageToken = token,
+                        changeTimeFilter = null
                     )
-                    syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.uploadedChunk, dataCount = delta.count)
 
-                } else {
-                    syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.noData)
+                    val delta = processChangesResponse(
+                        resource = input.resource,
+                        changes = response.dataList,
+                        timeZone = timeZone,
+                        reader = recordReader,
+                        processor = recordProcessor,
+                        processorOptions = processorOptions,
+                        end = state.end,
+                    )
+                    if (delta != null) {
+                        allData += delta
+                    }
+
+                    val nextToken = response.pageToken
+                    if (nextToken.isNullOrBlank() || nextToken == token) {
+                        break
+                    }
+
+                    token = nextToken
+                    nextTokens[dataType.name] = token
+                    setIncremental(token = encodeChangesTokenMap(nextTokens))
                 }
-
-            } else {
-                vitalLogger.info { "${input.resource}: found no change" }
             }
+        } catch (t: Throwable) {
+            vitalLogger.info { "${input.resource}: readChanges failed, fallback to generic backfill: $t" }
+            return genericBackfill(
+                stage = DataStage.Daily,
+                start = state.lastSync,
+                end = end,
+                timeZone = timeZone,
+                processorOptions = processorOptions,
+            )
+        }
 
-            // Since we have successfully uploaded this batch of changes,
-            // save the next change token, in case we get rate limited on the
-            // next `getChanges(token)` call.
-            setIncremental(token = changes.nextChangesToken)
-            token = changes.nextChangesToken
+        val mergedData = if (allData.isNotEmpty()) allData.merged() else null
+        if (mergedData != null && mergedData.isNotEmpty()) {
+            uploadResources(
+                mergedData,
+                uploader = recordUploader,
+                stage = DataStage.Daily,
+                start = null,
+                end = null,
+                timeZoneId = timeZone.id,
+                userId = userId,
+            )
+        } else {
+            syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.noData)
+        }
 
-        } while (changes.hasMore)
+        setIncremental(token = encodeChangesTokenMap(nextTokens))
     }
 
     private suspend fun genericBackfill(
@@ -380,21 +390,19 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         processorOptions: ProcessorOptions,
     ) {
         val userId = VitalClient.checkUserId()
-        val client = SamsungHealthClientProvider.getSamsungHealthClient(applicationContext)
+        val monitoredTypes = dataTypesToMonitor()
 
-        val anchorChangesToken = if (useRecordChangesForIncrementalBackfill) {
-            val recordTypesToMonitor = recordTypesToMonitor()
-            val token = client.getChangesToken(ChangesTokenRequest(recordTypes = recordTypesToMonitor))
+        val anchorTokens: Map<String, String> = if (useRecordChangesForIncrementalBackfill && monitoredTypes.isNotEmpty()) {
+            captureCurrentChangeTokens(monitoredTypes)
+        } else {
+            emptyMap()
+        }
 
+        if (anchorTokens.isNotEmpty()) {
             sharedPreferences.edit()
-                .putStringSet(
-                    input.resource.wrapped.monitoringTypesKey,
-                    recordTypesToMonitor.toSimpleNameSet()
-                )
+                .putStringSet(input.resource.wrapped.monitoringTypesKey, monitoredTypes.mapTo(mutableSetOf()) { it.name })
                 .apply()
-
-            token
-        } else null
+        }
 
         val (stageStart, stageEnd) = when (stage) {
             // Historical stage must pass the same start ..< end throughout all the chunks.
@@ -417,31 +425,45 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             processorOptions = processorOptions,
         )
 
-        var tokenToStore: String? = null
+        // Capture writes that landed while the range request was in flight.
+        val tokenToStore: String? = if (anchorTokens.isNotEmpty()) {
+            val nextTokens = anchorTokens.toMutableMap()
 
-        if (useRecordChangesForIncrementalBackfill) {
-            tokenToStore = checkNotNull(anchorChangesToken)
-            var changes: ChangesResponse
+            monitoredTypes.forEach { dataType ->
+                var token = checkNotNull(nextTokens[dataType.name])
 
-            do {
-                changes = client.getChanges(tokenToStore!!)
-                check(!changes.changesTokenExpired)
+                while (true) {
+                    val response = readChanges(
+                        dataType = dataType,
+                        pageToken = token,
+                        changeTimeFilter = null
+                    )
 
-                vitalLogger.info { "${input.resource}: found ${changes.changes.count()} new changes after range request" }
-
-                tokenToStore = changes.nextChangesToken
-
-                if (changes.changes.isNotEmpty()) {
-                    allData += processChangesResponse(
+                    val delta = processChangesResponse(
                         resource = input.resource,
-                        responses = changes,
+                        changes = response.dataList,
                         timeZone = timeZone,
+                        reader = recordReader,
                         processor = recordProcessor,
                         processorOptions = processorOptions,
                     )
-                }
+                    if (delta != null) {
+                        allData += delta
+                    }
 
-            } while (changes.hasMore)
+                    val nextToken = response.pageToken
+                    if (nextToken.isNullOrBlank() || nextToken == token) {
+                        break
+                    }
+
+                    token = nextToken
+                    nextTokens[dataType.name] = token
+                }
+            }
+
+            encodeChangesTokenMap(nextTokens)
+        } else {
+            null
         }
 
         val mergedData = allData.merged()
@@ -466,27 +488,86 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         setIncremental(token = tokenToStore)
     }
 
-    private fun monitoringRecordTypes(): Set<String> {
-        return sharedPreferences.getStringSet(input.resource.wrapped.monitoringTypesKey, null) ?: setOf()
+    private suspend fun captureCurrentChangeTokens(dataTypes: Set<DataType>): Map<String, String> {
+        val now = Instant.now()
+        val filter = InstantTimeFilter.of(now.minusMillis(1), now)
+
+        return dataTypes.mapNotNull { dataType ->
+            runCatching {
+                val pageToken = readChanges(
+                    dataType = dataType,
+                    pageToken = null,
+                    changeTimeFilter = filter
+                ).pageToken
+
+                if (pageToken.isNullOrBlank()) null else dataType.name to pageToken
+            }.getOrElse {
+                vitalLogger.info { "${input.resource}: failed to capture anchor token for ${dataType.name}: $it" }
+                null
+            }
+        }.toMap()
+    }
+
+    private suspend fun readChanges(
+        dataType: DataType,
+        pageToken: String?,
+        changeTimeFilter: InstantTimeFilter?,
+    ): DataResponse<Change<HealthDataPoint>> {
+        val store = SamsungHealthClientProvider.getHealthDataStore(applicationContext)
+        val builder = changedDataRequestBuilder(dataType)
+            ?: throw IllegalStateException("${dataType.name} is not change-readable")
+
+        builder.setPageSize(1000)
+        if (!pageToken.isNullOrBlank()) {
+            builder.setPageToken(pageToken)
+        }
+        if (changeTimeFilter != null) {
+            builder.setChangeTimeFilter(changeTimeFilter)
+        }
+
+        return store.readChanges(builder.build())
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun changedDataRequestBuilder(dataType: DataType): ChangedDataRequest.BasicBuilder<HealthDataPoint>? {
+        val getter = runCatching { dataType.javaClass.getMethod("getChangedDataRequestBuilder") }.getOrNull()
+            ?: return null
+        return runCatching { getter.invoke(dataType) as ChangedDataRequest.BasicBuilder<HealthDataPoint> }.getOrNull()
+    }
+
+    private suspend fun dataTypesToMonitor(): Set<DataType> {
+        val requested = input.resource.wrapped.dataTypeChangesToTriggerSync().toSet()
+        if (requested.isEmpty()) return emptySet()
+
+        val store = SamsungHealthClientProvider.getHealthDataStore(applicationContext)
+        val readPermissions = requested.mapTo(mutableSetOf()) { Permission.of(it, AccessType.READ) }
+        val granted = store.getGrantedPermissions(readPermissions)
+
+        return requested.filterTo(mutableSetOf()) { Permission.of(it, AccessType.READ) in granted }
+    }
+
+    private fun monitoringDataTypes(): Set<String> {
+        return sharedPreferences.getStringSet(input.resource.wrapped.monitoringTypesKey, null) ?: emptySet()
     }
 
     private val useRecordChangesForIncrementalBackfill by lazy {
-        input.resource.wrapped.recordTypeChangesToTriggerSync().isNotEmpty()
+        input.resource.wrapped.dataTypeChangesToTriggerSync().isNotEmpty()
     }
 
-    /**
-     * Health Connect rejects the request if we include [Record] types we do not have permission
-     * for. So we need to proactively filter out [Record] types based on what read permissions we
-     * have at the moment.
-     */
-    private suspend fun recordTypesToMonitor(): Set<KClass<out Record>> {
-        val client = SamsungHealthClientProvider.getSamsungHealthClient(applicationContext)
-        val grantedPermissions = client.permissionController.getGrantedPermissions()
+    private fun decodeChangesTokenMap(changesToken: String?): Map<String, String> {
+        if (changesToken.isNullOrBlank()) return emptyMap()
 
-        return input.resource.wrapped.recordTypeChangesToTriggerSync()
-            .filterTo(mutableSetOf()) { recordType ->
-                HealthPermission.getReadPermission(recordType) in grantedPermissions
-            }
+        val mapType = Types.newParameterizedType(Map::class.java, String::class.java, String::class.java)
+        val adapter = moshi.adapter<Map<String, String>>(mapType)
+        return runCatching { adapter.fromJson(changesToken) }.getOrNull().orEmpty()
+    }
+
+    private fun encodeChangesTokenMap(tokenByType: Map<String, String>): String? {
+        if (tokenByType.isEmpty()) return null
+
+        val mapType = Types.newParameterizedType(Map::class.java, String::class.java, String::class.java)
+        val adapter = moshi.adapter<Map<String, String>>(mapType)
+        return adapter.toJson(tokenByType)
     }
 
     private fun setIncremental(token: String?) {
@@ -520,7 +601,3 @@ internal inline fun <reified T : Any> SharedPreferences.Editor.putJson(
 
 internal val VitalResource.syncStateKey get() = UnSecurePrefKeys.syncStateKey(this)
 internal val VitalResource.monitoringTypesKey get() = UnSecurePrefKeys.monitoringTypesKey(this)
-
-// All Record types are public JVM types, so they must have a simple name.
-private fun Set<KClass<out Record>>.toSimpleNameSet(): Set<String> =
-    mapTo(mutableSetOf()) { it.simpleName!! }

@@ -1,9 +1,9 @@
 package io.tryvital.vitalhealthconnect
 
-import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
-import androidx.health.connect.client.records.Record
-import androidx.health.connect.client.records.SpeedRecord
-import androidx.health.connect.client.records.StepsRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.ActiveCaloriesBurnedRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.Record
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.SpeedRecord
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.StepsRecord
 import io.tryvital.vitalhealthconnect.model.RecordTypeRequirements
 import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.recordTypeDependencies
