@@ -13,10 +13,10 @@
             <option value="$PROJECT_DIR$/VitalClient" />
             <option value="$PROJECT_DIR$/VitalDevices" />
             <option value="$PROJECT_DIR$/VitalHealthConnect" />
+            <option value="$PROJECT_DIR$/VitalSamsungHealth" />
             <option value="$PROJECT_DIR$/app" />
           </set>
         </option>
-        <option name="resolveExternalAnnotations" value="false" />
       </GradleProjectSettings>
     </option>
   </component>
