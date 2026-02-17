@@ -50,6 +50,14 @@ fun HealthConnectScreen(
 
     val state = viewModel.uiState.collectAsState().value
 
+    if (state.errorMessage != null) {
+        AlertDialog(
+            onDismissRequest = viewModel::clearErrorMessage,
+            confirmButton = { Button(viewModel::clearErrorMessage) { Text("OK") } },
+            text = { Text(state.errorMessage) },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

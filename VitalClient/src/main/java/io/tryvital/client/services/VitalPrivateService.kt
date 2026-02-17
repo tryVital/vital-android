@@ -27,9 +27,10 @@ import retrofit2.http.Path
 @VitalPrivateApi
 interface VitalPrivateService {
     @VitalPrivateApi
-    @POST("user/{user_id}/sdk_sync_state/health_connect")
-    suspend fun healthConnectSdkSyncState(
+    @POST("user/{user_id}/sdk_sync_state/{provider}")
+    suspend fun sdkSyncState(
         @Path("user_id") userId: String,
+        @Path("provider") provider: ManualProviderSlug,
         @Body body: UserSDKSyncStateBody
     ): UserSDKSyncStateResponse
 
