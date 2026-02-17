@@ -2,6 +2,7 @@ plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
     id 'com.google.devtools.ksp' version "$ksp"
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -11,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId "io.tryvital.sample"
-        minSdk 26
+        minSdk 29
         targetSdk 36
         versionCode 1
         versionName "1.0"
@@ -37,7 +38,7 @@ android {
 
     kotlinOptions {
         jvmTarget = '1.8'
-        freeCompilerArgs = ['-Xjvm-default=enable']
+        freeCompilerArgs = ['-Xjvm-default=all']
     }
 
     buildFeatures {
@@ -70,6 +71,7 @@ dependencies {
     implementation project(':VitalClient')
     implementation project(':VitalDevices')
     implementation project(':VitalHealthConnect')
+    implementation project(':VitalSamsungHealth')
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin"
 
