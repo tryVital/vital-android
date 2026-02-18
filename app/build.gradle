@@ -45,10 +45,6 @@ android {
         compose true
     }
 
-    composeOptions {
-        kotlinCompilerExtensionVersion "$compose_compiler"
-    }
-
     packagingOptions {
         resources {
             excludes += '/META-INF/{AL2.0,LGPL2.1}'
@@ -83,7 +79,7 @@ dependencies {
     implementation "androidx.compose.ui:ui:$compose"
     implementation "androidx.compose.material3:material3:$material3"
     implementation "androidx.compose.ui:ui-tooling-preview:$compose"
-    implementation "androidx.compose.material:material-icons-extended:$compose"
+    implementation "androidx.compose.material:material-icons-extended:$material_icons"
     implementation "androidx.activity:activity:$activity_compose"
     implementation "androidx.activity:activity-compose:$activity_compose"
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_runtime"

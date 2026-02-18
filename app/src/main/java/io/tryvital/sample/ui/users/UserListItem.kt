@@ -1,12 +1,10 @@
 package io.tryvital.sample.ui.users
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,20 +26,17 @@ import io.tryvital.sample.Screen
 fun UserListItem(
     user: User,
     sdkUserId: String?,
-    isSelected: Boolean,
     onCreateLink: (User) -> Unit,
     onRemove: (User) -> Unit,
-    onSelect: (User) -> Unit,
     navController: NavController,
 ) {
-    val iconColor = if (isSelected) Color.White else Color.Gray
-    val textColor = if (isSelected) Color.White else Color.DarkGray
-    val backgroundColor = if (isSelected) Color.Gray else Color.Transparent
+    val iconColor = Color.Gray
+    val textColor = Color.DarkGray
+    val backgroundColor = Color.Transparent
 
     Row(
         modifier = Modifier
             .background(color = backgroundColor)
-            .clickable { onSelect(user) }
             .padding(horizontal = 12.dp, vertical = 4.dp)
             .height(56.dp),
         verticalAlignment = Alignment.CenterVertically

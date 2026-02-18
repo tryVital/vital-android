@@ -122,15 +122,11 @@ fun UsersScreen(
                         UserListItem(
                             user = user,
                             sdkUserId = state.sdkUserId,
-                            isSelected = state.selectedUser == user,
                             onCreateLink = {
                                 viewModel.linkUserWithProvider(context, it)
                             },
                             onRemove = {
                                 viewModel.removeUser(it)
-                            },
-                            onSelect = {
-                                viewModel.selectUser(it)
                             },
                             navController = navController
                         )

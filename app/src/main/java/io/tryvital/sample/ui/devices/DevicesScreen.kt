@@ -1,13 +1,11 @@
 package io.tryvital.sample.ui.devices
 
-import android.content.pm.PackageManager.*
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,9 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import coil.compose.rememberAsyncImagePainter
 import io.tryvital.sample.Screen
-import io.tryvital.vitaldevices.Brand
 import io.tryvital.vitaldevices.DeviceModel
-import io.tryvital.vitaldevices.Kind
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -84,9 +80,13 @@ private fun DeviceItem(
     device: DeviceModel
 ) {
     ListItem(
-        modifier = Modifier.clickable(onClick = {
-            navController.navigate(Screen.Device.route + device.id)
-        }),
+        modifier = Modifier.clickable(
+            null,
+            onClick = {
+                navController.navigate(Screen.Device.route + device.id)
+            },
+            indication = LocalIndication.current,
+        ),
         headlineText = {
             Text(
                 text = device.name,

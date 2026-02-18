@@ -92,17 +92,6 @@ class UsersViewModel(
         }
     }
 
-    fun selectUser(newSelectedUser: User) {
-        viewModelScope.launch {
-            viewModelState.update {
-                val selectedUser = if (newSelectedUser == it.selectedUser) null else newSelectedUser
-
-                userRepository.selectedUser = selectedUser
-                it.copy(selectedUser = selectedUser)
-            }
-        }
-    }
-
     fun linkUserWithProvider(context: Context, user: User) {
         viewModelScope.launch {
             if (user.userId != viewModelState.value.sdkUserId) {
@@ -147,7 +136,6 @@ data class UsersViewModelState(
     val loading: Boolean = false,
     val sdkUserId: String? = null,
     val users: List<User>? = listOf(),
-    val selectedUser: User? = null,
     var currentError: Throwable? = null,
     val isSDKConfigured: Boolean = false,
 )
