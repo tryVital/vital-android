@@ -329,7 +329,7 @@ class VitalSamsungHealthManager private constructor(
         }
 
         @OptIn(VitalPrivateApi::class)
-        vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.HealthConnect)
+        vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.SamsungHealth)
 
         try {
             localSyncStateManager.getLocalSyncState(forceRemoteCheck = true)
@@ -358,7 +358,7 @@ class VitalSamsungHealthManager private constructor(
             throw IllegalStateException("connect() only works with ConnectionPolicy.Explicit.")
         }
 
-        vitalClient.userService.deregisterProvider(provider = ProviderSlug.HealthConnect)
+        vitalClient.userService.deregisterProvider(provider = ProviderSlug.SamsungHealth)
 
         try {
             localSyncStateManager.getLocalSyncState(forceRemoteCheck = true)

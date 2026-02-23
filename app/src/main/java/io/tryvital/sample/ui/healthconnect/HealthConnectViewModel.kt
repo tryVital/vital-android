@@ -86,6 +86,10 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
         openHealthConnectIntent(context)?.let { context.startActivity(it) }
     }
 
+    fun clearErrorMessage() {
+        viewModelState.update { it.copy(errorMessage = null) }
+    }
+
     fun checkPermissions() {
         viewModelScope.launch {
             val state = viewModelState.value
@@ -128,6 +132,9 @@ class HealthConnectViewModel(context: Context) : ViewModel() {
                 } else {
                     vitalHealthConnectManager.disconnect()
                 }
+            } catch (e: Throwable) {
+                viewModelState.update { it.copy(errorMessage = e.message) }
+
             } finally {
                 viewModelState.update { it.copy(isPerformingConnectionAction = false) }
                 currentConnectionAction = null
@@ -195,4 +202,5 @@ data class HealthConnectViewModelState(
     val syncStatus: String = "",
     val connectionStatus: HealthConnectConnectionStatus = HealthConnectConnectionStatus.AutoConnect,
     val isPerformingConnectionAction: Boolean = false,
+    val errorMessage: String? = null,
 )

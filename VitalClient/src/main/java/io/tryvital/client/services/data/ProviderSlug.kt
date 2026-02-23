@@ -17,7 +17,8 @@ enum class ManualProviderSlug {
     @Json(name = "freestyle_libre_ble") LibreBLE,
     @Json(name = "manual") Manual,
     @Json(name = "apple_health_kit") AppleHealthKit,
-    @Json(name = "health_connect") HealthConnect;
+    @Json(name = "health_connect") HealthConnect,
+    @Json(name = "samsung_health") SamsungHealth;
 
     // Use the Json name also when converting to string.
     // This is intended for Retrofit request parameter serialization.
@@ -93,7 +94,8 @@ enum class ProviderSlug {
     @Json(name = "freestyle_libre_ble") LibreBLE,
     @Json(name = "manual") Manual,
     @Json(name = "apple_health_kit") AppleHealthKit,
-    @Json(name = "health_connect") HealthConnect;
+    @Json(name = "health_connect") HealthConnect,
+    @Json(name = "samsung_health") SamsungHealth;
 
     // Use the Json name also when converting to string.
     // This is intended for Retrofit request parameter serialization.
