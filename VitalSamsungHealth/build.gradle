@@ -1,0 +1,128 @@
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'com.google.devtools.ksp' version "$ksp"
+}
+
+android {
+    namespace 'io.tryvital.vitalsamsunghealth'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 26
+        targetSdk 36
+
+        aarMetadata {
+            minCompileSdk = 36
+        }
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+
+    lintOptions {
+        //because the Initializer is not in the same module as the VitalHealthInitializer it reports this as an error
+        disable 'EnsureInitializerMetadata'
+    }
+
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += "-Xopt-in=kotlin.RequiresOptIn"
+            jvmTarget = JavaVersion.VERSION_1_8.toString()
+        }
+    }
+}
+
+
+dependencies {
+    implementation "androidx.lifecycle:lifecycle-process:$lifecycle_process"
+    ksp "com.squareup.moshi:moshi-kotlin-codegen:$moshi"
+
+    implementation project(':VitalClient')
+
+    implementation "androidx.health.connect:connect-client:$health_connect"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycle_livedata_ktx"
+
+    implementation "androidx.startup:startup-runtime:$startup_runtime"
+    implementation "androidx.security:security-crypto:$security_crypto"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-guava:$kotlinx_coroutines"
+    implementation "androidx.work:work-runtime-ktx:$work_runtime"
+
+    implementation "com.squareup.moshi:moshi:$moshi"
+    implementation "com.squareup.moshi:moshi-adapters:$moshi"
+
+    testImplementation "junit:junit:$junit"
+    androidTestImplementation "androidx.test.ext:junit:$test_ext"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$test_espresso"
+
+    testImplementation "org.mockito:mockito-core:$mockito"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockito_kotlin"
+    testImplementation "org.mockito:mockito-inline:$mockito_inline"
+    testImplementation "com.squareup.okhttp3:mockwebserver:$mockwebserver"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_coroutines_test"
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'io.tryvital'
+            artifactId = 'vital-samsung-health'
+            version = '4.3.0'
+
+            pom {
+                packaging = 'aar'
+                name = 'vital-samsung-health'
+                description = 'Junction Health SDK for Samsung Health'
+                url = 'https://www.junction.com/'
+                inceptionYear = '2023'
+                licenses {
+                    license {
+                        name = 'GNU Affero General Public License v3.0'
+                        url = 'https://www.gnu.org/licenses/agpl-3.0.html'
+                        distribution = 'repo'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'developers@junction.com'
+                        name = 'Junction'
+                        organization = 'Junction'
+                        organizationUrl = 'https://www.junction.com/'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/tryVital/vital-android.git'
+                    developerConnection = 'scm:git:ssh://github.com/tryVital/vital-android.git'
+                    url = 'https://github.com/tryVital/vital-android'
+                }
+            }
+
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
+}
