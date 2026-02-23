@@ -96,9 +96,10 @@ interface VitalPrivateService {
         @Body payload: TimeseriesPayload<List<LocalBloodPressureSample>>
     ): Response<Unit>
 
-    @POST("user/{user_id}/sdk_sync_progress/health_connect")
+    @POST("user/{user_id}/sdk_sync_progress/{provider}")
     suspend fun reportSyncProgress(
         @Path("user_id") userId: String,
+        @Path("provider") provider: ManualProviderSlug,
         @Body payload: RequestBody
     ): Response<Unit>
 

@@ -5,6 +5,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.vitalhealthcore.model.BackfillType
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
 import io.tryvital.vitalhealthcore.model.backfillType
@@ -21,10 +22,10 @@ import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-private object SyncProgressGistKey :
-    VitalGistStorageKey<SyncProgress>(key = "vital_health_connect_progress")
-
-class SyncProgressStore private constructor(private val storage: VitalGistStorage) {
+class SyncProgressStore private constructor(
+    private val storage: VitalGistStorage,
+    private val gistKey: VitalGistStorageKey<SyncProgress>,
+) {
     private val state = MutableStateFlow(SyncProgress())
     private var hasChanges = false
     private val lock = ReentrantLock()
@@ -32,7 +33,7 @@ class SyncProgressStore private constructor(private val storage: VitalGistStorag
     private val latestProcessState = AtomicReference<Lifecycle.State?>(null)
 
     init {
-        state.value = storage.get(SyncProgressGistKey) ?: SyncProgress()
+        state.value = storage.get(gistKey) ?: SyncProgress()
         scope.launch {
             while (isActive) {
                 delay(10_000)
@@ -57,14 +58,14 @@ class SyncProgressStore private constructor(private val storage: VitalGistStorag
 
     fun flush() = lock.withLock {
         if (hasChanges) {
-            storage.set(state.value, SyncProgressGistKey)
+            storage.set(state.value, gistKey)
             hasChanges = false
         }
     }
 
     fun clear() = lock.withLock {
         state.value = SyncProgress()
-        storage.set(null, SyncProgressGistKey)
+        storage.set(null, gistKey)
     }
 
     fun recordSync(
@@ -151,15 +152,39 @@ class SyncProgressStore private constructor(private val storage: VitalGistStorag
     }
 
     companion object {
-        private var shared: SyncProgressStore? = null
+        private val shared: MutableMap<ManualProviderSlug, SyncProgressStore> = mutableMapOf()
 
-        fun getOrCreate(context: Context) = synchronized(this) {
-            when (val shared = this.shared) {
-                null -> {
-                    this.shared = SyncProgressStore(VitalGistStorage.getOrCreate(context))
-                    this.shared!!
+        fun getOrCreate(
+            context: Context,
+            providerSlug: ManualProviderSlug = ManualProviderSlug.HealthConnect,
+        ) = synchronized(this) {
+            val resolvedProvider = requireSupportedProvider(providerSlug)
+            shared.getOrPut(resolvedProvider) {
+                SyncProgressStore(
+                    VitalGistStorage.getOrCreate(context),
+                    SyncProgressGistKey(resolvedProvider),
+                )
+            }
+        }
+
+        private fun SyncProgressGistKey(providerSlug: ManualProviderSlug) =
+            VitalGistStorageKey<SyncProgress>(
+                key = when (providerSlug) {
+                    // Keep Health Connect storage location unchanged.
+                    ManualProviderSlug.HealthConnect -> "vital_health_connect_progress"
+                    ManualProviderSlug.SamsungHealth -> "vital_samsung_health_progress"
+                    else -> throw IllegalArgumentException(
+                        "Unsupported provider slug for sync progress storage: $providerSlug"
+                    )
                 }
-                else -> shared
+            )
+
+        private fun requireSupportedProvider(providerSlug: ManualProviderSlug): ManualProviderSlug {
+            return when (providerSlug) {
+                ManualProviderSlug.HealthConnect, ManualProviderSlug.SamsungHealth -> providerSlug
+                else -> throw IllegalArgumentException(
+                    "Unsupported provider slug for sync progress storage: $providerSlug"
+                )
             }
         }
     }

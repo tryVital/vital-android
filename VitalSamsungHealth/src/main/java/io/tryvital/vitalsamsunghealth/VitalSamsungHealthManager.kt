@@ -697,7 +697,7 @@ class VitalSamsungHealthManager private constructor(
                 val samsungHealthClientProvider = SamsungHealthClientProvider()
 
                 val localSyncStateManager = LocalSyncStateManager(coreClient, VitalLogger.getOrCreate(), coreClient.sharedPreferences)
-                val syncProgressStore = SyncProgressStore.getOrCreate(appContext)
+                val syncProgressStore = SyncProgressStore.getOrCreate(appContext, ManualProviderSlug.SamsungHealth)
 
                 instance = VitalSamsungHealthManager(
                     appContext,
@@ -710,7 +710,12 @@ class VitalSamsungHealthManager private constructor(
                     ),
                     VitalClientRecordUploader(coreClient),
                     localSyncStateManager,
-                    SyncProgressReporter(syncProgressStore, coreClient, localSyncStateManager),
+                    SyncProgressReporter(
+                        syncProgressStore,
+                        coreClient,
+                        localSyncStateManager,
+                        ManualProviderSlug.SamsungHealth
+                    ),
                     syncProgressStore,
                 )
                 sharedInstance = instance

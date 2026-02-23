@@ -681,7 +681,7 @@ class VitalHealthConnectManager private constructor(
                 val healthConnectClientProvider = HealthConnectClientProvider()
 
                 val localSyncStateManager = LocalSyncStateManager(coreClient, VitalLogger.getOrCreate(), coreClient.sharedPreferences)
-                val syncProgressStore = SyncProgressStore.getOrCreate(appContext)
+                val syncProgressStore = SyncProgressStore.getOrCreate(appContext, ManualProviderSlug.HealthConnect)
 
                 instance = VitalHealthConnectManager(
                     appContext,
@@ -694,7 +694,12 @@ class VitalHealthConnectManager private constructor(
                     ),
                     VitalClientRecordUploader(coreClient),
                     localSyncStateManager,
-                    SyncProgressReporter(syncProgressStore, coreClient, localSyncStateManager),
+                    SyncProgressReporter(
+                        syncProgressStore,
+                        coreClient,
+                        localSyncStateManager,
+                        ManualProviderSlug.HealthConnect
+                    ),
                     syncProgressStore,
                 )
                 sharedInstance = instance
