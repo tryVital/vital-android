@@ -3,7 +3,6 @@ package io.tryvital.vitalsamsunghealth.workers
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import androidx.core.app.ServiceCompat
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager
 import io.tryvital.vitalsamsunghealth.syncProgress.SyncProgress
@@ -23,8 +22,7 @@ class SyncOnExactAlarmService: Service() {
         val syncNotificationBuilder = VitalSamsungHealthManager.syncNotificationBuilder(applicationContext)
         val notification = syncNotificationBuilder.build(applicationContext, emptySet())
 
-        ServiceCompat.startForeground(
-            this,
+        this.startForeground(
             VITAL_SYNC_NOTIFICATION_ID,
             notification,
             foregroundServiceType()

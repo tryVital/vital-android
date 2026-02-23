@@ -1,7 +1,7 @@
 package io.tryvital.vitalsamsunghealth.model
 
-import androidx.health.connect.client.records.metadata.Device
-import androidx.health.connect.client.records.metadata.Metadata
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.metadata.Device
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.metadata.Metadata
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SourceType
 import java.time.Instant

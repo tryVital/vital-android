@@ -1,6 +1,6 @@
 package io.tryvital.vitalsamsunghealth.model
 
-import androidx.health.connect.client.records.metadata.Device
+import io.tryvital.vitalsamsunghealth.healthconnect.client.records.metadata.Device
 
 internal fun Device.toMetadataMap(): Map<String, String> {
     val metadata = mutableMapOf<String, String>()
