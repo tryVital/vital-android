@@ -35,8 +35,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.tryvital.vitalhealthcore.model.VitalResource
-import io.tryvital.vitalsamsunghealth.model.HealthConnectAvailability
-import io.tryvital.vitalsamsunghealth.model.HealthConnectConnectionStatus
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
+import io.tryvital.vitalhealthcore.model.ConnectionStatus
 import kotlinx.coroutines.launch
 
 @Composable
@@ -63,7 +63,7 @@ fun SamsungHealthCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (state.available == HealthConnectAvailability.Installed) {
+            if (state.available == ProviderAvailability.Installed) {
                 Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 SamsungPermissionInfo(state.permissionsGranted, state.permissionsMissing, viewModel)
             }
@@ -73,7 +73,7 @@ fun SamsungHealthCard(
 
 @Composable
 private fun SamsungConnectionStatusInfo(
-    connectionStatus: HealthConnectConnectionStatus,
+    connectionStatus: ConnectionStatus,
     isPerformingAction: Boolean,
     viewModel: SamsungHealthViewModel,
 ) {
@@ -86,7 +86,7 @@ private fun SamsungConnectionStatusInfo(
         Text(connectionStatus.name)
     }
 
-    if (connectionStatus != HealthConnectConnectionStatus.AutoConnect) {
+    if (connectionStatus != ConnectionStatus.AutoConnect) {
         Button(
             onClick = { viewModel.toggleConnection() },
             contentPadding = ButtonDefaults.TextButtonContentPadding,
@@ -96,12 +96,12 @@ private fun SamsungConnectionStatusInfo(
                 CircularProgressIndicator()
             } else {
                 Icon(
-                    if (connectionStatus == HealthConnectConnectionStatus.Disconnected) Icons.Outlined.Login else Icons.Outlined.Logout,
+                    if (connectionStatus == ConnectionStatus.Disconnected) Icons.Outlined.Login else Icons.Outlined.Logout,
                     contentDescription = null,
                     modifier = Modifier.size(ButtonDefaults.IconSize),
                 )
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text(if (connectionStatus == HealthConnectConnectionStatus.Disconnected) "Connect" else "Disconnect")
+                Text(if (connectionStatus == ConnectionStatus.Disconnected) "Connect" else "Disconnect")
             }
         }
     }
@@ -231,9 +231,9 @@ private fun SamsungPermissionInfo(
 }
 
 @Composable
-private fun SamsungAvailabilityInfo(availability: HealthConnectAvailability?) {
+private fun SamsungAvailabilityInfo(availability: ProviderAvailability?) {
     when (availability) {
-        HealthConnectAvailability.Installed -> {
+        ProviderAvailability.Installed -> {
             Text(
                 "This device has Samsung Health installed",
                 fontWeight = FontWeight.Bold,
@@ -242,7 +242,7 @@ private fun SamsungAvailabilityInfo(availability: HealthConnectAvailability?) {
             )
         }
 
-        HealthConnectAvailability.NotInstalled -> {
+        ProviderAvailability.NotInstalled -> {
             Text(
                 "Samsung Health is not installed",
                 fontWeight = FontWeight.Bold,
@@ -251,9 +251,9 @@ private fun SamsungAvailabilityInfo(availability: HealthConnectAvailability?) {
             )
         }
 
-        HealthConnectAvailability.NotSupportedSDK -> {
+        ProviderAvailability.NotSupportedSDK -> {
             Text(
-                "This device is not supported",
+                "The installed Samsung Health app is incompatible and needs to be upgraded.",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = Color.Magenta,

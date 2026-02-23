@@ -147,7 +147,7 @@ internal fun _processMenstrualCycle(
             source = Source(
                 type = SourceType.App,
                 appId = sourceBundle,
-                provider = ProviderSlug.HealthConnect,
+                provider = ProviderSlug.SamsungHealth,
             )
         )
     }

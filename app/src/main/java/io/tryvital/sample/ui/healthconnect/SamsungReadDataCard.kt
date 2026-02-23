@@ -23,14 +23,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.tryvital.vitalhealthcore.model.VitalResource
-import io.tryvital.vitalsamsunghealth.model.HealthConnectAvailability
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
 
 @Composable
 fun SamsungReadDataCard(
     state: SamsungHealthViewModelState,
     viewModel: SamsungHealthViewModel,
 ) {
-    if (state.available != HealthConnectAvailability.Installed) {
+    if (state.available != ProviderAvailability.Installed) {
         return
     }
 
@@ -63,30 +63,6 @@ fun SamsungReadDataCard(
                     Spacer(Modifier.size(ButtonDefaults.IconSpacing))
                     Text("Sync")
                 }
-            }
-            Button(
-                onClick = { viewModel.addGlucose() },
-                contentPadding = PaddingValues(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 12.dp),
-            ) {
-                Icon(
-                    Icons.Outlined.Healing,
-                    contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize),
-                )
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text("Add Glucose")
-            }
-            Button(
-                onClick = { viewModel.addWater() },
-                contentPadding = PaddingValues(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 12.dp),
-            ) {
-                Icon(
-                    Icons.Outlined.Healing,
-                    contentDescription = null,
-                    modifier = Modifier.size(ButtonDefaults.IconSize),
-                )
-                Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text("Add Water")
             }
         }
 

@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
 import io.tryvital.vitalhealthcore.model.VitalResource
 
 @Composable
@@ -17,7 +17,7 @@ fun ReadDataCard(
     state: HealthConnectViewModelState,
     viewModel: HealthConnectViewModel,
 ) {
-    if (state.available != HealthConnectAvailability.Installed) {
+    if (state.available != ProviderAvailability.Installed) {
         return
     } else {
         Card(Modifier.padding(16.dp)) {

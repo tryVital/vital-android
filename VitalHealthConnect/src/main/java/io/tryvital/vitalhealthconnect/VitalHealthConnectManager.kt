@@ -26,13 +26,15 @@ import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.*
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthcore.model.ConnectionPolicy
+import io.tryvital.vitalhealthcore.model.ConnectionStatus
 import io.tryvital.vitalhealthcore.model.PermissionStatus
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
 import io.tryvital.vitalhealthcore.model.SyncStatus
 import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthcore.model.WritableVitalResource
 import io.tryvital.vitalhealthcore.records.RecordUploader
-import io.tryvital.vitalhealthconnect.exceptions.ConnectionDestroyed
+import io.tryvital.vitalhealthcore.exceptions.ConnectionDestroyed
 import io.tryvital.vitalhealthconnect.model.*
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.records.*
@@ -200,12 +202,12 @@ class VitalHealthConnectManager private constructor(
         }
 
         return localSyncStateManager.connectionStatus.value.let {
-            it == HealthConnectConnectionStatus.AutoConnect || it == HealthConnectConnectionStatus.Connected
+            it == ConnectionStatus.AutoConnect || it == ConnectionStatus.Connected
         }
     }
 
     internal suspend fun checkAndUpdatePermissions(): Pair<Set<VitalResource>, Set<VitalResource>> = permissionMutex.withLock {
-        if (isAvailable(context) != HealthConnectAvailability.Installed) {
+        if (isAvailable(context) != ProviderAvailability.Installed) {
             return emptySet<VitalResource>() to emptySet()
         }
 
@@ -647,26 +649,26 @@ class VitalHealthConnectManager private constructor(
         private var sharedInstance: VitalHealthConnectManager? = null
 
         @Suppress("unused")
-        fun isAvailable(context: Context): HealthConnectAvailability {
+        fun isAvailable(context: Context): ProviderAvailability {
             return when (HealthConnectClient.getSdkStatus(context, packageName)) {
-                HealthConnectClient.SDK_UNAVAILABLE -> HealthConnectAvailability.NotSupportedSDK
-                HealthConnectClient.SDK_AVAILABLE -> HealthConnectAvailability.Installed
-                HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> HealthConnectAvailability.NotInstalled
-                else -> HealthConnectAvailability.NotSupportedSDK
+                HealthConnectClient.SDK_UNAVAILABLE -> ProviderAvailability.NotSupportedSDK
+                HealthConnectClient.SDK_AVAILABLE -> ProviderAvailability.Installed
+                HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> ProviderAvailability.NotInstalled
+                else -> ProviderAvailability.NotSupportedSDK
             }
         }
 
         @Suppress("unused")
         fun openHealthConnectIntent(context: Context): Intent? {
             return when (isAvailable(context)) {
-                HealthConnectAvailability.NotSupportedSDK -> null
-                HealthConnectAvailability.NotInstalled -> {
+                ProviderAvailability.NotSupportedSDK -> null
+                ProviderAvailability.NotInstalled -> {
                     Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")
                         setPackage("com.android.vending")
                     }
                 }
-                HealthConnectAvailability.Installed -> {
+                ProviderAvailability.Installed -> {
                     Intent(ACTION_HEALTH_CONNECT_SETTINGS)
                 }
             }

@@ -8,48 +8,44 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Looper
+import android.util.Log
 import androidx.activity.result.contract.ActivityResultContract
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.*
 import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.work.*
-import com.samsung.android.sdk.health.data.data.HealthDataPoint
+import com.samsung.android.sdk.health.data.error.AuthorizationException
+import com.samsung.android.sdk.health.data.error.PlatformInternalException
 import com.samsung.android.sdk.health.data.permission.AccessType
-import com.samsung.android.sdk.health.data.permission.Permission
-import com.samsung.android.sdk.health.data.request.DataType
-import com.samsung.android.sdk.health.data.request.DataTypes
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.*
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthcore.model.ConnectionPolicy
+import io.tryvital.vitalhealthcore.model.ConnectionStatus
 import io.tryvital.vitalhealthcore.model.PermissionStatus
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
 import io.tryvital.vitalhealthcore.model.SyncStatus
 import io.tryvital.vitalhealthcore.model.VitalResource
-import io.tryvital.vitalhealthcore.model.WritableVitalResource
 import io.tryvital.vitalhealthcore.records.RecordUploader
-import io.tryvital.vitalsamsunghealth.exceptions.ConnectionDestroyed
+import io.tryvital.vitalhealthcore.exceptions.ConnectionDestroyed
 import io.tryvital.vitalsamsunghealth.model.*
 import io.tryvital.vitalsamsunghealth.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalsamsunghealth.records.*
-import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SyncContextTag
 import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
 import io.tryvital.vitalhealthcore.syncProgress.SyncProgressReporter
 import io.tryvital.vitalhealthcore.syncProgress.SyncProgressStore
-import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SystemEventType
 import io.tryvital.vitalsamsunghealth.workers.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
-import java.time.ZoneOffset
 import java.util.*
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.reflect.KClass
 
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -119,7 +115,7 @@ class VitalSamsungHealthManager private constructor(
     lateinit var processLifecycleObserver: LifecycleObserver
 
     init {
-        vitalLogger.logI("VitalHealthConnectManager initialized")
+        vitalLogger.logI("VitalSamsungHealthManager initialized")
         _status.tryEmit(SyncStatus.Unknown)
 
         taskScope.launch(Dispatchers.Main.immediate) {
@@ -142,9 +138,8 @@ class VitalSamsungHealthManager private constructor(
     @Suppress("unused")
     fun createPermissionRequestContract(
         readResources: Set<VitalResource> = emptySet(),
-        writeResources: Set<WritableVitalResource> = emptySet(),
     ): ActivityResultContract<Unit, Deferred<PermissionOutcome>>
-        = VitalPermissionRequestContract(readResources, writeResources, this, taskScope)
+        = VitalPermissionRequestContract(readResources, this, taskScope)
 
     @Suppress("unused")
     fun hasAskedForPermission(resource: VitalResource): Boolean {
@@ -158,11 +153,6 @@ class VitalSamsungHealthManager private constructor(
                 sharedPreferences.getBoolean(UnSecurePrefKeys.readResourceGrant(resource), false)
             if (hasAsked) PermissionStatus.Asked else PermissionStatus.NotAsked
         }
-    }
-
-    @Suppress("unused")
-    fun hasAskedForPermission(resource: WritableVitalResource): Boolean {
-        return sharedPreferences.getBoolean(UnSecurePrefKeys.writeResourceGrant(resource), false)
     }
 
     fun resourcesWithReadPermission(): Set<VitalResource> {
@@ -195,17 +185,21 @@ class VitalSamsungHealthManager private constructor(
         }
 
         return localSyncStateManager.connectionStatus.value.let {
-            it == HealthConnectConnectionStatus.AutoConnect || it == HealthConnectConnectionStatus.Connected
+            it == ConnectionStatus.AutoConnect || it == ConnectionStatus.Connected
         }
     }
 
     internal suspend fun checkAndUpdatePermissions(): Pair<Set<VitalResource>, Set<VitalResource>> = permissionMutex.withLock {
-        if (isAvailable(context) != HealthConnectAvailability.Installed) {
+        if (isAvailable(context) != ProviderAvailability.Installed) {
             return emptySet<VitalResource>() to emptySet()
         }
 
         val lastKnownGrantedResources = resourcesWithReadPermission()
-        val currentGrants = getGrantedPermissions(context)
+        val currentGrants = try {
+            getGrantedPermissions(context)
+        } catch (_: AuthorizationException) {
+            return emptySet<VitalResource>() to emptySet<VitalResource>()
+        }
 
         val readResourcesByStatus = VitalResource.values().groupBy { resource ->
             if (!resource.supportedBySamsungDataApi()) {
@@ -219,41 +213,16 @@ class VitalSamsungHealthManager private constructor(
             }
         }
 
-        val writeResourcesByStatus = WritableVitalResource.values()
-            .groupBy { currentGrants.containsAll(permissionsRequiredToWriteResources(setOf(it))) }
-
         val upToDateGrantedResources = readResourcesByStatus.getOrDefault(true, listOf()).toSet()
 
         sharedPreferences.edit().run {
             readResourcesByStatus.forEach { (hasGranted, resources) ->
                 resources.forEach { putBoolean(UnSecurePrefKeys.readResourceGrant(it), hasGranted) }
             }
-            writeResourcesByStatus.forEach { (hasGranted, resources) ->
-                resources.forEach { putBoolean(UnSecurePrefKeys.writeResourceGrant(it), hasGranted) }
-            }
             apply()
         }
 
         return upToDateGrantedResources to upToDateGrantedResources - lastKnownGrantedResources
-    }
-
-    internal fun permissionsRequiredToWriteResources(resources: Set<WritableVitalResource>): Set<String> {
-        val recordTypes = mutableSetOf<KClass<out Record>>()
-
-        for (resource in resources) {
-            val records = when (resource) {
-                WritableVitalResource.Water -> listOf(HydrationRecord::class)
-                WritableVitalResource.Glucose -> listOf(BloodGlucoseRecord::class)
-            }
-
-            recordTypes.addAll(records)
-        }
-
-        return recordTypes.mapNotNullTo(mutableSetOf()) {
-            permissionForRecordType(it, AccessType.WRITE)?.let { permission ->
-                permissionKey(permission.dataType, permission.accessType)
-            }
-        }
     }
 
     internal fun readPermissionsRequiredByResources(resources: Set<VitalResource>): Set<String> {
@@ -285,7 +254,7 @@ class VitalSamsungHealthManager private constructor(
      * user has switched away from your app.
      */
     @SuppressLint("ApplySharedPref")
-    fun configureHealthConnectClient(
+    fun configureSamsungHealthClient(
         logsEnabled: Boolean = false,
         syncOnAppStart: Boolean = true,
         numberOfDaysToBackFill: Int = 30,
@@ -478,45 +447,6 @@ class VitalSamsungHealthManager private constructor(
         return true
     }
 
-    suspend fun writeRecord(
-        resource: WritableVitalResource,
-        startDate: Instant,
-        endDate: Instant,
-        value: Double
-    ) {
-        val healthDataStore = samsungHealthClientProvider.getHealthDataStore(context)
-        val end = if (startDate <= endDate) startDate.plusSeconds(1) else endDate
-
-        when (resource) {
-            WritableVitalResource.Water -> {
-                val dataPoint = HealthDataPoint.builder()
-                    .setStartTime(startDate, ZoneOffset.UTC)
-                    .setEndTime(end, ZoneOffset.UTC)
-                    .addFieldData(DataType.WaterIntakeType.AMOUNT, value.toFloat())
-                    .build()
-
-                val insertRequest = DataTypes.WATER_INTAKE.insertDataRequestBuilder
-                    .addData(dataPoint)
-                    .build()
-                healthDataStore.insertData(insertRequest)
-            }
-            WritableVitalResource.Glucose -> {
-                val dataPoint = HealthDataPoint.builder()
-                    .setStartTime(startDate, ZoneOffset.UTC)
-                    .setEndTime(end, ZoneOffset.UTC)
-                    .addFieldData(DataType.BloodGlucoseType.GLUCOSE_LEVEL, value.toFloat())
-                    .build()
-
-                val insertRequest = DataTypes.BLOOD_GLUCOSE.insertDataRequestBuilder
-                    .addData(dataPoint)
-                    .build()
-                healthDataStore.insertData(insertRequest)
-            }
-        }
-
-        syncData()
-    }
-
     @Suppress("unused")
     suspend fun read(
         resource: VitalResource,
@@ -661,28 +591,44 @@ class VitalSamsungHealthManager private constructor(
         private var sharedInstance: VitalSamsungHealthManager? = null
 
         @Suppress("unused")
-        fun isAvailable(context: Context): HealthConnectAvailability {
-            if (context.packageManager == null) return HealthConnectAvailability.NotSupportedSDK
+        fun isAvailable(context: Context): ProviderAvailability {
+            if (context.packageManager == null) return ProviderAvailability.NotSupportedSDK
             return try {
                 @Suppress("DEPRECATION")
                 context.packageManager.getPackageInfo(samsungHealthPackageName, 0)
-                HealthConnectAvailability.Installed
+
+                // Test if the Samsung Health SDK is usable.
+//                HealthDataService.getStore(context).getDeviceManager().getLocalDeviceAsync().get(1, TimeUnit.SECONDS)
+
+                ProviderAvailability.Installed
+            } catch (_: TimeoutException) {
+                ProviderAvailability.Installed
             } catch (_: PackageManager.NameNotFoundException) {
-                HealthConnectAvailability.NotInstalled
+                ProviderAvailability.NotInstalled
+            } catch (e: PlatformInternalException) {
+                if (e.errorCode == 3001) {
+                    ProviderAvailability.NotSupportedSDK
+                } else {
+                    Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
+                    ProviderAvailability.NotInstalled
+                }
+            } catch (e: Throwable) {
+                Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
+                ProviderAvailability.NotInstalled
             }
         }
 
         @Suppress("unused")
-        fun openHealthConnectIntent(context: Context): Intent? {
+        fun openSamsungHealthIntent(context: Context): Intent? {
             return when (isAvailable(context)) {
-                HealthConnectAvailability.NotSupportedSDK -> null
-                HealthConnectAvailability.NotInstalled -> {
+                ProviderAvailability.NotSupportedSDK -> null
+                ProviderAvailability.NotInstalled -> {
                     Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("https://play.google.com/store/apps/details?id=$samsungHealthPackageName")
                         setPackage("com.android.vending")
                     }
                 }
-                HealthConnectAvailability.Installed -> {
+                ProviderAvailability.Installed -> {
                     context.packageManager.getLaunchIntentForPackage(samsungHealthPackageName)
                 }
             }

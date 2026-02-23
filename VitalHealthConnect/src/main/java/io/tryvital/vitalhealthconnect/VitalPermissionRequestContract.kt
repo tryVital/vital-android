@@ -12,6 +12,7 @@ import io.tryvital.client.services.VitalPrivateApi
 import io.tryvital.client.services.data.ManualProviderSlug
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthcore.model.ConnectionPolicy
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
 import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthcore.model.WritableVitalResource
 import io.tryvital.vitalhealthconnect.model.*
@@ -34,7 +35,7 @@ class VitalPermissionRequestContract(
         context: Context,
         input: Unit
     ): SynchronousResult<Deferred<PermissionOutcome>>? {
-        if (VitalHealthConnectManager.isAvailable(context) != HealthConnectAvailability.Installed) {
+        if (VitalHealthConnectManager.isAvailable(context) != ProviderAvailability.Installed) {
             return SynchronousResult(CompletableDeferred(PermissionOutcome.HealthConnectUnavailable))
         }
 

@@ -24,8 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
-import io.tryvital.vitalhealthconnect.model.HealthConnectConnectionStatus
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
+import io.tryvital.vitalhealthcore.model.ConnectionStatus
 import io.tryvital.vitalhealthcore.model.VitalResource
 import kotlinx.coroutines.launch
 
@@ -53,7 +53,7 @@ fun HealthConnectCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            if (state.available == HealthConnectAvailability.Installed) {
+            if (state.available == ProviderAvailability.Installed) {
                 Text("Permissions", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 PermissionInfo(state.permissionsGranted, state.permissionsMissing, viewModel)
             }
@@ -63,7 +63,7 @@ fun HealthConnectCard(
 
 @Composable
 fun ConnectionStatusInfo(
-    connectionStatus: HealthConnectConnectionStatus,
+    connectionStatus: ConnectionStatus,
     isPerformingAction: Boolean,
     viewModel: HealthConnectViewModel
 ) {
@@ -72,7 +72,7 @@ fun ConnectionStatusInfo(
         Text(connectionStatus.name)
     }
 
-    if (connectionStatus != HealthConnectConnectionStatus.AutoConnect) {
+    if (connectionStatus != ConnectionStatus.AutoConnect) {
         Button(
             onClick = { viewModel.toggleConnection() },
             contentPadding = ButtonDefaults.TextButtonContentPadding,
@@ -83,12 +83,12 @@ fun ConnectionStatusInfo(
 
             } else {
                 Icon(
-                    if (connectionStatus == HealthConnectConnectionStatus.Disconnected) Icons.Outlined.Login else Icons.Outlined.Logout,
+                    if (connectionStatus == ConnectionStatus.Disconnected) Icons.Outlined.Login else Icons.Outlined.Logout,
                     contentDescription = null,
                     modifier = Modifier.size(ButtonDefaults.IconSize)
                 )
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text(if (connectionStatus == HealthConnectConnectionStatus.Disconnected) "Connect" else "Disconnect")
+                Text(if (connectionStatus == ConnectionStatus.Disconnected) "Connect" else "Disconnect")
             }
         }
     }
@@ -220,9 +220,9 @@ fun PermissionInfo(
 }
 
 @Composable
-private fun AvailabilityInfo(availability: HealthConnectAvailability?) {
+private fun AvailabilityInfo(availability: ProviderAvailability?) {
     when (availability) {
-        HealthConnectAvailability.Installed -> Box(
+        ProviderAvailability.Installed -> Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
@@ -235,7 +235,7 @@ private fun AvailabilityInfo(availability: HealthConnectAvailability?) {
                 color = Color.Magenta
             )
         }
-        HealthConnectAvailability.NotInstalled -> Box(
+        ProviderAvailability.NotInstalled -> Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
@@ -289,14 +289,14 @@ private fun AvailabilityInfo(availability: HealthConnectAvailability?) {
             }
         }
 
-        HealthConnectAvailability.NotSupportedSDK -> Box(
+        ProviderAvailability.NotSupportedSDK -> Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "This device is not supported ;(",
+                "The Android OS is too old for Health Connect and needs to be upgraded.",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = Color.Magenta

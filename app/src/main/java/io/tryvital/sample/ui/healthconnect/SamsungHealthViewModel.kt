@@ -11,12 +11,13 @@ import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthcore.model.WritableVitalResource
 import io.tryvital.vitalsamsunghealth.ExperimentalVitalApi
 import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager
-import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager.Companion.openHealthConnectIntent
+import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager.Companion.openSamsungHealthIntent
 import io.tryvital.vitalsamsunghealth.disableBackgroundSync
 import io.tryvital.vitalsamsunghealth.enableBackgroundSyncContract
 import io.tryvital.vitalsamsunghealth.isBackgroundSyncEnabled
-import io.tryvital.vitalsamsunghealth.model.HealthConnectAvailability
-import io.tryvital.vitalsamsunghealth.model.HealthConnectConnectionStatus
+import io.tryvital.vitalhealthcore.model.ProviderAvailability
+import io.tryvital.vitalhealthcore.model.ConnectionStatus
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -67,7 +68,6 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
 
     fun createPermissionRequestContract() = manager.createPermissionRequestContract(
         readResources = VitalResource.values().toSet(),
-        writeResources = WritableVitalResource.values().toSet(),
     )
 
     @OptIn(ExperimentalVitalApi::class)
@@ -77,13 +77,17 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
     fun disableBackgroundSync() = manager.disableBackgroundSync()
 
     fun checkAvailability(context: Context) {
-        viewModelState.update {
-            it.copy(available = VitalSamsungHealthManager.isAvailable(context))
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            viewModelState.update {
+                it.copy(available = VitalSamsungHealthManager.isAvailable(context))
+            }
         }
     }
 
     fun openSamsungHealth(context: Context) {
-        openHealthConnectIntent(context)?.let { context.startActivity(it) }
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            openSamsungHealthIntent(context)?.let { context.startActivity(it) }
+        }
     }
 
     fun clearErrorMessage() {
@@ -93,7 +97,7 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
     fun checkPermissions() {
         viewModelScope.launch {
             val state = viewModelState.value
-            if (state.available != HealthConnectAvailability.Installed) {
+            if (state.available != ProviderAvailability.Installed) {
                 return@launch
             }
 
@@ -116,7 +120,7 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
     }
 
     fun toggleConnection() {
-        check(viewModelState.value.connectionStatus != HealthConnectConnectionStatus.AutoConnect)
+        check(viewModelState.value.connectionStatus != ConnectionStatus.AutoConnect)
 
         if (currentConnectionAction != null) {
             return
@@ -128,7 +132,7 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
             val status = viewModelState.value.connectionStatus
 
             try {
-                if (status == HealthConnectConnectionStatus.Disconnected) {
+                if (status == ConnectionStatus.Disconnected) {
                     manager.connect()
                 } else {
                     manager.disconnect()
@@ -146,28 +150,6 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
     fun sync() {
         viewModelScope.launch {
             manager.syncData()
-        }
-    }
-
-    fun addWater() {
-        viewModelScope.launch {
-            manager.writeRecord(
-                WritableVitalResource.Water,
-                Instant.now(),
-                Instant.now(),
-                100.0,
-            )
-        }
-    }
-
-    fun addGlucose() {
-        viewModelScope.launch {
-            manager.writeRecord(
-                WritableVitalResource.Glucose,
-                Instant.now(),
-                Instant.now(),
-                15.0,
-            )
         }
     }
 
@@ -202,11 +184,11 @@ private fun isSupportedBySamsungDataApi(resource: VitalResource): Boolean = when
 }
 
 data class SamsungHealthViewModelState(
-    val available: HealthConnectAvailability? = null,
+    val available: ProviderAvailability? = null,
     val permissionsGranted: List<VitalResource> = listOf(),
     val permissionsMissing: List<VitalResource> = listOf(),
     val syncStatus: String = "",
-    val connectionStatus: HealthConnectConnectionStatus = HealthConnectConnectionStatus.AutoConnect,
+    val connectionStatus: ConnectionStatus = ConnectionStatus.AutoConnect,
     val isPerformingConnectionAction: Boolean = false,
     val errorMessage: String? = null,
 )
