@@ -5,9 +5,9 @@ import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.SpeedRecord
 import androidx.health.connect.client.records.StepsRecord
 import io.tryvital.vitalhealthconnect.model.RecordTypeRequirements
-import io.tryvital.vitalhealthconnect.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.recordTypeDependencies
 import io.tryvital.vitalhealthconnect.model.remapped
+import io.tryvital.vitalhealthcore.model.VitalResource
 import org.junit.Assert
 import org.junit.Test
 import kotlin.reflect.KClass

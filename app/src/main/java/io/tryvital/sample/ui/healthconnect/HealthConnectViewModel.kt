@@ -14,9 +14,9 @@ import io.tryvital.vitalhealthconnect.enableBackgroundSyncContract
 import io.tryvital.vitalhealthconnect.isBackgroundSyncEnabled
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
 import io.tryvital.vitalhealthconnect.model.HealthConnectConnectionStatus
-import io.tryvital.vitalhealthconnect.model.PermissionStatus
-import io.tryvital.vitalhealthconnect.model.VitalResource
-import io.tryvital.vitalhealthconnect.model.WritableVitalResource
+import io.tryvital.vitalhealthcore.model.PermissionStatus
+import io.tryvital.vitalhealthcore.model.VitalResource
+import io.tryvital.vitalhealthcore.model.WritableVitalResource
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

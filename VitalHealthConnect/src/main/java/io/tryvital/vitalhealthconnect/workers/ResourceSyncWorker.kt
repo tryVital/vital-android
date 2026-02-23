@@ -21,8 +21,8 @@ import io.tryvital.vitalhealthconnect.UnSecurePrefKeys
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
 import io.tryvital.vitalhealthconnect.exceptions.ConnectionDestroyed
 import io.tryvital.vitalhealthconnect.exceptions.ConnectionPaused
-import io.tryvital.vitalhealthconnect.model.RemappedVitalResource
-import io.tryvital.vitalhealthconnect.model.VitalResource
+import io.tryvital.vitalhealthcore.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.merged
 import io.tryvital.vitalhealthconnect.model.recordTypeChangesToTriggerSync
@@ -32,9 +32,13 @@ import io.tryvital.vitalhealthconnect.records.HealthConnectRecordReader
 import io.tryvital.vitalhealthconnect.records.ProcessorOptions
 import io.tryvital.vitalhealthconnect.records.RecordProcessor
 import io.tryvital.vitalhealthconnect.records.RecordReader
-import io.tryvital.vitalhealthconnect.records.RecordUploader
+import io.tryvital.vitalhealthcore.records.RecordUploader
 import io.tryvital.vitalhealthconnect.records.VitalClientRecordUploader
-import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SyncContextTag
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SyncID
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SyncStatus
+import io.tryvital.vitalhealthcore.workers.LocalSyncState
 import kotlinx.coroutines.CancellationException
 import java.time.Instant
 import java.util.TimeZone
@@ -66,7 +70,7 @@ internal data class ResourceSyncWorkerInput(
                     data.getString("resource") ?: throw IllegalArgumentException("Missing resource")
                 )
             ),
-            tags = data.getIntArray("tags")?.map(SyncProgress.SyncContextTag.Companion::of) ?: emptyList()
+            tags = data.getIntArray("tags")?.map(SyncProgress.SyncContextTag::of) ?: emptyList()
         )
     }
 }

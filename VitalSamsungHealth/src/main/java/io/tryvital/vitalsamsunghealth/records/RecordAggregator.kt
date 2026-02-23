@@ -9,9 +9,9 @@ import io.tryvital.vitalsamsunghealth.healthconnect.client.records.metadata.Data
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SourceType
 import io.tryvital.vitalsamsunghealth.SamsungHealthClientProvider
-import io.tryvital.vitalsamsunghealth.model.HCActivitySummary
-import io.tryvital.vitalsamsunghealth.model.HCSleepSummary
-import io.tryvital.vitalsamsunghealth.model.HCWorkoutSummary
+import io.tryvital.vitalhealthcore.model.HCActivitySummary
+import io.tryvital.vitalhealthcore.model.HCSleepSummary
+import io.tryvital.vitalhealthcore.model.HCWorkoutSummary
 import io.tryvital.vitalsamsunghealth.model.quantitySample
 import java.time.Instant
 import java.time.LocalDate

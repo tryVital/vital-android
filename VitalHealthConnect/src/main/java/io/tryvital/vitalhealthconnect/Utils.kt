@@ -1,8 +1,8 @@
 package io.tryvital.vitalhealthconnect
 
 import android.content.Context
-import io.tryvital.vitalhealthconnect.model.VitalResource
-import io.tryvital.vitalhealthconnect.model.WritableVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
+import io.tryvital.vitalhealthcore.model.WritableVitalResource
 import io.tryvital.vitalhealthconnect.workers.syncStateKey
 
 object UnSecurePrefKeys {

@@ -6,7 +6,8 @@ import android.os.IBinder
 import androidx.core.app.ServiceCompat
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.VitalHealthConnectManager
-import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SystemEventType
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch

@@ -16,5 +16,6 @@ rootProject.name = "vital-android"
 include ':app'
 include ':VitalClient'
 include ':VitalDevices'
+include ':VitalHealthCore'
 include ':VitalHealthConnect'
 include ':VitalSamsungHealth'

@@ -4,7 +4,7 @@ import com.samsung.android.sdk.health.data.data.Change
 import com.samsung.android.sdk.health.data.data.ChangeType
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
 import io.tryvital.client.services.data.DataStage
-import io.tryvital.vitalsamsunghealth.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.RemappedVitalResource
 import io.tryvital.vitalsamsunghealth.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalsamsunghealth.records.ProcessorOptions
 import io.tryvital.vitalsamsunghealth.records.RecordProcessor

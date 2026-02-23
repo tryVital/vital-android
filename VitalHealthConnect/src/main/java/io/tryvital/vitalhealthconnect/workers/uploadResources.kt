@@ -4,7 +4,7 @@ import io.tryvital.client.services.data.DataStage
 import io.tryvital.vitalhealthconnect.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalhealthconnect.model.processedresource.SummaryData
 import io.tryvital.vitalhealthconnect.model.processedresource.TimeSeriesData
-import io.tryvital.vitalhealthconnect.records.RecordUploader
+import io.tryvital.vitalhealthcore.records.RecordUploader
 import java.time.Instant
 import java.util.Date
 

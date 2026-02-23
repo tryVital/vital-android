@@ -18,95 +18,11 @@ import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.ManualMealCreation
 import io.tryvital.client.services.data.SummaryPayload
 import io.tryvital.client.services.data.TimeseriesPayload
+import io.tryvital.vitalhealthcore.records.RecordUploader
 import retrofit2.Response
 import java.time.Instant
 
 internal class UploadFailure(statusCode: Int, message: String): Throwable("code[$statusCode]: $message}")
-
-interface RecordUploader {
-
-    suspend fun uploadSleeps(
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        sleepPayloads: List<LocalSleep>,
-        stage: DataStage = DataStage.Daily,
-    )
-
-    suspend fun uploadBody(
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        bodyPayload: LocalBody,
-        stage: DataStage = DataStage.Daily,
-    )
-
-    suspend fun uploadProfile(
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        profilePayload: LocalProfile,
-        stage: DataStage = DataStage.Daily,
-    )
-
-    suspend fun uploadActivities(
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        activityPayloads: List<LocalActivity>,
-        stage: DataStage = DataStage.Daily,
-    )
-
-    suspend fun uploadWorkouts(
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        workoutPayloads: List<LocalWorkout>,
-        stage: DataStage = DataStage.Daily,
-    )
-
-    suspend fun uploadMenstrualCycles(
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        cyclePayloads: List<LocalMenstrualCycle>,
-        stage: DataStage = DataStage.Daily,
-    )
-
-    suspend fun uploadMeals(
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        mealPayloads: List<ManualMealCreation>,
-        stage: DataStage = DataStage.Daily
-    )
-
-    suspend fun uploadBloodPressure(
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        bloodPressurePayloads: List<LocalBloodPressureSample>,
-        stage: DataStage = DataStage.Daily,
-    )
-
-    suspend fun uploadQuantitySamples(
-        resource: IngestibleTimeseriesResource,
-        userId: String,
-        startDate: Instant?,
-        endDate: Instant?,
-        timeZoneId: String?,
-        quantitySamples: List<LocalQuantitySample>,
-        stage: DataStage = DataStage.Daily,
-    )
-}
 
 class VitalClientRecordUploader(private val vitalClient: VitalClient) : RecordUploader {
     override suspend fun uploadSleeps(

@@ -1,94 +1,10 @@
 package io.tryvital.vitalhealthconnect.model
 
 import androidx.health.connect.client.records.*
+import io.tryvital.vitalhealthcore.model.VitalResource
+import io.tryvital.vitalhealthcore.model.remapped as coreRemapped
 
 import kotlin.reflect.KClass
-
-sealed class VitalResource(val name: String) {
-    object Profile : VitalResource("profile")
-    object Body : VitalResource("body")
-    object Workout : VitalResource("workout")
-    object Activity : VitalResource("activity")
-    object Sleep : VitalResource("sleep")
-    object Glucose : VitalResource("glucose")
-    object BloodPressure : VitalResource("bloodPressure")
-    object BloodOxygen : VitalResource("bloodOxygen")
-    object HeartRate : VitalResource("heartRate")
-    object Water : VitalResource("water")
-    object HeartRateVariability : VitalResource("heartRateVariability")
-    object MenstrualCycle : VitalResource("menstrualCycle")
-
-    object Steps : VitalResource("steps")
-    object ActiveEnergyBurned : VitalResource("activeEnergyBurned")
-    object BasalEnergyBurned : VitalResource("basalEnergyBurned")
-    object FloorsClimbed : VitalResource("floorsClimbed")
-    object DistanceWalkingRunning : VitalResource("distanceWalkingRunning")
-    object Vo2Max : VitalResource("vo2Max")
-
-    object RespiratoryRate : VitalResource("respiratoryRate")
-    object Temperature : VitalResource("temperature")
-
-    object Meal: VitalResource("meal")
-
-    override fun toString(): String {
-        return name
-    }
-
-    val priority: Int get() = when (this) {
-        Activity -> 10
-        Body -> 11
-        MenstrualCycle -> 12
-        Profile -> 13
-        Sleep -> 20
-        BloodPressure -> 21
-        Glucose -> 22
-        HeartRateVariability -> 23
-        Vo2Max -> 24
-        Water -> 25
-        RespiratoryRate -> 26
-        Temperature -> 27
-        BloodOxygen -> 28
-        Meal -> 29
-        Workout -> 31
-        Steps -> 51
-        DistanceWalkingRunning -> 52
-        FloorsClimbed -> 53
-        HeartRate -> 91
-        ActiveEnergyBurned -> 92
-        BasalEnergyBurned -> 93
-    }
-
-    companion object {
-        @Suppress("unused")
-        fun values(): Array<VitalResource> {
-            return arrayOf(
-                Profile,
-                Body,
-                Workout,
-                Activity,
-                Sleep,
-                Glucose,
-                BloodPressure,
-                HeartRate,
-                Steps,
-                ActiveEnergyBurned,
-                BasalEnergyBurned,
-                FloorsClimbed,
-                DistanceWalkingRunning,
-                Vo2Max,
-                Water,
-                HeartRateVariability,
-                MenstrualCycle,
-                RespiratoryRate,
-                Temperature,
-                BloodOxygen,
-                Meal,
-            )
-        }
-
-        fun valueOf(value: String) = values().first { it.name == value }
-    }
-}
 
 /**
  * Describes how Health Connect sample types map to a particular VitalResource.
@@ -158,11 +74,6 @@ internal data class RecordTypeRequirements(
     }
 }
 
-@JvmInline
-value class RemappedVitalResource(val wrapped: VitalResource) {
-    override fun toString() = wrapped.toString()
-}
-
 /**
  * VitalResource remapping.
  *
@@ -171,7 +82,7 @@ value class RemappedVitalResource(val wrapped: VitalResource) {
  * compute Activity Day Summary & pull individual samples adaptively in accordance to the permission
  * state.
  */
-internal fun VitalResource.remapped(): RemappedVitalResource = RemappedVitalResource(this)
+internal fun VitalResource.remapped(): io.tryvital.vitalhealthcore.model.RemappedVitalResource = coreRemapped()
 
 /**
  * VitalResource data dependencies on Health Connect record.

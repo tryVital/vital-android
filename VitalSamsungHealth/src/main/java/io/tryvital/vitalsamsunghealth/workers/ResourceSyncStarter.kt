@@ -18,9 +18,10 @@ import io.tryvital.vitalsamsunghealth.UnSecurePrefKeys
 import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager
 import io.tryvital.vitalsamsunghealth.isConnectedToInternet
 import io.tryvital.vitalsamsunghealth.markAutoSyncSuccess
-import io.tryvital.vitalsamsunghealth.model.RemappedVitalResource
-import io.tryvital.vitalsamsunghealth.model.VitalResource
-import io.tryvital.vitalsamsunghealth.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SyncContextTag
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
@@ -58,7 +59,7 @@ internal data class ResourceSyncStarterInput(
                 RemappedVitalResource(VitalResource.valueOf(it))
             } ?: emptySet(),
             startForeground = data.getBoolean("startForeground", true),
-            tags = data.getIntArray("tags")?.map(SyncProgress.SyncContextTag.Companion::of) ?: emptyList()
+            tags = data.getIntArray("tags")?.map(SyncProgress.SyncContextTag::of) ?: emptyList()
         )
     }
 }

@@ -9,7 +9,7 @@ import io.tryvital.client.Environment
 import io.tryvital.client.Region
 import io.tryvital.client.VitalClient
 import io.tryvital.sample.ui.settings.SettingsAuthMode
-import io.tryvital.vitalhealthconnect.model.ConnectionPolicy
+import io.tryvital.vitalhealthcore.model.ConnectionPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.updateAndGet

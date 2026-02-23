@@ -9,7 +9,8 @@ import androidx.lifecycle.lifecycleScope
 import io.tryvital.client.VitalClient
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.model.HealthConnectAvailability
-import io.tryvital.vitalhealthconnect.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
+import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SystemEventType
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 
