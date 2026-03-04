@@ -8,13 +8,12 @@ import com.samsung.android.sdk.health.data.request.DataType
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SourceType
 import io.tryvital.vitalhealthcore.model.HCActivitySummary
-import io.tryvital.vitalhealthcore.model.HCSleepSummary
-import io.tryvital.vitalhealthcore.model.HCWorkoutSummary
+import io.tryvital.vitalsamsunghealth.model.SHSleepSummary
+import io.tryvital.vitalsamsunghealth.model.SHWorkoutSummary
 import io.tryvital.vitalsamsunghealth.SamsungHealthClientProvider
 import io.tryvital.vitalsamsunghealth.model.quantitySample
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.TimeZone
 import kotlin.math.floor
@@ -23,8 +22,8 @@ import kotlin.math.min
 import kotlin.math.roundToLong
 
 internal interface RecordAggregator {
-    suspend fun aggregateSleepSummary(startTime: Instant, endTime: Instant): HCSleepSummary
-    suspend fun aggregateWorkoutSummary(startTime: Instant, endTime: Instant): HCWorkoutSummary
+    suspend fun aggregateSleepSummary(startTime: Instant, endTime: Instant): SHSleepSummary
+    suspend fun aggregateWorkoutSummary(startTime: Instant, endTime: Instant): SHWorkoutSummary
     suspend fun aggregateActivityDaySummaries(startDate: LocalDate, endDate: LocalDate, timeZone: TimeZone): Map<LocalDate, HCActivitySummary>
     suspend fun aggregateStepHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample>
     suspend fun aggregateCaloriesActiveHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample>
@@ -39,38 +38,33 @@ internal class HealthConnectRecordAggregator(
 
     private val reader: RecordReader = HealthConnectRecordReader(context, samsungHealthClientProvider)
 
-    override suspend fun aggregateSleepSummary(startTime: Instant, endTime: Instant): HCSleepSummary {
+    override suspend fun aggregateSleepSummary(startTime: Instant, endTime: Instant): SHSleepSummary {
         val samples = heartRateSamples(reader.readHeartRate(startTime, endTime))
-            .filter { it.time >= startTime && it.time <= endTime }
+            .filter { it.time in startTime..endTime }
 
         if (samples.isEmpty()) {
-            return HCSleepSummary()
+            return SHSleepSummary()
         }
 
         val min = samples.minOf { it.beatsPerMinute }
         val max = samples.maxOf { it.beatsPerMinute }
         val avg = samples.map { it.beatsPerMinute }.average().toInt()
 
-        return HCSleepSummary(
+        return SHSleepSummary(
             heartRateMaximum = max.toInt(),
             heartRateMinimum = min.toInt(),
             heartRateMean = avg,
-            hrvMeanSdnn = null,
-            respiratoryRateMean = null,
         )
     }
 
-    override suspend fun aggregateWorkoutSummary(startTime: Instant, endTime: Instant): HCWorkoutSummary {
+    override suspend fun aggregateWorkoutSummary(startTime: Instant, endTime: Instant): SHWorkoutSummary {
         val heartRateSummary = aggregateHeartRateZones(startTime, endTime)
-        val distance = reader.readDistance(startTime, endTime).sumOf { (it.value ?: 0f).toDouble() }
-        val calories = reader.readActiveEnergyBurned(startTime, endTime).sumOf { (it.value ?: 0f).toDouble() }
-
-        return heartRateSummary.copy(distanceMeter = distance, caloriesBurned = calories)
+        return heartRateSummary
     }
 
-    private suspend fun aggregateHeartRateZones(startTime: Instant, endTime: Instant): HCWorkoutSummary {
+    private suspend fun aggregateHeartRateZones(startTime: Instant, endTime: Instant): SHWorkoutSummary {
         val samples = heartRateSamples(reader.readHeartRate(startTime, endTime)).sortedBy { it.time }
-        if (samples.size <= 1) return HCWorkoutSummary()
+        if (samples.size <= 1) return SHWorkoutSummary()
 
         val timestamps = samples.map { it.time.epochSecond }
         val values = samples.map { it.beatsPerMinute }
@@ -107,7 +101,7 @@ internal class HealthConnectRecordAggregator(
 
         averageHr /= durations.count()
 
-        return HCWorkoutSummary(
+        return SHWorkoutSummary(
             heartRateMaximum = maxHr.toInt(),
             heartRateMinimum = minHr.toInt(),
             heartRateMean = averageHr.toInt(),

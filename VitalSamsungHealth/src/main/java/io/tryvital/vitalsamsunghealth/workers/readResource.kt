@@ -75,12 +75,16 @@ internal suspend fun readResourceByTimeRange(
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Sleep -> reader.readSleepSession(startTime, endTime).let { sessions ->
-            processor.processSleepFromRecords(sleepSessionRecords = sessions).let(ProcessedResourceData::Summary)
+            val skinTemperature = reader.readSleepSkinTemperature(
+                sessions.map { it.uid }
+            )
+
+            processor.processSleepFromRecords(sleepSessionRecords = sessions, skinTemperature = skinTemperature)
+                .let(ProcessedResourceData::Summary)
         }
 
         VitalResource.Body -> processor.processBodyFromRecords(
-            weightRecords = reader.readWeights(startTime, endTime),
-            bodyFatRecords = reader.readBodyFat(startTime, endTime),
+            reader.readBodyCompositions(startTime, endTime),
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.Profile -> processor.processProfileFromRecords(
@@ -88,11 +92,10 @@ internal suspend fun readResourceByTimeRange(
         ).let(ProcessedResourceData::Summary)
 
         VitalResource.HeartRate -> readTimeseries(reader::readHeartRate, processor::processHeartRateFromRecords)
-        VitalResource.HeartRateVariability -> readTimeseries(reader::readHeartRateVariabilityRmssd, processor::processHeartRateVariabilityRmssFromRecords)
         VitalResource.Glucose -> readTimeseries(reader::readBloodGlucose, processor::processGlucoseFromRecords)
         VitalResource.BloodPressure -> readTimeseries(reader::readBloodPressure, processor::processBloodPressureFromRecords)
         VitalResource.Water -> readTimeseries(reader::readHydration, processor::processWaterFromRecords)
 
-        VitalResource.MenstrualCycle, VitalResource.RespiratoryRate -> throw IllegalArgumentException("${resource.wrapped} is unavailable with Samsung Health")
+        VitalResource.MenstrualCycle, VitalResource.RespiratoryRate, VitalResource.HeartRateVariability -> throw IllegalArgumentException("${resource.wrapped} is unavailable with Samsung Health")
     }
 }

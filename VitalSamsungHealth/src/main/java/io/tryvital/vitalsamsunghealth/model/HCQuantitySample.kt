@@ -22,7 +22,9 @@ fun quantitySample(
         type = sourceType ?: dataPoint?.inferredSourceType,
         sourceBundle = dataPoint?.dataSource?.appId,
         deviceModel = null,
-        metadata = emptyMap(),
+        metadata = dataPoint?.dataSource?.deviceId?.let { deviceId ->
+            mapOf("_DID" to deviceId)
+        } ?: emptyMap()
     )
 }
 

@@ -2,7 +2,6 @@ package io.tryvital.vitalhealthconnect.records
 
 import android.content.Context
 import androidx.health.connect.client.aggregate.AggregateMetric
-import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BasalMetabolicRateRecord
@@ -10,9 +9,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.FloorsClimbedRecord
 import androidx.health.connect.client.records.HeartRateRecord
-import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.Record
-import androidx.health.connect.client.records.RespiratoryRateRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
 import androidx.health.connect.client.records.metadata.DataOrigin
@@ -21,18 +18,15 @@ import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
-import androidx.health.platform.client.request.AggregateDataRequest
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SourceType
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalhealthconnect.HealthConnectClientProvider
-import io.tryvital.vitalhealthcore.model.HCActivityHourlyTotals
 import io.tryvital.vitalhealthcore.model.HCActivitySummary
-import io.tryvital.vitalhealthcore.model.HCSleepSummary
-import io.tryvital.vitalhealthcore.model.HCWorkoutSummary
 import io.tryvital.vitalhealthconnect.model.quantitySample
+import io.tryvital.vitalhealthconnect.model.HCSleepSummary
+import io.tryvital.vitalhealthconnect.model.HCWorkoutSummary
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock

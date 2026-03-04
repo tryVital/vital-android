@@ -713,10 +713,11 @@ internal class HealthConnectRecordProcessor(
     ): SummaryData.Meals {
         val zoneId = timeZone.toZoneId()
         val now = ZonedDateTime.now(zoneId)
+
         val startInstant = minOf(
             lastSynced?.atZone(zoneId) ?: now,
             now.minusDays(ACTIVITY_STATS_DAYS_TO_LOOKBACK)
-        ).toInstant()
+        ).truncatedTo(ChronoUnit.DAYS).toInstant()
 
         val nutritionRecords = recordReader.readNutritionRecords(startInstant, now.toInstant())
 

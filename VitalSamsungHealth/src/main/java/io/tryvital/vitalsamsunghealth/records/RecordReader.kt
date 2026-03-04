@@ -20,12 +20,10 @@ import java.time.ZoneId
 internal interface RecordReader {
     suspend fun readExerciseSessions(startTime: Instant, endTime: Instant): List<HealthDataPoint>
     suspend fun readHeartRate(startTime: Instant, endTime: Instant): List<HealthDataPoint>
-    suspend fun readRestingHeartRate(startTime: Instant, endTime: Instant): List<HealthDataPoint>
-    suspend fun readHeartRateVariabilityRmssd(startTime: Instant, endTime: Instant): List<HealthDataPoint>
     suspend fun readHeights(startTime: Instant, endTime: Instant): List<HealthDataPoint>
-    suspend fun readWeights(startTime: Instant, endTime: Instant): List<HealthDataPoint>
-    suspend fun readBodyFat(startTime: Instant, endTime: Instant): List<HealthDataPoint>
+    suspend fun readBodyCompositions(startTime: Instant, endTime: Instant): List<HealthDataPoint>
     suspend fun readSleepSession(startTime: Instant, endTime: Instant): List<HealthDataPoint>
+    suspend fun readSleepSkinTemperature(sleepIds: List<String>): Map<String, List<HealthDataPoint>>
     suspend fun readOxygenSaturation(startTime: Instant, endTime: Instant): List<HealthDataPoint>
     suspend fun readActiveEnergyBurned(startTime: Instant, endTime: Instant): List<AggregatedData<Float>>
     suspend fun readBasalMetabolicRate(startTime: Instant, endTime: Instant): List<HealthDataPoint>
@@ -57,27 +55,43 @@ internal class HealthConnectRecordReader(
         return readPoints(startTime, endTime) { DataTypes.HEART_RATE.readDataRequestBuilder }
     }
 
-    override suspend fun readRestingHeartRate(startTime: Instant, endTime: Instant): List<HealthDataPoint> = emptyList()
-
-    override suspend fun readHeartRateVariabilityRmssd(startTime: Instant, endTime: Instant): List<HealthDataPoint> = emptyList()
-
     override suspend fun readHeights(startTime: Instant, endTime: Instant): List<HealthDataPoint> {
         return readPoints(startTime, endTime) { DataTypes.BODY_COMPOSITION.readDataRequestBuilder }
             .filter { it.getValue(DataType.BodyCompositionType.HEIGHT) != null }
     }
 
-    override suspend fun readWeights(startTime: Instant, endTime: Instant): List<HealthDataPoint> {
+    override suspend fun readBodyCompositions(startTime: Instant, endTime: Instant): List<HealthDataPoint> {
         return readPoints(startTime, endTime) { DataTypes.BODY_COMPOSITION.readDataRequestBuilder }
-            .filter { it.getValue(DataType.BodyCompositionType.WEIGHT) != null }
-    }
-
-    override suspend fun readBodyFat(startTime: Instant, endTime: Instant): List<HealthDataPoint> {
-        return readPoints(startTime, endTime) { DataTypes.BODY_COMPOSITION.readDataRequestBuilder }
-            .filter { it.getValue(DataType.BodyCompositionType.BODY_FAT) != null }
     }
 
     override suspend fun readSleepSession(startTime: Instant, endTime: Instant): List<HealthDataPoint> {
         return readPoints(startTime, endTime) { DataTypes.SLEEP.readDataRequestBuilder }
+    }
+
+    override suspend fun readSleepSkinTemperature(sleepIds: List<String>): Map<String, List<HealthDataPoint>> {
+        if (sleepIds.isEmpty()) {
+            return emptyMap()
+        }
+
+        val request = DataTypes.SLEEP.associatedReadRequestBuilder
+            .addAssociatedDataType(DataType.SleepType.Associates.SKIN_TEMPERATURE)
+            .setIdFilter(
+                com.samsung.android.sdk.health.data.request.IdFilter.builder().run {
+                    for (sleepId in sleepIds) {
+                        addDataUid(sleepId)
+                    }
+                    build()
+                }
+            )
+            .build()
+
+        val response = healthDataStore.readAssociatedData(request)
+        return response.dataList
+            .groupBy(
+                keySelector = { it.uid },
+                valueTransform = { it.getDataPointOf(DataTypes.SKIN_TEMPERATURE) ?: emptyList() },
+            )
+            .mapValues { it.value.flatten() }
     }
 
     override suspend fun readOxygenSaturation(startTime: Instant, endTime: Instant): List<HealthDataPoint> {

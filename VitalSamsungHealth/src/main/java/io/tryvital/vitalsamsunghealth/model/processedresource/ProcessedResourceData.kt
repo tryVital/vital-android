@@ -99,12 +99,18 @@ sealed class SummaryData {
     data class Body(
         val bodyMass: List<LocalQuantitySample>,
         val bodyFatPercentage: List<LocalQuantitySample>,
+        val bodyMassIndex: List<LocalQuantitySample>,
+        val leanBodyMass: List<LocalQuantitySample>,
+        val waistCircumference: List<LocalQuantitySample>,
     ) : SummaryData() {
 
         fun toBodyPayload(): LocalBody {
             return LocalBody(
                 bodyMass = bodyMass,
                 bodyFatPercentage = bodyFatPercentage,
+                bodyMassIndex = bodyMassIndex,
+                leanBodyMass = leanBodyMass,
+                waistCircumference = waistCircumference,
             )
         }
 

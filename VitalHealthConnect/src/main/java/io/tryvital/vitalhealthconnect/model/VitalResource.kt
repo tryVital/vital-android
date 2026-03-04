@@ -119,11 +119,8 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
         supplementary = listOf(
         ),
     )
-    VitalResource.ActiveEnergyBurned -> RecordTypeRequirements.single(ActiveCaloriesBurnedRecord::class)
-    VitalResource.BasalEnergyBurned -> RecordTypeRequirements.single(BasalMetabolicRateRecord::class)
     VitalResource.DistanceWalkingRunning -> RecordTypeRequirements.single(DistanceRecord::class)
     VitalResource.FloorsClimbed -> RecordTypeRequirements.single(FloorsClimbedRecord::class)
-    VitalResource.Steps -> RecordTypeRequirements.single(StepsRecord::class)
     VitalResource.Vo2Max -> RecordTypeRequirements.single(Vo2MaxRecord::class)
 
     VitalResource.RespiratoryRate -> RecordTypeRequirements.single(RespiratoryRateRecord::class)

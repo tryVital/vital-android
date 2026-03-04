@@ -105,6 +105,9 @@ sealed class SummaryData {
             return LocalBody(
                 bodyMass = bodyMass,
                 bodyFatPercentage = bodyFatPercentage,
+                leanBodyMass = emptyList(),
+                bodyMassIndex = emptyList(),
+                waistCircumference = emptyList(),
             )
         }
 

@@ -5,26 +5,24 @@ import com.samsung.android.sdk.health.data.data.AggregatedData
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
 import com.samsung.android.sdk.health.data.data.entries.BloodGlucose
 import com.samsung.android.sdk.health.data.data.entries.HeartRate
-import com.samsung.android.sdk.health.data.data.entries.OxygenSaturation
-import com.samsung.android.sdk.health.data.data.entries.SleepSession
 import com.samsung.android.sdk.health.data.request.DataType
+import com.samsung.android.sdk.health.data.request.DataType.NutritionType.MealType
+import io.tryvital.client.services.data.HealthConnectRecordCollection
 import io.tryvital.client.services.data.IngestibleTimeseriesResource
 import io.tryvital.client.services.data.LocalActivity
 import io.tryvital.client.services.data.LocalBloodPressureSample
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.LocalSleep
 import io.tryvital.client.services.data.LocalWorkout
+import io.tryvital.client.services.data.ManualMealCreation
+import io.tryvital.client.services.data.NutritionRecord
 import io.tryvital.client.services.data.SampleType
-import io.tryvital.client.utils.VitalLogger
-import io.tryvital.vitalsamsunghealth.SupportedSleepApps
 import io.tryvital.vitalsamsunghealth.model.inferredSourceType
 import io.tryvital.vitalsamsunghealth.model.processedresource.SummaryData
 import io.tryvital.vitalsamsunghealth.model.processedresource.TimeSeriesData
 import io.tryvital.vitalsamsunghealth.model.quantitySample
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.TimeZone
@@ -35,6 +33,7 @@ data class ProcessorOptions(
 )
 
 const val ACTIVITY_STATS_DAYS_TO_LOOKBACK = 3L
+const val NUTRITION_STATS_DAYS_TO_LOOKBACK = 5L
 
 sealed class TimeRangeOrRecords<out R> {
     data class TimeRange<out R>(val start: Instant, val end: Instant) : TimeRangeOrRecords<R>()
@@ -45,12 +44,11 @@ interface RecordProcessor {
     suspend fun processBloodPressureFromRecords(readBloodPressure: List<HealthDataPoint>): TimeSeriesData.BloodPressure
     suspend fun processGlucoseFromRecords(readBloodGlucose: List<HealthDataPoint>): TimeSeriesData.QuantitySamples
     suspend fun processHeartRateFromRecords(heartRateRecords: List<HealthDataPoint>): TimeSeriesData.QuantitySamples
-    fun processHeartRateVariabilityRmssFromRecords(heartRateRecords: List<HealthDataPoint>): TimeSeriesData.QuantitySamples
     fun processWaterFromRecords(readHydration: List<HealthDataPoint>): TimeSeriesData.QuantitySamples
-    suspend fun processBodyFromRecords(weightRecords: List<HealthDataPoint>, bodyFatRecords: List<HealthDataPoint>): SummaryData.Body
+    suspend fun processBodyFromRecords(records: List<HealthDataPoint>): SummaryData.Body
     suspend fun processProfileFromRecords(heightRecords: List<HealthDataPoint>): SummaryData.Profile
     suspend fun processWorkoutsFromRecords(exerciseRecords: List<HealthDataPoint>): SummaryData.Workouts
-    suspend fun processSleepFromRecords(sleepSessionRecords: List<HealthDataPoint>): SummaryData.Sleeps
+    suspend fun processSleepFromRecords(sleepSessionRecords: List<HealthDataPoint>, skinTemperature: Map<String, List<HealthDataPoint>>): SummaryData.Sleeps
     suspend fun processActivities(lastSynced: Instant?, timeZone: TimeZone): SummaryData.Activities
     suspend fun processMeals(lastSynced: Instant?, timeZone: TimeZone): SummaryData.Meals
     suspend fun processActiveCaloriesBurnedRecords(
@@ -93,23 +91,30 @@ internal class HealthConnectRecordProcessor(
             readBloodPressure.mapNotNull { point ->
                 val systolic = point.getValue(DataType.BloodPressureType.SYSTOLIC) ?: return@mapNotNull null
                 val diastolic = point.getValue(DataType.BloodPressureType.DIASTOLIC) ?: return@mapNotNull null
+                val pulse = point.getValue(DataType.BloodPressureType.PULSE_RATE) ?: return@mapNotNull null
 
                 LocalBloodPressureSample(
                     systolic = quantitySample(
                         value = systolic.toDouble(),
                         unit = SampleType.BloodPressureSystolic.unit,
                         startDate = point.startTime,
-                        endDate = point.startTime,
+                        endDate = point.endTime ?: point.startTime,
                         dataPoint = point,
                     ),
                     diastolic = quantitySample(
                         value = diastolic.toDouble(),
                         unit = SampleType.BloodPressureDiastolic.unit,
                         startDate = point.startTime,
-                        endDate = point.startTime,
+                        endDate = point.endTime ?: point.startTime,
                         dataPoint = point,
                     ),
-                    pulse = null,
+                    pulse = quantitySample(
+                        value = pulse.toDouble(),
+                        unit = SampleType.HeartRate.unit,
+                        startDate = point.startTime,
+                        endDate = point.endTime ?: point.startTime,
+                        dataPoint = point,
+                    ),
                 )
             }
         )
@@ -122,7 +127,7 @@ internal class HealthConnectRecordProcessor(
                 series.map {
                     quantitySample(
                         value = it.glucose.toDouble(),
-                        unit = SampleType.GlucoseConcentrationMilligramPerDecilitre.unit,
+                        unit = SampleType.GlucoseConcentrationMillimolePerLitre.unit,
                         startDate = it.timestamp,
                         endDate = it.timestamp,
                         dataPoint = point,
@@ -133,7 +138,7 @@ internal class HealthConnectRecordProcessor(
                 listOf(
                     quantitySample(
                         value = glucose.toDouble(),
-                        unit = SampleType.GlucoseConcentrationMilligramPerDecilitre.unit,
+                        unit = SampleType.GlucoseConcentrationMillimolePerLitre.unit,
                         startDate = point.startTime,
                         endDate = point.startTime,
                         dataPoint = point,
@@ -147,10 +152,6 @@ internal class HealthConnectRecordProcessor(
 
     override suspend fun processHeartRateFromRecords(heartRateRecords: List<HealthDataPoint>): TimeSeriesData.QuantitySamples {
         return TimeSeriesData.QuantitySamples(IngestibleTimeseriesResource.HeartRate, mapHeartRate(heartRateRecords))
-    }
-
-    override fun processHeartRateVariabilityRmssFromRecords(heartRateRecords: List<HealthDataPoint>): TimeSeriesData.QuantitySamples {
-        return TimeSeriesData.QuantitySamples(IngestibleTimeseriesResource.HeartRateVariability, emptyList())
     }
 
     override fun processWaterFromRecords(readHydration: List<HealthDataPoint>): TimeSeriesData.QuantitySamples {
@@ -174,16 +175,16 @@ internal class HealthConnectRecordProcessor(
         return SummaryData.Workouts(
             exerciseRecords.flatMap { point ->
                 val sessions = point.getValue(DataType.ExerciseType.SESSIONS) ?: emptyList()
-                sessions.map { session ->
+                sessions.mapIndexed { index, session ->
                     val summary = recordAggregator.aggregateWorkoutSummary(session.startTime, session.endTime)
 
                     LocalWorkout(
-                        id = point.uid,
+                        id = "${point.uid}:${index}:${session.exerciseType.name}",
                         startDate = session.startTime,
                         endDate = session.endTime,
                         sport = session.exerciseType.name.lowercase(),
-                        calories = summary.caloriesBurned,
-                        distance = summary.distanceMeter,
+                        calories = session.calories.toDouble(),
+                        distance = session.distance?.toDouble(),
                         heartRateMinimum = summary.heartRateMinimum,
                         heartRateMaximum = summary.heartRateMaximum,
                         heartRateMean = summary.heartRateMean,
@@ -194,9 +195,11 @@ internal class HealthConnectRecordProcessor(
                         heartRateZone5 = summary.heartRateZone5,
                         heartRateZone6 = summary.heartRateZone6,
                         sourceBundle = point.dataSource?.appId,
-                        deviceModel = null,
                         sourceType = point.inferredSourceType,
-                        metadata = emptyMap(),
+                        deviceModel = null,
+                        metadata = point.dataSource?.deviceId?.let { deviceId ->
+                            mapOf("_DID" to deviceId)
+                        } ?: emptyMap(),
                     )
                 }
             }
@@ -213,68 +216,120 @@ internal class HealthConnectRecordProcessor(
         )
     }
 
-    override suspend fun processBodyFromRecords(weightRecords: List<HealthDataPoint>, bodyFatRecords: List<HealthDataPoint>) = SummaryData.Body(
-        bodyMass = weightRecords.mapNotNull { point ->
+    override suspend fun processBodyFromRecords(records: List<HealthDataPoint>) = SummaryData.Body(
+        bodyMass = records.mapNotNull { point ->
             val kg = point.getValue(DataType.BodyCompositionType.WEIGHT) ?: return@mapNotNull null
             quantitySample(
                 value = kg.toDouble(),
                 unit = SampleType.Weight.unit,
                 startDate = point.startTime,
-                endDate = point.startTime,
+                endDate = point.endTime ?: point.startTime,
                 dataPoint = point,
             )
         },
-        bodyFatPercentage = bodyFatRecords.mapNotNull { point ->
+        bodyFatPercentage = records.mapNotNull { point ->
             val bodyFat = point.getValue(DataType.BodyCompositionType.BODY_FAT) ?: return@mapNotNull null
             quantitySample(
                 value = bodyFat.toDouble(),
                 unit = SampleType.BodyFat.unit,
                 startDate = point.startTime,
-                endDate = point.startTime,
+                endDate = point.endTime ?: point.startTime,
                 dataPoint = point,
             )
         },
+        leanBodyMass = records.mapNotNull { point ->
+            val leanBodyMass = point.getValue(DataType.BodyCompositionType.FAT_FREE_MASS) ?: return@mapNotNull null
+            quantitySample(
+                value = leanBodyMass.toDouble(),
+                unit = SampleType.LeanBodyMass.unit,
+                startDate = point.startTime,
+                endDate = point.endTime ?: point.startTime,
+                dataPoint = point,
+            )
+        },
+        bodyMassIndex = records.mapNotNull { point ->
+            val bmi = point.getValue(DataType.BodyCompositionType.BODY_MASS_INDEX) ?: return@mapNotNull null
+            quantitySample(
+                value = bmi.toDouble(),
+                unit = SampleType.BodyMassIndex.unit,
+                startDate = point.startTime,
+                endDate = point.endTime ?: point.startTime,
+                dataPoint = point,
+            )
+        },
+        waistCircumference = emptyList(),
     )
 
-    override suspend fun processSleepFromRecords(sleepSessionRecords: List<HealthDataPoint>): SummaryData.Sleeps {
-        return SummaryData.Sleeps(processSleeps(sleepSessionRecords))
+    override suspend fun processSleepFromRecords(sleepSessionRecords: List<HealthDataPoint>, skinTemperature: Map<String, List<HealthDataPoint>>): SummaryData.Sleeps {
+        return SummaryData.Sleeps(processSleeps(sleepSessionRecords, skinTemperature))
     }
 
-    private suspend fun processSleeps(sleeps: List<HealthDataPoint>): List<LocalSleep> {
-        return sleeps.filterForAcceptedSleepDataSources().flatMap { point ->
-            val sessions = point.getValue(DataType.SleepType.SESSIONS) ?: emptyList<SleepSession>()
-            sessions.map { sleepSession ->
-                val statistics = recordAggregator.aggregateSleepSummary(sleepSession.startTime, sleepSession.endTime)
-                val stages = sleepSession.stages ?: emptyList()
+    private suspend fun processSleeps(sleeps: List<HealthDataPoint>, skinTemperature: Map<String, List<HealthDataPoint>>): List<LocalSleep> {
+        return sleeps.map { sleep ->
+            val sessions = checkNotNull(sleep.getValue(DataType.SleepType.SESSIONS))
+            val score = sleep.getValue(DataType.SleepType.SLEEP_SCORE)
 
-                LocalSleep(
-                    id = point.uid,
-                    startDate = sleepSession.startTime,
-                    endDate = sleepSession.endTime,
-                    sourceBundle = point.dataSource?.appId,
-                    deviceModel = null,
-                    metadata = emptyMap(),
-                    sourceType = point.inferredSourceType,
-                    heartRateMean = statistics.heartRateMean,
-                    heartRateMaximum = statistics.heartRateMaximum,
-                    heartRateMinimum = statistics.heartRateMinimum,
-                    hrvMeanSdnn = statistics.hrvMeanSdnn,
-                    respiratoryRateMean = statistics.respiratoryRateMean,
-                    sleepStages = LocalSleep.Stages(
-                        awakeSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.AWAKE }
-                            .map { sleepStage -> stageSample(LocalSleep.Stage.Awake.id, sleepStage.startTime, sleepStage.endTime, point) },
-                        deepSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.DEEP }
-                            .map { sleepStage -> stageSample(LocalSleep.Stage.Deep.id, sleepStage.startTime, sleepStage.endTime, point) },
-                        lightSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.LIGHT }
-                            .map { sleepStage -> stageSample(LocalSleep.Stage.Light.id, sleepStage.startTime, sleepStage.endTime, point) },
-                        remSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.REM }
-                            .map { sleepStage -> stageSample(LocalSleep.Stage.Rem.id, sleepStage.startTime, sleepStage.endTime, point) },
-                        unknownSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.UNDEFINED }
-                            .map { sleepStage -> stageSample(LocalSleep.Stage.Unknown.id, sleepStage.startTime, sleepStage.endTime, point) },
-                        outOfBedSleepSamples = emptyList(),
-                    ),
-                )
+            val endTime = checkNotNull(sleep.endTime)
+            val statistics = recordAggregator.aggregateSleepSummary(sleep.startTime, endTime)
+
+            val stages = sessions.flatMap { it.stages ?: emptyList() }
+
+            val temperatureSamples: List<LocalQuantitySample>? = skinTemperature[sleep.uid]?.flatMap { point ->
+                val series = point.getValue(DataType.SkinTemperatureType.SERIES_DATA)
+                if (!series.isNullOrEmpty()) {
+                    series.map { datum ->
+                        quantitySample(
+                            value = datum.skinTemperature.toDouble(),
+                            unit = SampleType.Temperature.unit,
+                            startDate = datum.startTime,
+                            endDate = datum.endTime,
+                            dataPoint = point,
+                        )
+                    }
+                } else {
+                    val temperature = point.getValue(DataType.SkinTemperatureType.SKIN_TEMPERATURE) ?: return@flatMap emptyList()
+                    listOf(
+                        quantitySample(
+                            value = temperature.toDouble(),
+                            unit = SampleType.Temperature.unit,
+                            startDate = point.startTime,
+                            endDate = point.endTime ?: point.startTime,
+                            dataPoint = point,
+                        )
+
+                    )
+                }
             }
+
+            LocalSleep(
+                id = "",
+                startDate = sleep.startTime,
+                endDate = endTime,
+                sourceBundle = sleep.dataSource?.appId,
+                deviceModel = null,
+                metadata = sleep.dataSource?.deviceId?.let { deviceId ->
+                    mapOf("_DID" to deviceId)
+                } ?: emptyMap(),
+                sourceType = sleep.inferredSourceType,
+                score = score,
+                heartRateMean = statistics.heartRateMean,
+                heartRateMaximum = statistics.heartRateMaximum,
+                heartRateMinimum = statistics.heartRateMinimum,
+                sleepStages = LocalSleep.Stages(
+                    awakeSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.AWAKE }
+                        .map { sleepStage -> stageSample(LocalSleep.Stage.Awake.id, sleepStage.startTime, sleepStage.endTime, sleep) },
+                    deepSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.DEEP }
+                        .map { sleepStage -> stageSample(LocalSleep.Stage.Deep.id, sleepStage.startTime, sleepStage.endTime, sleep) },
+                    lightSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.LIGHT }
+                        .map { sleepStage -> stageSample(LocalSleep.Stage.Light.id, sleepStage.startTime, sleepStage.endTime, sleep) },
+                    remSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.REM }
+                        .map { sleepStage -> stageSample(LocalSleep.Stage.Rem.id, sleepStage.startTime, sleepStage.endTime, sleep) },
+                    unknownSleepSamples = stages.filter { it.stage == DataType.SleepType.StageType.UNDEFINED }
+                        .map { sleepStage -> stageSample(LocalSleep.Stage.Unknown.id, sleepStage.startTime, sleepStage.endTime, sleep) },
+                    outOfBedSleepSamples = emptyList(),
+                ),
+                wristTemperature = temperatureSamples ?: emptyList(),
+            )
         }
     }
 
@@ -327,7 +382,7 @@ internal class HealthConnectRecordProcessor(
                 value = kcalPerDay.toDouble(),
                 unit = SampleType.BasalMetabolicRate.unit,
                 startDate = point.startTime,
-                endDate = point.startTime,
+                endDate = point.endTime ?: point.startTime,
                 dataPoint = point,
             )
         }
@@ -460,7 +515,7 @@ internal class HealthConnectRecordProcessor(
                 quantitySample(
                     value = value.toDouble(),
                     unit = SampleType.Vo2Max.unit,
-                    startDate = session.endTime,
+                    startDate = session.startTime,
                     endDate = session.endTime,
                     dataPoint = point,
                 )
@@ -478,7 +533,7 @@ internal class HealthConnectRecordProcessor(
                 value = celsius.toDouble(),
                 unit = SampleType.Temperature.unit,
                 startDate = point.startTime,
-                endDate = point.startTime,
+                endDate = point.endTime ?: point.startTime,
                 dataPoint = point,
             )
         },
@@ -487,11 +542,11 @@ internal class HealthConnectRecordProcessor(
     override suspend fun processOxygenSaturationRecords(oxygenSaturations: List<HealthDataPoint>) = TimeSeriesData.QuantitySamples(
         IngestibleTimeseriesResource.BloodOxygen,
         oxygenSaturations.flatMap { point ->
-            val series = point.getValue(DataType.BloodOxygenType.SERIES_DATA) ?: emptyList<OxygenSaturation>()
+            val series = point.getValue(DataType.BloodOxygenType.SERIES_DATA) ?: emptyList()
             if (series.isNotEmpty()) {
                 series.map {
                     quantitySample(
-                        value = (it.oxygenSaturation / 100.0).toDouble(),
+                        value = it.oxygenSaturation.toDouble(),
                         unit = SampleType.OxygenSaturation.unit,
                         startDate = it.startTime,
                         endDate = it.endTime,
@@ -502,10 +557,10 @@ internal class HealthConnectRecordProcessor(
                 val value = point.getValue(DataType.BloodOxygenType.OXYGEN_SATURATION) ?: return@flatMap emptyList()
                 listOf(
                     quantitySample(
-                        value = (value / 100.0).toDouble(),
+                        value = value.toDouble(),
                         unit = SampleType.OxygenSaturation.unit,
                         startDate = point.startTime,
-                        endDate = point.startTime,
+                        endDate = point.endTime ?: point.startTime,
                         dataPoint = point,
                     )
                 )
@@ -532,7 +587,110 @@ internal class HealthConnectRecordProcessor(
     }
 
     override suspend fun processMeals(lastSynced: Instant?, timeZone: TimeZone): SummaryData.Meals {
-        return SummaryData.Meals(emptyList())
+        val zoneId = timeZone.toZoneId()
+        val now = ZonedDateTime.now(zoneId)
+
+        val startInstant = minOf(
+            lastSynced?.atZone(zoneId) ?: now,
+            now.minusDays(NUTRITION_STATS_DAYS_TO_LOOKBACK)
+        ).truncatedTo(ChronoUnit.DAYS).toInstant()
+
+        val nutritionRecords = recordReader.readNutritionRecords(startInstant, now.toInstant())
+
+        val meals = nutritionRecords.map { point ->
+            val sourceBundle = point.dataSource?.appId
+            val mealType = mealTypeToInt(point.getValue(DataType.NutritionType.MEAL_TYPE))
+            val zoneOffset = point.zoneOffset
+            val start = point.startTime
+            val end = point.endTime ?: start
+
+            Triple(
+                Triple(sourceBundle, mealType, start.atZone(zoneOffset ?: zoneId).toLocalDate()),
+                sourceBundle,
+                NutritionRecord(
+                    startTime = start,
+                    startZoneOffset = zoneOffset?.toString(),
+                    endTime = end,
+                    endZoneOffset = zoneOffset?.toString(),
+                    biotin = null,
+                    caffeine = null,
+                    // SH: mg, JUNC: mg
+                    calcium = point.getValue(DataType.NutritionType.CALCIUM)?.toDouble(),
+                    // SH: g, JUNC: g
+                    energy = point.getValue(DataType.NutritionType.CALORIES)?.toDouble(),
+                    energyFromFat = null,
+                    chloride = null,
+                    // SH: mg, JUNC: g
+                    cholesterol = point.getValue(DataType.NutritionType.CHOLESTEROL)?.toDouble()?.let { it * 1000 },
+                    chromium = null,
+                    copper = null,
+                    // SH: g, JUNC: g
+                    dietaryFiber = point.getValue(DataType.NutritionType.DIETARY_FIBER)?.toDouble(),
+                    folate = null,
+                    folicAcid = null,
+                    iodine = null,
+                    // SH: mg, JUNC: mg
+                    iron = point.getValue(DataType.NutritionType.IRON)?.toDouble(),
+                    magnesium = null,
+                    manganese = null,
+                    molybdenum = null,
+                    // SH: g, JUNC: g
+                    monounsaturatedFat = point.getValue(DataType.NutritionType.MONOSATURATED_FAT)?.toDouble(),
+                    niacin = null,
+                    pantothenicAcid = null,
+                    phosphorus = null,
+                    // SH: g, JUNC: g
+                    polyunsaturatedFat = point.getValue(DataType.NutritionType.POLYSATURATED_FAT)?.toDouble(),
+                    // SH: mg, JUNC: mg
+                    potassium = point.getValue(DataType.NutritionType.POTASSIUM)?.toDouble(),
+                    // SH: g, JUNC: g
+                    protein = point.getValue(DataType.NutritionType.PROTEIN)?.toDouble(),
+                    riboflavin = null,
+                    // SH: g, JUNC: g
+                    saturatedFat = point.getValue(DataType.NutritionType.SATURATED_FAT)?.toDouble(),
+                    selenium = null,
+                    // SH: mg, JUNC: mg
+                    sodium = point.getValue(DataType.NutritionType.SODIUM)?.toDouble(),
+                    // SH: g, JUNC: g
+                    sugar = point.getValue(DataType.NutritionType.SUGAR)?.toDouble(),
+                    thiamin = null,
+                    // SH: g, JUNC: g
+                    totalCarbohydrate = point.getValue(DataType.NutritionType.CARBOHYDRATE)?.toDouble(),
+                    // SH: g, JUNC: g
+                    totalFat = point.getValue(DataType.NutritionType.TOTAL_FAT)?.toDouble(),
+                    // SH: g, JUNC: g
+                    transFat = point.getValue(DataType.NutritionType.TRANS_FAT)?.toDouble(),
+                    unsaturatedFat = null,
+                    // SH: ug, JUNC: mg
+                    vitaminA = point.getValue(DataType.NutritionType.VITAMIN_A)?.toDouble()?.let { it * 1000 },
+                    vitaminB12 = null,
+                    vitaminB6 = null,
+                    // SH: mg, JUNC: mg
+                    vitaminC = point.getValue(DataType.NutritionType.VITAMIN_C)?.toDouble(),
+                    vitaminD = null,
+                    vitaminE = null,
+                    vitaminK = null,
+                    zinc = null,
+                    name = point.getValue(DataType.NutritionType.TITLE),
+                    mealType = mealType,
+                    metadata = point.dataSource?.appId?.let { appId ->
+                        mapOf("dataOrigin" to mapOf("packageName" to appId))
+                    } ?: emptyMap(),
+                ),
+            )
+        }.groupBy { it.first }
+
+        return SummaryData.Meals(
+            meals = meals.values.map { grouped ->
+                val sourceBundle = grouped.first().second
+                ManualMealCreation(
+                    healthConnect = HealthConnectRecordCollection(
+                        sourceBundle = sourceBundle ?: "",
+                        nutritionRecords = grouped.map { it.third },
+                    )
+                )
+            }
+        )
     }
 
     private fun stageSample(stageId: Int, startTime: Instant, endTime: Instant, point: HealthDataPoint): LocalQuantitySample {
@@ -569,22 +727,14 @@ internal class HealthConnectRecordProcessor(
     }
 }
 
-private fun List<HealthDataPoint>.filterForAcceptedSleepDataSources(): List<HealthDataPoint> {
-    return filter { point ->
-        SupportedSleepApps.values().any { it.packageName == point.dataSource?.appId }
+private fun mealTypeToInt(mealType: MealType?): Int {
+    return when (mealType) {
+        MealType.BREAKFAST -> 1
+        MealType.LUNCH -> 2
+        MealType.DINNER -> 3
+        MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK, MealType.EVENING_SNACK  -> 4
+        MealType.UNDEFINED, null -> 0
     }
-}
-
-internal inline fun <R> quantitySamplesByDate(
-    records: Iterable<R>,
-    zoneId: ZoneId,
-    timeSelector: (R) -> Instant,
-    transform: (R) -> LocalQuantitySample,
-): Map<LocalDate, List<LocalQuantitySample>> {
-    return records.groupBy(
-        keySelector = { timeSelector(it).atZone(zoneId).toLocalDate() },
-        valueTransform = transform,
-    )
 }
 
 internal fun merge(
