@@ -239,6 +239,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val resourceSyncState = sharedPreferences.getJson<ResourceSyncState>(input.resource.wrapped.syncStateKey)
 
         val localSyncState = localSyncStateManager.getLocalSyncState(
+            grantedPermissions = { manager.checkAndUpdatePermissions().third.sorted() },
             onRevalidation = {
                 syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.revalidatingSyncState)
             }

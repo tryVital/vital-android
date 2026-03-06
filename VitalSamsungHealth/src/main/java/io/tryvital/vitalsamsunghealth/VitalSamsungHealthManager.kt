@@ -181,7 +181,9 @@ class VitalSamsungHealthManager private constructor(
         // Try to revalidate the LocalSyncState if a revalidation is due.
         // Gracefully ignore the exception thrown by getLocalSyncState().
         runCatching {
-            localSyncStateManager.getLocalSyncState()
+            localSyncStateManager.getLocalSyncState(
+                grantedPermissions = { checkAndUpdatePermissions().third.sorted() }
+            )
         }
 
         return localSyncStateManager.connectionStatus.value.let {
@@ -189,16 +191,16 @@ class VitalSamsungHealthManager private constructor(
         }
     }
 
-    internal suspend fun checkAndUpdatePermissions(): Pair<Set<VitalResource>, Set<VitalResource>> = permissionMutex.withLock {
+    internal suspend fun checkAndUpdatePermissions(): Triple<Set<VitalResource>, Set<VitalResource>, Set<String>> = permissionMutex.withLock {
         if (isAvailable(context) != ProviderAvailability.Installed) {
-            return emptySet<VitalResource>() to emptySet()
+            return Triple(emptySet<VitalResource>(), emptySet(), emptySet())
         }
 
         val lastKnownGrantedResources = resourcesWithReadPermission()
         val currentGrants = try {
             getGrantedPermissions(context)
         } catch (_: AuthorizationException) {
-            return emptySet<VitalResource>() to emptySet<VitalResource>()
+            return Triple(emptySet<VitalResource>(), emptySet<VitalResource>(), emptySet())
         }
 
         val readResourcesByStatus = VitalResource.values().groupBy { resource ->
@@ -222,7 +224,7 @@ class VitalSamsungHealthManager private constructor(
             apply()
         }
 
-        return upToDateGrantedResources to upToDateGrantedResources - lastKnownGrantedResources
+        return Triple(upToDateGrantedResources, upToDateGrantedResources - lastKnownGrantedResources, currentGrants)
     }
 
     internal fun readPermissionsRequiredByResources(resources: Set<VitalResource>): Set<String> {
@@ -282,7 +284,9 @@ class VitalSamsungHealthManager private constructor(
             // Try to revalidate the LocalSyncState if a revalidation is due.
             // Gracefully ignore the exception thrown by getLocalSyncState().
             runCatching {
-                localSyncStateManager.getLocalSyncState()
+                localSyncStateManager.getLocalSyncState(
+                    grantedPermissions = { checkAndUpdatePermissions().third.sorted() }
+                )
             }
         }
     }
@@ -297,16 +301,24 @@ class VitalSamsungHealthManager private constructor(
             throw IllegalStateException("connect() only works with ConnectionPolicy.Explicit.")
         }
 
+        val (grantedResources, grantedPermissions) = checkAndUpdatePermissions()
+            .let { (a, _, c) -> a to c.sorted() }
+
         @OptIn(VitalPrivateApi::class)
-        vitalClient.createConnectedSourceIfNotExist(ManualProviderSlug.SamsungHealth)
+        vitalClient.createConnectedSourceIfNotExist(
+            ManualProviderSlug.SamsungHealth,
+            grantedPermissions = grantedPermissions,
+        )
 
         try {
-            localSyncStateManager.getLocalSyncState(forceRemoteCheck = true)
+            localSyncStateManager.getLocalSyncState(
+                grantedPermissions = { grantedPermissions },
+                forceRemoteCheck = true
+            )
 
             // Check if there are already granted read permissions.
             // If so, trigger a data sync immediately.
-            val (granted, _) = checkAndUpdatePermissions()
-            if (granted.isNotEmpty()) {
+            if (grantedResources.isNotEmpty()) {
                 taskScope.launch {
                     syncData()
                 }
@@ -330,7 +342,12 @@ class VitalSamsungHealthManager private constructor(
         vitalClient.userService.deregisterProvider(provider = ProviderSlug.SamsungHealth)
 
         try {
-            localSyncStateManager.getLocalSyncState(forceRemoteCheck = true)
+            localSyncStateManager.getLocalSyncState(
+                // We are disconnecting, so let's report empty permissions, even if technically
+                // the permissions are app-bound and hence not revoked.
+                grantedPermissions = { emptyList() },
+                forceRemoteCheck = true,
+            )
 
             // Connection is still active unexpectedly.
             throw IllegalStateException("connection has been re-instated concurrently by another SDK installation")
