@@ -1,11 +1,5 @@
 package io.tryvital.vitalsamsunghealth.records
 
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.CervicalMucusRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.IntermenstrualBleedingRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.MenstruationFlowRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.MenstruationPeriodRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.OvulationTestRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.SexualActivityRecord
 import io.tryvital.client.services.data.LocalMenstrualCycle
 import io.tryvital.client.services.data.MenstrualCycle
 import io.tryvital.client.services.data.ProviderSlug
@@ -16,6 +10,70 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.util.TimeZone
+
+internal data class MenstruationPeriodRecord(
+    val startTime: Instant,
+    val startZoneOffset: ZoneOffset?,
+    val endTime: Instant,
+    val endZoneOffset: ZoneOffset?,
+    val sourceBundle: String,
+)
+
+internal data class MenstruationFlowRecord(
+    val time: Instant,
+    val zoneOffset: ZoneOffset,
+    val flow: Int,
+    val sourceBundle: String,
+)
+
+internal data class CervicalMucusRecord(
+    val time: Instant,
+    val zoneOffset: ZoneOffset,
+    val appearance: Int,
+    val sourceBundle: String,
+)
+
+internal data class IntermenstrualBleedingRecord(
+    val time: Instant,
+    val zoneOffset: ZoneOffset,
+    val sourceBundle: String,
+)
+
+internal data class OvulationTestRecord(
+    val time: Instant,
+    val zoneOffset: ZoneOffset,
+    val result: Int,
+    val sourceBundle: String,
+)
+
+internal data class SexualActivityRecord(
+    val time: Instant,
+    val zoneOffset: ZoneOffset,
+    val protectionUsed: Int,
+    val sourceBundle: String,
+)
+
+private object MenstrualConsts {
+    const val FLOW_UNKNOWN = 0
+    const val FLOW_LIGHT = 1
+    const val FLOW_MEDIUM = 2
+    const val FLOW_HEAVY = 3
+
+    const val CERVICAL_CREAMY = 1
+    const val CERVICAL_DRY = 2
+    const val CERVICAL_STICKY = 3
+    const val CERVICAL_EGG_WHITE = 4
+    const val CERVICAL_WATERY = 5
+
+    const val OVULATION_INCONCLUSIVE = 0
+    const val OVULATION_NEGATIVE = 1
+    const val OVULATION_POSITIVE = 2
+    const val OVULATION_HIGH = 3
+
+    const val PROTECTION_UNKNOWN = 0
+    const val PROTECTION_USED = 1
+    const val PROTECTION_NOT_USED = 2
+}
 
 internal data class CycleBoundary(
     val cycleStart: LocalDate,
@@ -39,16 +97,15 @@ internal fun processMenstrualCycle(
     ovulationTest: List<OvulationTestRecord>,
     sexualActivity: List<SexualActivityRecord>,
 ): List<LocalMenstrualCycle> {
-    val periodsByPackage = periods.groupBy { it.metadata.dataOrigin.packageName }
-    val flowsByPackage = flows.groupBy { it.metadata.dataOrigin.packageName }
-    val cervicalMucusByPackage = cervicalMucus.groupBy { it.metadata.dataOrigin.packageName }
-    val intermenstrualBleedingByPackage = intermenstrualBleeding.groupBy { it.metadata.dataOrigin.packageName }
-    val ovulationTestByPackage = ovulationTest.groupBy { it.metadata.dataOrigin.packageName }
-    val sexualActivityByPackage = sexualActivity.groupBy { it.metadata.dataOrigin.packageName }
+    val periodsByPackage = periods.groupBy { it.sourceBundle }
+    val flowsByPackage = flows.groupBy { it.sourceBundle }
+    val cervicalMucusByPackage = cervicalMucus.groupBy { it.sourceBundle }
+    val intermenstrualBleedingByPackage = intermenstrualBleeding.groupBy { it.sourceBundle }
+    val ovulationTestByPackage = ovulationTest.groupBy { it.sourceBundle }
+    val sexualActivityByPackage = sexualActivity.groupBy { it.sourceBundle }
 
     val packages = periodsByPackage.keys + flowsByPackage.keys + cervicalMucusByPackage.keys +
-            intermenstrualBleedingByPackage.keys + ovulationTestByPackage.keys +
-            sexualActivityByPackage.keys
+        intermenstrualBleedingByPackage.keys + ovulationTestByPackage.keys + sexualActivityByPackage.keys
 
     return packages.flatMap { packageName ->
         val cycles = _processMenstrualCycle(
@@ -77,7 +134,6 @@ internal fun _processMenstrualCycle(
 
     val cycleBoundaries = mutableListOf<CycleBoundary>()
 
-    // queryMulti returns sample in `startDate` ascending order.
     var currentCycleStart: LocalDate? = null
     var currentPeriodEnd: LocalDate? = null
 
@@ -117,16 +173,15 @@ internal fun _processMenstrualCycle(
         val quality = cervicalMucusQuality(record.appearance) ?: return@groupSamplesByBoundary null
         MenstrualCycle.CervicalMucusEntry(date, quality)
     }
-    val intermenstrualBleedingByCycle = groupSamplesByBoundary(currentTimeZone, intermenstrualBleeding, cycleBoundaries, { it.time to it.zoneOffset }) { date, record ->
+    val intermenstrualBleedingByCycle = groupSamplesByBoundary(currentTimeZone, intermenstrualBleeding, cycleBoundaries, { it.time to it.zoneOffset }) { date, _ ->
         MenstrualCycle.IntermenstrualBleedingEntry(date)
     }
     val ovulationTestByCycle = groupSamplesByBoundary(currentTimeZone, ovulationTest, cycleBoundaries, { it.time to it.zoneOffset }) { date, record ->
-        val flow = ovulationTestResult(record.result) ?: return@groupSamplesByBoundary null
-        MenstrualCycle.OvulationTestEntry(date, flow)
+        val result = ovulationTestResult(record.result) ?: return@groupSamplesByBoundary null
+        MenstrualCycle.OvulationTestEntry(date, result)
     }
     val sexualActivityByCycle = groupSamplesByBoundary(currentTimeZone, sexualActivity, cycleBoundaries, { it.time to it.zoneOffset }) { date, record ->
-        val protectionUsed = protectionUsed(record.protectionUsed)
-        MenstrualCycle.SexualActivityEntry(date, protectionUsed)
+        MenstrualCycle.SexualActivityEntry(date, protectionUsed(record.protectionUsed))
     }
 
     return cycleBoundaries.map { boundary ->
@@ -144,33 +199,24 @@ internal fun _processMenstrualCycle(
             contraceptive = emptyList(),
             homePregnancyTest = emptyList(),
             homeProgesteroneTest = emptyList(),
-            source = Source(
-                type = SourceType.App,
-                appId = sourceBundle,
-                provider = ProviderSlug.SamsungHealth,
-            )
+            source = Source(type = SourceType.App, appId = sourceBundle, provider = ProviderSlug.SamsungHealth),
         )
     }
 }
-
 
 internal inline fun <reified Record, reified Entry> groupSamplesByBoundary(
     currentTimeZone: ZoneId,
     records: List<Record>,
     boundaries: List<CycleBoundary>,
     recordExtractor: (Record) -> Pair<Instant, ZoneOffset?>,
-    transform: (LocalDate, Record) -> Entry?
+    transform: (LocalDate, Record) -> Entry?,
 ): Map<CycleBoundary, List<Entry>> {
-
-    // Simple O(N*M) algorithm since the number of entries is low.
     return boundaries.associateWith { boundary ->
         records.mapNotNull { record ->
             val (startTime, zoneOffset) = recordExtractor(record)
             val startDate = startTime.atZone(zoneOffset ?: currentTimeZone).toLocalDate()
 
-            if (!boundary.contains(startDate)) {
-                return@mapNotNull null
-            }
+            if (!boundary.contains(startDate)) return@mapNotNull null
 
             transform(startDate, record)
         }
@@ -178,31 +224,33 @@ internal inline fun <reified Record, reified Entry> groupSamplesByBoundary(
 }
 
 internal fun menstrualFlow(rawValue: Int): MenstrualCycle.MenstrualFlow? = when (rawValue) {
-    MenstruationFlowRecord.FLOW_HEAVY -> MenstrualCycle.MenstrualFlow.Heavy
-    MenstruationFlowRecord.FLOW_MEDIUM -> MenstrualCycle.MenstrualFlow.Medium
-    MenstruationFlowRecord.FLOW_LIGHT -> MenstrualCycle.MenstrualFlow.Light
-    MenstruationFlowRecord.FLOW_UNKNOWN -> MenstrualCycle.MenstrualFlow.Unspecified
+    MenstrualConsts.FLOW_HEAVY -> MenstrualCycle.MenstrualFlow.Heavy
+    MenstrualConsts.FLOW_MEDIUM -> MenstrualCycle.MenstrualFlow.Medium
+    MenstrualConsts.FLOW_LIGHT -> MenstrualCycle.MenstrualFlow.Light
+    MenstrualConsts.FLOW_UNKNOWN -> MenstrualCycle.MenstrualFlow.Unspecified
     else -> null
 }
 
 internal fun cervicalMucusQuality(rawValue: Int): MenstrualCycle.CervicalMucusQuality? = when (rawValue) {
-    CervicalMucusRecord.APPEARANCE_CREAMY -> MenstrualCycle.CervicalMucusQuality.Creamy
-    CervicalMucusRecord.APPEARANCE_DRY -> MenstrualCycle.CervicalMucusQuality.Dry
-    CervicalMucusRecord.APPEARANCE_STICKY -> MenstrualCycle.CervicalMucusQuality.Sticky
-    CervicalMucusRecord.APPEARANCE_EGG_WHITE -> MenstrualCycle.CervicalMucusQuality.EggWhite
-    CervicalMucusRecord.APPEARANCE_WATERY -> MenstrualCycle.CervicalMucusQuality.Watery
+    MenstrualConsts.CERVICAL_CREAMY -> MenstrualCycle.CervicalMucusQuality.Creamy
+    MenstrualConsts.CERVICAL_DRY -> MenstrualCycle.CervicalMucusQuality.Dry
+    MenstrualConsts.CERVICAL_STICKY -> MenstrualCycle.CervicalMucusQuality.Sticky
+    MenstrualConsts.CERVICAL_EGG_WHITE -> MenstrualCycle.CervicalMucusQuality.EggWhite
+    MenstrualConsts.CERVICAL_WATERY -> MenstrualCycle.CervicalMucusQuality.Watery
     else -> null
 }
 
 internal fun ovulationTestResult(rawValue: Int): MenstrualCycle.OvulationTestResult? = when (rawValue) {
-    OvulationTestRecord.RESULT_INCONCLUSIVE -> MenstrualCycle.OvulationTestResult.Indeterminate
-    OvulationTestRecord.RESULT_NEGATIVE -> MenstrualCycle.OvulationTestResult.Negative
-    OvulationTestRecord.RESULT_HIGH, OvulationTestRecord.RESULT_POSITIVE -> MenstrualCycle.OvulationTestResult.Positive
+    MenstrualConsts.OVULATION_INCONCLUSIVE -> MenstrualCycle.OvulationTestResult.Indeterminate
+    MenstrualConsts.OVULATION_NEGATIVE -> MenstrualCycle.OvulationTestResult.Negative
+    MenstrualConsts.OVULATION_HIGH,
+    MenstrualConsts.OVULATION_POSITIVE -> MenstrualCycle.OvulationTestResult.Positive
     else -> null
 }
 
 internal fun protectionUsed(rawValue: Int): Boolean? = when (rawValue) {
-    SexualActivityRecord.PROTECTION_USED_PROTECTED -> true
-    SexualActivityRecord.PROTECTION_USED_UNPROTECTED -> false
+    MenstrualConsts.PROTECTION_USED -> true
+    MenstrualConsts.PROTECTION_NOT_USED -> false
+    MenstrualConsts.PROTECTION_UNKNOWN -> null
     else -> null
 }

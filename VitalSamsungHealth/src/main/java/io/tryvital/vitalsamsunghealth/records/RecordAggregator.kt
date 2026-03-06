@@ -1,68 +1,35 @@
 package io.tryvital.vitalsamsunghealth.records
 
 import android.content.Context
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.ActiveCaloriesBurnedRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.DistanceRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.FloorsClimbedRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.StepsRecord
-import io.tryvital.vitalsamsunghealth.healthconnect.client.records.metadata.DataOrigin
+import com.samsung.android.sdk.health.data.data.AggregatedData
+import com.samsung.android.sdk.health.data.data.HealthDataPoint
+import com.samsung.android.sdk.health.data.data.entries.HeartRate
+import com.samsung.android.sdk.health.data.request.DataType
 import io.tryvital.client.services.data.LocalQuantitySample
 import io.tryvital.client.services.data.SourceType
-import io.tryvital.vitalsamsunghealth.SamsungHealthClientProvider
 import io.tryvital.vitalhealthcore.model.HCActivitySummary
-import io.tryvital.vitalhealthcore.model.HCSleepSummary
-import io.tryvital.vitalhealthcore.model.HCWorkoutSummary
+import io.tryvital.vitalsamsunghealth.model.SHSleepSummary
+import io.tryvital.vitalsamsunghealth.model.SHWorkoutSummary
+import io.tryvital.vitalsamsunghealth.SamsungHealthClientProvider
 import io.tryvital.vitalsamsunghealth.model.quantitySample
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.TimeZone
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToLong
 
 internal interface RecordAggregator {
-
-    suspend fun aggregateSleepSummary(
-        startTime: Instant,
-        endTime: Instant,
-        dataOrigin: DataOrigin
-    ): HCSleepSummary
-
-    suspend fun aggregateWorkoutSummary(
-        startTime: Instant,
-        endTime: Instant,
-        dataOrigin: DataOrigin
-    ): HCWorkoutSummary
-
-    suspend fun aggregateActivityDaySummaries(
-        startDate: LocalDate,
-        endDate: LocalDate,
-        timeZone: TimeZone
-    ): Map<LocalDate, HCActivitySummary>
-
-    suspend fun aggregateStepHourlyTotals(
-        start: Instant,
-        end: Instant,
-    ): List<LocalQuantitySample>
-
-    suspend fun aggregateCaloriesActiveHourlyTotals(
-        start: Instant,
-        end: Instant,
-    ): List<LocalQuantitySample>
-
-    suspend fun aggregateFloorsClimbedHourlyTotals(
-        start: Instant,
-        end: Instant,
-    ): List<LocalQuantitySample>
-
-    suspend fun aggregateDistanceHourlyTotals(
-        start: Instant,
-        end: Instant,
-    ): List<LocalQuantitySample>
+    suspend fun aggregateSleepSummary(startTime: Instant, endTime: Instant): SHSleepSummary
+    suspend fun aggregateWorkoutSummary(startTime: Instant, endTime: Instant): SHWorkoutSummary
+    suspend fun aggregateActivityDaySummaries(startDate: LocalDate, endDate: LocalDate, timeZone: TimeZone): Map<LocalDate, HCActivitySummary>
+    suspend fun aggregateStepHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample>
+    suspend fun aggregateCaloriesActiveHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample>
+    suspend fun aggregateFloorsClimbedHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample>
+    suspend fun aggregateDistanceHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample>
 }
-
 
 internal class HealthConnectRecordAggregator(
     context: Context,
@@ -71,58 +38,33 @@ internal class HealthConnectRecordAggregator(
 
     private val reader: RecordReader = HealthConnectRecordReader(context, samsungHealthClientProvider)
 
-    override suspend fun aggregateSleepSummary(
-        startTime: Instant,
-        endTime: Instant,
-        dataOrigin: DataOrigin
-    ): HCSleepSummary {
-        val samples = reader.readHeartRate(startTime, endTime)
-            .flatMap { it.samples }
-            .filter { it.time >= startTime && it.time <= endTime }
+    override suspend fun aggregateSleepSummary(startTime: Instant, endTime: Instant): SHSleepSummary {
+        val samples = heartRateSamples(reader.readHeartRate(startTime, endTime))
+            .filter { it.time in startTime..endTime }
 
         if (samples.isEmpty()) {
-            return HCSleepSummary()
+            return SHSleepSummary()
         }
 
         val min = samples.minOf { it.beatsPerMinute }
         val max = samples.maxOf { it.beatsPerMinute }
         val avg = samples.map { it.beatsPerMinute }.average().toInt()
 
-        return HCSleepSummary(
+        return SHSleepSummary(
             heartRateMaximum = max.toInt(),
             heartRateMinimum = min.toInt(),
             heartRateMean = avg,
-            hrvMeanSdnn = null,
-            respiratoryRateMean = null,
         )
     }
 
-    override suspend fun aggregateWorkoutSummary(
-        startTime: Instant,
-        endTime: Instant,
-        dataOrigin: DataOrigin
-    ): HCWorkoutSummary {
+    override suspend fun aggregateWorkoutSummary(startTime: Instant, endTime: Instant): SHWorkoutSummary {
         val heartRateSummary = aggregateHeartRateZones(startTime, endTime)
-        val distance = reader.readDistance(startTime, endTime).sumOf { it.distance.inMeters }
-        val calories = reader.readActiveEnergyBurned(startTime, endTime).sumOf { it.energy.inKilocalories }
-
-        return heartRateSummary.copy(
-            distanceMeter = distance,
-            caloriesBurned = calories,
-        )
+        return heartRateSummary
     }
 
-    private suspend fun aggregateHeartRateZones(
-        startTime: Instant,
-        endTime: Instant,
-    ): HCWorkoutSummary {
-        val samples = reader.readHeartRate(startTime, endTime)
-            .flatMap { it.samples }
-            .sortedBy { it.time }
-
-        if (samples.size <= 1) {
-            return HCWorkoutSummary()
-        }
+    private suspend fun aggregateHeartRateZones(startTime: Instant, endTime: Instant): SHWorkoutSummary {
+        val samples = heartRateSamples(reader.readHeartRate(startTime, endTime)).sortedBy { it.time }
+        if (samples.size <= 1) return SHWorkoutSummary()
 
         val timestamps = samples.map { it.time.epochSecond }
         val values = samples.map { it.beatsPerMinute }
@@ -159,7 +101,7 @@ internal class HealthConnectRecordAggregator(
 
         averageHr /= durations.count()
 
-        return HCWorkoutSummary(
+        return SHWorkoutSummary(
             heartRateMaximum = maxHr.toInt(),
             heartRateMinimum = minHr.toInt(),
             heartRateMean = averageHr.toInt(),
@@ -175,7 +117,7 @@ internal class HealthConnectRecordAggregator(
     override suspend fun aggregateActivityDaySummaries(
         startDate: LocalDate,
         endDate: LocalDate,
-        timeZone: TimeZone
+        timeZone: TimeZone,
     ): Map<LocalDate, HCActivitySummary> {
         val zoneId = timeZone.toZoneId()
         val start = startDate.atStartOfDay(zoneId).toInstant()
@@ -187,9 +129,13 @@ internal class HealthConnectRecordAggregator(
         val floors = aggregateFloorsClimbedHourlyTotals(start, end)
 
         val exerciseMinutesByDay = reader.readExerciseSessions(start, end)
-            .groupBy { it.startTime.atZone(zoneId).toLocalDate() }
+            .flatMap { point ->
+                val sessions = point.getValue(DataType.ExerciseType.SESSIONS) ?: emptyList()
+                sessions.map { session -> session.startTime to session.endTime }
+            }
+            .groupBy { it.first.atZone(zoneId).toLocalDate() }
             .mapValues { (_, sessions) ->
-                sessions.sumOf { ChronoUnit.MINUTES.between(it.startTime, it.endTime) }
+                sessions.sumOf { ChronoUnit.MINUTES.between(it.first, it.second) }
             }
 
         val dates = generateSequence(startDate) { d -> if (d < endDate) d.plusDays(1) else null }.toList()
@@ -207,66 +153,64 @@ internal class HealthConnectRecordAggregator(
     }
 
     override suspend fun aggregateCaloriesActiveHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample> {
-        return fromIntervals(
+        return fromAggregated(
             records = reader.readActiveEnergyBurned(start, end),
             unit = "kcal",
-            startAt = { it.startTime },
-            endAt = { it.endTime },
-            metadataOf = { it.metadata },
-            valueOf = { it.energy.inKilocalories }
+            valueOf = { (it.value ?: 0f).toDouble() },
         )
     }
 
     override suspend fun aggregateDistanceHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample> {
-        return fromIntervals(
+        return fromAggregated(
             records = reader.readDistance(start, end),
             unit = "m",
-            startAt = { it.startTime },
-            endAt = { it.endTime },
-            metadataOf = { it.metadata },
-            valueOf = { it.distance.inMeters }
+            valueOf = { (it.value ?: 0f).toDouble() },
         )
     }
 
     override suspend fun aggregateFloorsClimbedHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample> {
-        return fromIntervals(
+        return fromAggregated(
             records = reader.readFloorsClimbed(start, end),
             unit = "count",
-            startAt = { it.startTime },
-            endAt = { it.endTime },
-            metadataOf = { it.metadata },
-            valueOf = { it.floors }
+            valueOf = { (it.value ?: 0f).toDouble() },
         )
     }
 
     override suspend fun aggregateStepHourlyTotals(start: Instant, end: Instant): List<LocalQuantitySample> {
-        return fromIntervals(
+        return fromAggregated(
             records = reader.readSteps(start, end),
             unit = "count",
-            startAt = { it.startTime },
-            endAt = { it.endTime },
-            metadataOf = { it.metadata },
-            valueOf = { it.count.toDouble() }
+            valueOf = { (it.value ?: 0L).toDouble() },
         )
     }
 
-    private fun <T> fromIntervals(
-        records: List<T>,
+    private fun <T : Any> fromAggregated(
+        records: List<AggregatedData<T>>,
         unit: String,
-        startAt: (T) -> Instant,
-        endAt: (T) -> Instant,
-        metadataOf: (T) -> io.tryvital.vitalsamsunghealth.healthconnect.client.records.metadata.Metadata,
-        valueOf: (T) -> Double
+        valueOf: (AggregatedData<T>) -> Double,
     ): List<LocalQuantitySample> {
         return records.map {
             quantitySample(
                 value = valueOf(it),
                 unit = unit,
-                startDate = startAt(it),
-                endDate = endAt(it),
-                metadata = metadataOf(it),
+                startDate = it.startTime,
+                endDate = it.endTime,
                 sourceType = SourceType.MultipleSources,
             )
         }
     }
+
+    private fun heartRateSamples(points: List<HealthDataPoint>): List<HeartRateSample> {
+        return points.flatMap { point ->
+            val series = point.getValue(DataType.HeartRateType.SERIES_DATA) ?: emptyList<HeartRate>()
+            if (series.isNotEmpty()) {
+                series.map { HeartRateSample(it.startTime, it.heartRate.roundToLong()) }
+            } else {
+                val bpm = point.getValue(DataType.HeartRateType.HEART_RATE) ?: return@flatMap emptyList()
+                listOf(HeartRateSample(point.startTime, bpm.roundToLong()))
+            }
+        }
+    }
 }
+
+private data class HeartRateSample(val time: Instant, val beatsPerMinute: Long)

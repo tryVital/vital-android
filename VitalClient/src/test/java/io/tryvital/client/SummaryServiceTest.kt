@@ -110,7 +110,10 @@ class SummaryServiceTest {
                 timeZoneId = null,
                 data = LocalBody(
                     bodyMass = emptyList(),
-                    bodyFatPercentage = emptyList()
+                    bodyFatPercentage = emptyList(),
+                    bodyMassIndex = emptyList(),
+                    leanBodyMass = emptyList(),
+                    waistCircumference = emptyList(),
                 )
             )
         )

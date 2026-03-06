@@ -102,6 +102,12 @@ data class LocalBody(
     val bodyMass: List<LocalQuantitySample>,
     @Json(name = "body_fat_percentage")
     val bodyFatPercentage: List<LocalQuantitySample>,
+    @Json(name = "body_mass_index")
+    val bodyMassIndex: List<LocalQuantitySample>,
+    @Json(name = "lean_body_mass")
+    val leanBodyMass: List<LocalQuantitySample>,
+    @Json(name = "waist_circumference")
+    val waistCircumference: List<LocalQuantitySample>,
 )
 
 // @VitalPrivateApi
@@ -131,6 +137,10 @@ data class LocalSleep(
     val respiratoryRateMean: Double? = null,
     @Json(name = "sleep_stages")
     val sleepStages: Stages,
+    @Json(name = "wrist_temperature")
+    val wristTemperature: List<LocalQuantitySample> = emptyList(),
+    @Json(name = "score")
+    val score: Int? = null,
     @Json(name = "metadata")
     val metadata: Map<String, String> = emptyMap(),
 ) {
@@ -222,4 +232,6 @@ sealed class SampleType(val unit: String) {
     object BloodPressureDiastolic : SampleType("mmHg")
     object Water : SampleType("ml")
     object Temperature : SampleType("°C")
+    object BodyMassIndex : SampleType("index")
+    object LeanBodyMass : SampleType("kg")
 }

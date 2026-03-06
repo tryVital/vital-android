@@ -1,4 +1,4 @@
-package io.tryvital.vitalhealthcore.model
+package io.tryvital.vitalhealthconnect.model
 
 data class HCSleepSummary(
     val heartRateMaximum: Int? = null,
