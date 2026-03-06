@@ -55,7 +55,7 @@ private suspend fun postGlucoseSamplesImpl(context: Context, provider: ManualPro
         return
     }
 
-    client.createConnectedSourceIfNotExist(provider)
+    client.createConnectedSourceIfNotExist(provider, grantedPermissions = null)
     client.vitalPrivateService.timeseriesPost(
         userId = VitalClient.checkUserId(),
         resource = "glucose",
@@ -76,7 +76,7 @@ private suspend fun postBloodPressureSamplesImpl(context: Context, provider: Man
         return
     }
 
-    client.createConnectedSourceIfNotExist(provider)
+    client.createConnectedSourceIfNotExist(provider, grantedPermissions = null)
     client.vitalPrivateService.bloodPressureTimeseriesPost(
         userId = VitalClient.checkUserId(),
         payload = TimeseriesPayload(

@@ -12,6 +12,8 @@ data class UserSDKSyncStateBody(
     val requestStartDate: Instant?,
     @Json(name = "request_end_date")
     val requestEndDate: Instant?,
+    @Json(name = "granted_permissions")
+    val grantedPermissions: List<String>?,
 )
 
 @JsonClass(generateAdapter = false)
@@ -53,6 +55,8 @@ data class ManualProviderRequest(
     val userId: String,
     @Json(name = "provider_id")
     val providerId: String? = null,
+    @Json(name = "granted_permissions")
+    val grantedPermissions: List<String>? = null,
 )
 
 @JsonClass(generateAdapter = true)

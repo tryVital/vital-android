@@ -58,7 +58,8 @@ internal class LocalSyncStateManager(
     }
 
     suspend fun getLocalSyncState(
+        grantedPermissions: suspend () -> List<String>,
         forceRemoteCheck: Boolean = false,
         onRevalidation: (() -> Unit)? = null,
-    ): LocalSyncState = delegate.getLocalSyncState(forceRemoteCheck, onRevalidation)
+    ): LocalSyncState = delegate.getLocalSyncState(grantedPermissions, forceRemoteCheck, onRevalidation)
 }

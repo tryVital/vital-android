@@ -65,6 +65,7 @@ class BaseLocalSyncStateManager<ConnectionStatus>(
 
     @OptIn(VitalPrivateApi::class)
     suspend fun getLocalSyncState(
+        grantedPermissions: suspend () -> List<String>,
         forceRemoteCheck: Boolean = false,
         onRevalidation: (() -> Unit)? = null,
     ): LocalSyncState {
@@ -84,9 +85,11 @@ class BaseLocalSyncStateManager<ConnectionStatus>(
             vitalLogger.info { "LocalSyncState: revalidating" }
             onRevalidation?.invoke()
 
+            val grantedPermissions = grantedPermissions()
+
             when (connectionPolicy) {
                 ConnectionPolicy.AutoConnect -> {
-                    vitalClient.createConnectedSourceIfNotExist(providerSlug)
+                    vitalClient.createConnectedSourceIfNotExist(providerSlug, grantedPermissions)
                 }
 
                 ConnectionPolicy.Explicit -> {
@@ -107,6 +110,7 @@ class BaseLocalSyncStateManager<ConnectionStatus>(
                     tzinfo = TimeZone.getDefault().id,
                     requestStartDate = proposedStart,
                     requestEndDate = now,
+                    grantedPermissions = grantedPermissions,
                 ),
             )
 

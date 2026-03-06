@@ -98,17 +98,19 @@ class VitalPermissionRequestContract(
 
             VitalLogger.getOrCreate().logI("[processGrantedPermissions] Saved read grants: ${readGrants.joinToString(", ")}")
 
+            val (allGrants, discoveredNewGrants, grantedPermissions) = manager.checkAndUpdatePermissions()
+            val allNewGrants = readGrants + discoveredNewGrants
+
             if (manager.localSyncStateManager.connectionPolicy == ConnectionPolicy.AutoConnect) {
                 try {
-                    manager.vitalClient
-                        .createConnectedSourceIfNotExist(ManualProviderSlug.SamsungHealth)
+                    manager.vitalClient.createConnectedSourceIfNotExist(
+                        ManualProviderSlug.SamsungHealth,
+                        grantedPermissions = grantedPermissions.sorted(),
+                    )
                 } catch (e: Throwable) {
                     VitalLogger.getOrCreate().logE("[Ask] proactive CS creation failed", e)
                 }
             }
-
-            val (allGrants, discoveredNewGrants) = manager.checkAndUpdatePermissions()
-            val allNewGrants = readGrants + discoveredNewGrants
 
             if (allNewGrants.isNotEmpty()) {
                 manager.syncProgressStore.recordAsk(allNewGrants.map { RemappedVitalResource(it) }.toSet())

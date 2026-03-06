@@ -13,7 +13,10 @@ fun VitalClient.hasUserConnectedTo(provider: ProviderSlug): Boolean {
 }
 
 @VitalPrivateApi
-suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProviderSlug) {
+suspend fun VitalClient.createConnectedSourceIfNotExist(
+    provider: ManualProviderSlug,
+    grantedPermissions: List<String>?,
+) {
     val userId = VitalClient.checkUserId()
     val slug = provider.toProviderSlug()
 
@@ -27,7 +30,7 @@ suspend fun VitalClient.createConnectedSourceIfNotExist(provider: ManualProvider
         // Try to create the manual connected source.
         vitalPrivateService.manualProvider(
             provider = provider,
-            request = ManualProviderRequest(userId = userId)
+            request = ManualProviderRequest(userId = userId, grantedPermissions = grantedPermissions)
         )
         recordConnectedSourceExistence()
 
