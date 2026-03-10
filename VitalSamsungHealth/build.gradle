@@ -102,7 +102,7 @@ dependencies {
 //        release(MavenPublication) {
 //            groupId = 'io.tryvital'
 //            artifactId = 'vital-samsung-health'
-//            version = '4.3.1'
+//            version = '4.3.2'
 //
 //            pom {
 //                packaging = 'aar'
