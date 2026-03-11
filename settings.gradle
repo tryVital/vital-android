@@ -1,9 +1,13 @@
 pluginManagement {
+    includeBuild('gradle/plugins')
     repositories {
         gradlePluginPortal()
         google()
         mavenCentral()
     }
+}
+plugins {
+    id 'io.tryvital.shealth-settings-plugin'
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
@@ -13,6 +17,7 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "vital-android"
+
 include ':app'
 include ':VitalClient'
 include ':VitalDevices'

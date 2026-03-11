@@ -52,7 +52,10 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.compose' version '2.1.21' apply false
 
     id 'org.jreleaser' version '1.18.0'
+    id 'io.tryvital.shealth-project-plugin' apply false
 }
+
+apply plugin: 'io.tryvital.shealth-project-plugin'
 
 def localProperties = new Properties()
 def localPropertiesFile = project.rootProject.file("local.properties")
