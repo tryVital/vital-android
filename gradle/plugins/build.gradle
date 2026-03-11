@@ -1,0 +1,55 @@
+plugins {
+    id 'org.jreleaser' version '1.18.0'
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = project.rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.newDataInputStream())
+}
+
+subprojects {
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
+
+    publishing {
+        repositories {
+            maven {
+                url = rootProject.layout.buildDirectory.dir('staging-deploy')
+            }
+        }
+    }
+
+    jreleaser {
+        signing {
+            active = 'ALWAYS'
+            armored = true
+        }
+        deploy {
+            maven {
+                mavenCentral {
+                    sonatype {
+                        active = 'ALWAYS'
+                        url = 'https://central.sonatype.com/api/v1/publisher'
+                        stagingRepository('build/staging-deploy')
+                        verifyPom = false
+                    }
+                }
+            }
+        }
+    }
+
+    afterEvaluate {
+        signing {
+            useInMemoryPgpKeys(
+                (localProperties.getProperty("signing.secretKey") ?: System.getenv("JRELEASER_GPG_SECRET_KEY"))?.replace("\\n", "\n"),
+                localProperties.getProperty("signing.password") ?: System.getenv("JRELEASER_GPG_PASSPHRASE")
+            )
+            sign publishing.publications
+        }
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

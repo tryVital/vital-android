@@ -34,3 +34,13 @@ jobs:
         run: doppler -p maven-central -c prod run -- ./gradlew jreleaserDeploy
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Publish plugins locally
+        run: doppler -p maven-central -c prod run -- ./gradlew -p gradle/plugins publish
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+
+      - name: Upload plugins
+        run: doppler -p maven-central -c prod run -- ./gradlew -p gradle/plugins jreleaserDeploy
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}

@@ -71,7 +71,8 @@ dependencies {
     api project(':VitalClient')
     api project(':VitalHealthCore')
 
-    implementation files("lib/samsung-health-data-api-1.0.0.aar")
+    implementation "com.samsung.health:samsung-health-data-api:1.0.0"
+
     // Samsung Health transitive dependencies
     implementation "com.google.code.gson:gson:2.13.2"
 
@@ -97,44 +98,44 @@ dependencies {
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlinx_coroutines_test"
 }
 
-//publishing {
-//    publications {
-//        release(MavenPublication) {
-//            groupId = 'io.tryvital'
-//            artifactId = 'vital-samsung-health'
-//            version = '4.3.2'
-//
-//            pom {
-//                packaging = 'aar'
-//                name = 'vital-samsung-health'
-//                description = 'Junction Health SDK for Samsung Health'
-//                url = 'https://www.junction.com/'
-//                inceptionYear = '2023'
-//                licenses {
-//                    license {
-//                        name = 'GNU Affero General Public License v3.0'
-//                        url = 'https://www.gnu.org/licenses/agpl-3.0.html'
-//                        distribution = 'repo'
-//                    }
-//                }
-//                developers {
-//                    developer {
-//                        id = 'developers@junction.com'
-//                        name = 'Junction'
-//                        organization = 'Junction'
-//                        organizationUrl = 'https://www.junction.com/'
-//                    }
-//                }
-//                scm {
-//                    connection = 'scm:git:https://github.com/tryVital/vital-android.git'
-//                    developerConnection = 'scm:git:ssh://github.com/tryVital/vital-android.git'
-//                    url = 'https://github.com/tryVital/vital-android'
-//                }
-//            }
-//
-//            afterEvaluate {
-//                from components.release
-//            }
-//        }
-//    }
-//}
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'io.tryvital'
+            artifactId = 'vital-samsung-health'
+            version = '4.3.2'
+
+            pom {
+                packaging = 'aar'
+                name = 'vital-samsung-health'
+                description = 'Junction Health SDK for Samsung Health'
+                url = 'https://www.junction.com/'
+                inceptionYear = '2023'
+                licenses {
+                    license {
+                        name = 'GNU Affero General Public License v3.0'
+                        url = 'https://www.gnu.org/licenses/agpl-3.0.html'
+                        distribution = 'repo'
+                    }
+                }
+                developers {
+                    developer {
+                        id = 'developers@junction.com'
+                        name = 'Junction'
+                        organization = 'Junction'
+                        organizationUrl = 'https://www.junction.com/'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/tryVital/vital-android.git'
+                    developerConnection = 'scm:git:ssh://github.com/tryVital/vital-android.git'
+                    url = 'https://github.com/tryVital/vital-android'
+                }
+            }
+
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
+}
