@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "io.tryvital"
-version = "4.3.2"
+version = "5.0.0-beta.1"
 
 repositories {
     gradlePluginPortal()
@@ -26,7 +26,7 @@ gradlePlugin {
             id = "io.tryvital.shealth-project-plugin"
             implementationClass = "io.tryvital.plugins.SamsungHealthLocalRepoPlugin"
             displayName = "shealth-project-plugin"
-            description = "Publishes the Samsung Health Data API AAR into a local Maven repository before dependency resolution."
+            description = "Publishes the Samsung Health Data SDK AAR into a local Maven repository before dependency resolution."
             tags.set(listOf("android", "maven", "aar", "samsung-health"))
         }
 
@@ -34,7 +34,7 @@ gradlePlugin {
             id = "io.tryvital.shealth-settings-plugin"
             implementationClass = "io.tryvital.plugins.SamsungHealthLocalRepoSettingsPlugin"
             displayName = "shealth-settings-plugin"
-            description = "Adds the Samsung Health local Maven repository to dependencyResolutionManagement without overriding existing settings."
+            description = "Adds the local Maven repository created by io.tryvital.shealth-project-plugin to dependencyResolutionManagement without overriding existing settings."
             tags.set(listOf("android", "settings", "maven", "samsung-health"))
         }
     }
@@ -50,19 +50,19 @@ publishing {
 
     publications.withType<MavenPublication>().configureEach {
         if (name == "pluginMaven") {
-            artifactId = "shealth-project-plugin"
+            artifactId = "shealth-plugins"
         }
 
         pom {
-            packaging = "jar"
             name.set(
                 if (this@configureEach.name == "pluginMaven") {
-                    "shealth-project-plugin"
+                    "shealth-plugins"
                 } else {
                     project.name
                 }
             )
-            description.set("Junction Health Gradle plugin for publishing Samsung Health Data API AARs into a local Maven repository")
+            packaging = "jar"
+            description.set("Junction Health Gradle plugins for integrating the Samsung Health Data SDK AAR distribution")
             url.set("https://www.junction.com/")
             inceptionYear.set("2023")
             licenses {
