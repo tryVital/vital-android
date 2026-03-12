@@ -1,4 +1,5 @@
 plugins {
+    id 'java-gradle-plugin'
     id 'org.jreleaser' version '1.18.0'
 }
 
@@ -8,7 +9,7 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.newDataInputStream())
 }
 
-subprojects {
+subprojects { subproject ->
     apply plugin: 'maven-publish'
     apply plugin: 'signing'
 
@@ -47,9 +48,23 @@ subprojects {
             )
             sign publishing.publications
         }
+
+        gradlePlugin.plugins.configureEach { p ->
+            jreleaser.deploy.maven.mavenCentral.named("sonatype").configure {
+                artifactOverride {
+                    groupId = p.id
+                    artifactId = "${p.id}.gradle.plugin"
+                    jar = false
+                    sourceJar = false
+                    javadocJar = false
+                }
+            }
+        }
     }
 }
 
-task clean(type: Delete) {
+
+tasks.register("cleanBuildDir", Delete) { task ->
     delete rootProject.buildDir
+    tasks.named("clean").configure { clean -> clean.dependsOn(task) }
 }
