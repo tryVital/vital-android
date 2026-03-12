@@ -53,6 +53,8 @@ publishing {
             artifactId = "shealth-plugins"
         }
 
+        version = "5.0.0-beta.1"
+
         pom {
             name.set(
                 if (this@configureEach.name == "pluginMaven") {
