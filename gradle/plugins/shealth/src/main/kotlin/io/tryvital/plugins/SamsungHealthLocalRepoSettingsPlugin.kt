@@ -1,6 +1,8 @@
 package io.tryvital.plugins
 
+import org.gradle.api.Action
 import org.gradle.api.Plugin
+import org.gradle.api.Project
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 import org.gradle.api.initialization.Settings
 import org.gradle.kotlin.dsl.maven
@@ -20,5 +22,16 @@ class SamsungHealthLocalRepoSettingsPlugin : Plugin<Settings> {
                 url = repositoryUri
             }
         }
+
+        settings.gradle.beforeProject(object : Action<Project> {
+            override fun execute(project: Project) {
+                if (project == project.rootProject) {
+                    project.extensions.extraProperties.set(
+                        SamsungHealthLocalRepoPlugin.SETTINGS_MANAGED_PROPERTY,
+                        true
+                    )
+                }
+            }
+        })
     }
 }
