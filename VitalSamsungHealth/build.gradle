@@ -103,7 +103,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'io.tryvital'
             artifactId = 'vital-samsung-health'
-            version = '5.0.0-beta.1'
+            version = '5.0.0-beta.2'
 
             pom {
                 packaging = 'aar'
