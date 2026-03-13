@@ -9,17 +9,29 @@ import org.gradle.kotlin.dsl.maven
 
 class SamsungHealthLocalRepoSettingsPlugin : Plugin<Settings> {
     override fun apply(settings: Settings) {
-        val repositoryUri = settings.rootDir.resolve("build/${SamsungHealthLocalRepoPlugin.REPOSITORY_DIRECTORY}").toURI()
+        val settingsScriptFile =
+            settings.rootDir.resolve("settings.gradle").takeIf { it.isFile }
+                ?: settings.rootDir.resolve("settings.gradle.kts").takeIf { it.isFile }
 
-        val repositories = settings.dependencyResolutionManagement.repositories
-        val repositoryAlreadyPresent = repositories.any { repository ->
-            repository is MavenArtifactRepository && repository.url == repositoryUri
-        }
+        val settingsManagesDependencyRepositories = settingsScriptFile
+            ?.takeIf { it.isFile }
+            ?.readText()
+            ?.contains(Regex("""(?m)^\s*dependencyResolutionManagement\s*\{"""))
+            ?: false
 
-        if (!repositoryAlreadyPresent) {
-            repositories.maven {
-                name = "samsungHealthLocalRepository"
-                url = repositoryUri
+        if (settingsManagesDependencyRepositories) {
+            val repositoryUri = settings.rootDir.resolve("build/${SamsungHealthLocalRepoPlugin.REPOSITORY_DIRECTORY}").toURI()
+
+            val repositories = settings.dependencyResolutionManagement.repositories
+            val repositoryAlreadyPresent = repositories.any { repository ->
+                repository is MavenArtifactRepository && repository.url == repositoryUri
+            }
+
+            if (!repositoryAlreadyPresent) {
+                repositories.maven {
+                    name = "samsungHealthLocalRepository"
+                    url = repositoryUri
+                }
             }
         }
 
@@ -28,7 +40,7 @@ class SamsungHealthLocalRepoSettingsPlugin : Plugin<Settings> {
                 if (project == project.rootProject) {
                     project.extensions.extraProperties.set(
                         SamsungHealthLocalRepoPlugin.SETTINGS_MANAGED_PROPERTY,
-                        true
+                        settingsManagesDependencyRepositories
                     )
                 }
             }

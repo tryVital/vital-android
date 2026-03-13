@@ -69,6 +69,8 @@ publishing {
     }
 
     publications.withType<MavenPublication>().configureEach {
+        val isPluginMarkerPublication = this@configureEach.name.endsWith("PluginMarkerMaven")
+
         if (name == "pluginMaven") {
             artifactId = "shealth-plugins"
         }
@@ -83,7 +85,7 @@ publishing {
                     project.name
                 }
             )
-            packaging = "jar"
+            packaging = if (isPluginMarkerPublication) "pom" else "jar"
             description.set("Junction Health Gradle plugins for integrating the Samsung Health Data SDK AAR distribution")
             url.set("https://www.junction.com/")
             inceptionYear.set("2023")
