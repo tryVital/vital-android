@@ -91,7 +91,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'io.tryvital'
             artifactId = 'vital-health-connect'
-            version = '5.0.0-beta.4'
+            version = '5.0.0-rc.1'
 
             pom {
                 packaging = 'aar'
