@@ -302,6 +302,19 @@ private fun AvailabilityInfo(availability: ProviderAvailability?) {
                 color = Color.Magenta
             )
         }
+        ProviderAvailability.OnboardingIncomplete -> Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Health Connect onboarding is incomplete.",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta
+            )
+        }
         null -> Box(
             modifier = Modifier
                 .fillMaxWidth()

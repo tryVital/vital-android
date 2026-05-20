@@ -35,7 +35,7 @@ class VitalPermissionRequestContract(
         input: Unit
     ): SynchronousResult<Deferred<PermissionOutcome>> {
          if (VitalSamsungHealthManager.isAvailable(context) != ProviderAvailability.Installed) {
-            return SynchronousResult(CompletableDeferred(PermissionOutcome.HealthConnectUnavailable))
+            return SynchronousResult(CompletableDeferred(PermissionOutcome.SamsungHealthUnavailable))
         }
 
         val activity = context as? Activity
@@ -77,8 +77,13 @@ class VitalPermissionRequestContract(
         activity: Activity,
     ): Deferred<PermissionOutcome> {
         return taskScope.async {
-            val healthDataStore = manager.samsungHealthClientProvider.getHealthDataStore(activity)
-            val granted = healthDataStore.requestPermissions(requested, activity)
+            val granted = try {
+                manager.requestPermissions(requested = requested, activity = activity)
+                    ?: return@async PermissionOutcome.SamsungHealthUnavailable
+            } catch (e: Throwable) {
+                return@async PermissionOutcome.UnknownError(e)
+            }
+
             val grantedKeys = granted.mapTo(mutableSetOf()) { permissionKey(it.dataType, it.accessType) }
 
             val readGrants = readResources

@@ -14,7 +14,7 @@ sealed interface PermissionOutcome {
     object NotPrompted: Failure(null) {
         override fun toString() = "notPrompted"
     }
-    object HealthConnectUnavailable: PermissionOutcome {
-        override fun toString() = "healthDataUnavailable"
+    object SamsungHealthUnavailable: PermissionOutcome {
+        override fun toString() = "samsungHealthUnavailable"
     }
 }

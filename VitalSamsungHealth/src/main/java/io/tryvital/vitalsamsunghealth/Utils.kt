@@ -31,8 +31,11 @@ object UnSecurePrefKeys {
     internal fun writeResourceGrant(resource: WritableVitalResource) = "resource.write.samsungHealth.$resource"
 }
 
-internal suspend fun getGrantedPermissions(context: Context) =
-    SamsungHealthClientProvider().getHealthDataStore(context).let { store ->
+internal suspend fun getGrantedPermissions(
+    context: Context,
+    samsungHealthClientProvider: SamsungHealthClientProvider,
+) =
+    samsungHealthClientProvider.getHealthDataStore(context).let { store ->
         val candidates = mutableSetOf<Permission>()
 
         for (resource in VitalResource.values()) {

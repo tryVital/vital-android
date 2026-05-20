@@ -260,6 +260,15 @@ private fun SamsungAvailabilityInfo(availability: ProviderAvailability?) {
             )
         }
 
+        ProviderAvailability.OnboardingIncomplete -> {
+            Text(
+                "Open Samsung Health to finish onboarding.",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta,
+            )
+        }
+
         null -> {
             CircularProgressIndicator()
         }

@@ -3,6 +3,7 @@
 package io.tryvital.vitalsamsunghealth
 
 import android.annotation.SuppressLint
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -15,8 +16,10 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.work.*
 import com.samsung.android.sdk.health.data.error.AuthorizationException
+import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.error.PlatformInternalException
 import com.samsung.android.sdk.health.data.permission.AccessType
+import com.samsung.android.sdk.health.data.permission.Permission
 import io.tryvital.client.VitalClient
 import io.tryvital.client.createConnectedSourceIfNotExist
 import io.tryvital.client.services.VitalPrivateApi
@@ -193,14 +196,22 @@ class VitalSamsungHealthManager private constructor(
 
     internal suspend fun checkAndUpdatePermissions(): Triple<Set<VitalResource>, Set<VitalResource>, Set<String>> = permissionMutex.withLock {
         if (isAvailable(context) != ProviderAvailability.Installed) {
+            clearReadPermissionCache()
             return Triple(emptySet<VitalResource>(), emptySet(), emptySet())
         }
 
         val lastKnownGrantedResources = resourcesWithReadPermission()
         val currentGrants = try {
-            getGrantedPermissions(context)
+            getGrantedPermissions(context, samsungHealthClientProvider)
         } catch (_: AuthorizationException) {
             return Triple(emptySet<VitalResource>(), emptySet<VitalResource>(), emptySet())
+        } catch (e: Throwable) {
+            if (e.isSamsungHealthPlatformUnavailableForPermissions()) {
+                clearReadPermissionCache()
+                vitalLogger.info { "Samsung Health platform is unavailable; permissions unavailable" }
+                return Triple(emptySet<VitalResource>(), emptySet<VitalResource>(), emptySet())
+            }
+            throw e
         }
 
         val readResourcesByStatus = VitalResource.values().groupBy { resource ->
@@ -225,6 +236,33 @@ class VitalSamsungHealthManager private constructor(
         }
 
         return Triple(upToDateGrantedResources, upToDateGrantedResources - lastKnownGrantedResources, currentGrants)
+    }
+
+    private fun clearReadPermissionCache() {
+        sharedPreferences.edit().run {
+            VitalResource.values()
+                .filter { it.supportedBySamsungDataApi() }
+                .forEach { remove(UnSecurePrefKeys.readResourceGrant(it)) }
+            apply()
+        }
+    }
+
+    internal suspend fun requestPermissions(
+        activity: Activity,
+        requested: Set<Permission>,
+    ): Set<Permission>? {
+        return try {
+            val healthDataStore = samsungHealthClientProvider.getHealthDataStore(activity)
+            healthDataStore.requestPermissions(requested, activity)
+        } catch (e: Throwable) {
+            if (e.isSamsungHealthPlatformUnavailableForPermissions()) {
+                clearReadPermissionCache()
+                vitalLogger.info { "Samsung Health platform is unavailable; permission request unavailable" }
+                null
+            } else {
+                throw e
+            }
+        }
     }
 
     internal fun readPermissionsRequiredByResources(resources: Set<VitalResource>): Set<String> {
@@ -623,15 +661,23 @@ class VitalSamsungHealthManager private constructor(
             } catch (_: PackageManager.NameNotFoundException) {
                 ProviderAvailability.NotInstalled
             } catch (e: PlatformInternalException) {
-                if (e.errorCode == 3001) {
+                if (e.isSamsungHealthOobeIncomplete()) {
+                    ProviderAvailability.OnboardingIncomplete
+                } else if (e.isSamsungHealthOldVersion()) {
                     ProviderAvailability.NotSupportedSDK
                 } else {
                     Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
                     ProviderAvailability.NotInstalled
                 }
             } catch (e: Throwable) {
-                Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
-                ProviderAvailability.NotInstalled
+                if (e.isSamsungHealthOobeIncomplete()) {
+                    ProviderAvailability.OnboardingIncomplete
+                } else if (e.isSamsungHealthOldVersion()) {
+                    ProviderAvailability.NotSupportedSDK
+                } else {
+                    Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
+                    ProviderAvailability.NotInstalled
+                }
             }
         }
 
@@ -645,6 +691,7 @@ class VitalSamsungHealthManager private constructor(
                         setPackage("com.android.vending")
                     }
                 }
+                ProviderAvailability.OnboardingIncomplete,
                 ProviderAvailability.Installed -> {
                     context.packageManager.getLaunchIntentForPackage(samsungHealthPackageName)
                 }
@@ -707,3 +754,19 @@ private fun List<WorkInfo>?.hasActiveWork(): Boolean {
 
     return firstOrNull { it.state in setOf(WorkInfo.State.RUNNING, WorkInfo.State.ENQUEUED) } != null
 }
+
+private fun Throwable.samsungHealthErrorCode(): Int? {
+    return generateSequence(this) { it.cause }
+        .filterIsInstance<HealthDataException>()
+        .mapNotNull { it.errorCode }
+        .firstOrNull()
+}
+
+private fun Throwable.isSamsungHealthOldVersion(): Boolean =
+    samsungHealthErrorCode() == 3001
+
+private fun Throwable.isSamsungHealthOobeIncomplete(): Boolean =
+    samsungHealthErrorCode() == 3003
+
+private fun Throwable.isSamsungHealthPlatformUnavailableForPermissions(): Boolean =
+    isSamsungHealthOldVersion() || isSamsungHealthOobeIncomplete()
