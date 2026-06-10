@@ -40,4 +40,14 @@ enum class ProviderAvailability {
      * See https://developer.samsung.com/health/data/guide/developer-mode.html for the instructions.
      */
     AppNotAllowed,
+
+    /**
+     * Samsung Health only.
+     *
+     * Samsung Health has been installed, but we fail to estsblish a functional service connection
+     * to Samsung Health. This edge case can happen when Samsung Health is installed while your app
+     * is active. The only solution today as of June 10, 2026 appears to be closing and restarting
+     * your app.
+     */
+    ServiceUnavailable,
 }

@@ -14,7 +14,19 @@ sealed interface PermissionOutcome {
     object NotPrompted: Failure(null) {
         override fun toString() = "notPrompted"
     }
-    object SamsungHealthUnavailable: PermissionOutcome {
-        override fun toString() = "samsungHealthUnavailable"
+
+    @Deprecated(
+        message = "Use SamsungHealthUnavailable instead.",
+        replaceWith = ReplaceWith("PermissionOutcome.SamsungHealthUnavailable")
+    )
+    object HealthConnectUnavailable: PermissionOutcome {
+        override fun toString() = "healthDataUnavailable"
+    }
+
+    companion object {
+        val SamsungHealthUnavailable: PermissionOutcome
+            @Suppress("DEPRECATION")
+            get() = HealthConnectUnavailable
     }
 }
+

@@ -50,6 +50,7 @@ import java.time.Instant
 import java.util.*
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration.Companion.seconds
 
 
 @Suppress("MemberVisibilityCanBePrivate")
@@ -690,9 +691,17 @@ class VitalSamsungHealthManager private constructor(
 
             return try {
                 // Test if the Samsung Health SDK is usable.
-                HealthDataService.getStore(context).getDeviceManager().getLocalDevice()
+                withTimeout(3.seconds) {
+                    HealthDataService.getStore(context).getDeviceManager().getLocalDevice()
+                }
                 ProviderAvailability.Installed
             } catch (e: Throwable) {
+                // getLocalDevice() usually returns pretty instantly (<1sec)
+                // Only under edge cases post fresh SH app installation where this call could
+                // be stuck and timeout.
+                if (e is TimeoutCancellationException) {
+                    return ProviderAvailability.ServiceUnavailable
+                }
                 when (e.samsungHealthErrorCode()) {
                     APP_NOT_ALLOWED -> ProviderAvailability.AppNotAllowed
                     OOBE_INCOMPLETE -> ProviderAvailability.OnboardingIncomplete
@@ -700,7 +709,7 @@ class VitalSamsungHealthManager private constructor(
                     else -> {
                         Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
                         ProviderAvailability.NotInstalled
-                        }
+                    }
                 }
             }
         }
@@ -717,6 +726,7 @@ class VitalSamsungHealthManager private constructor(
                 }
                 ProviderAvailability.OnboardingIncomplete,
                 ProviderAvailability.AppNotAllowed,
+                ProviderAvailability.ServiceUnavailable,
                 ProviderAvailability.Installed -> {
                     context.packageManager.getLaunchIntentForPackage(samsungHealthPackageName)
                 }
@@ -790,9 +800,3 @@ private fun Throwable.samsungHealthErrorCode(): Int? {
 private const val APP_NOT_ALLOWED = 2003
 private const val OLD_VERSION = 3001
 private const val OOBE_INCOMPLETE = 3003
-
-private fun Throwable.isSamsungHealthPlatformUnavailableForPermissions(): Boolean =
-    when (samsungHealthErrorCode()) {
-        APP_NOT_ALLOWED, OLD_VERSION, OOBE_INCOMPLETE -> true
-        else -> false
-    }

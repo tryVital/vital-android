@@ -278,6 +278,15 @@ private fun SamsungAvailabilityInfo(availability: ProviderAvailability?) {
             )
         }
 
+        ProviderAvailability.ServiceUnavailable -> {
+            Text(
+                "Samsung Health is installed, but the app has trouble connecting to it. Please close and relaunch the app.",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta,
+            )
+        }
+
         null -> {
             CircularProgressIndicator()
         }

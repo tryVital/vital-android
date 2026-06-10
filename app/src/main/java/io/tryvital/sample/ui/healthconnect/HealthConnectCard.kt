@@ -302,7 +302,7 @@ private fun AvailabilityInfo(availability: ProviderAvailability?) {
                 color = Color.Magenta
             )
         }
-        ProviderAvailability.OnboardingIncomplete, ProviderAvailability.AppNotAllowed -> Box(
+        ProviderAvailability.OnboardingIncomplete, ProviderAvailability.AppNotAllowed, ProviderAvailability.ServiceUnavailable -> Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
