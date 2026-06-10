@@ -79,7 +79,7 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
     fun checkAvailability(context: Context) {
         viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
             viewModelState.update {
-                it.copy(available = VitalSamsungHealthManager.isAvailable(context))
+                it.copy(available = VitalSamsungHealthManager.providerAvailability(context))
             }
         }
     }

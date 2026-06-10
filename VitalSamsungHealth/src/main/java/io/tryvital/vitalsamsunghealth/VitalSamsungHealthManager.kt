@@ -15,6 +15,7 @@ import androidx.lifecycle.LifecycleObserver
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.asFlow
 import androidx.work.*
+import com.samsung.android.sdk.health.data.HealthDataService
 import com.samsung.android.sdk.health.data.error.AuthorizationException
 import com.samsung.android.sdk.health.data.error.HealthDataException
 import com.samsung.android.sdk.health.data.error.PlatformInternalException
@@ -645,6 +646,15 @@ class VitalSamsungHealthManager private constructor(
         @SuppressLint("StaticFieldLeak")
         private var sharedInstance: VitalSamsungHealthManager? = null
 
+        /**
+         * Whether Samsumg Health is available on this device.
+         *
+         * This synchronous function only reports [ProviderAvailability.Installed] and [ProviderAvailability.NotInstalled]
+         * for API parity with [VitalHealthConnectManager].
+         *
+         * To detect also Samsung Health incomplete onboarding experience and SDK version mismatches,
+         * use the [providerAvailability] suspend function.
+         */
         @Suppress("unused")
         fun isAvailable(context: Context): ProviderAvailability {
             if (context.packageManager == null) return ProviderAvailability.NotSupportedSDK
@@ -652,23 +662,30 @@ class VitalSamsungHealthManager private constructor(
                 @Suppress("DEPRECATION")
                 context.packageManager.getPackageInfo(samsungHealthPackageName, 0)
 
-                // Test if the Samsung Health SDK is usable.
-//                HealthDataService.getStore(context).getDeviceManager().getLocalDeviceAsync().get(1, TimeUnit.SECONDS)
-
-                ProviderAvailability.Installed
-            } catch (_: TimeoutException) {
                 ProviderAvailability.Installed
             } catch (_: PackageManager.NameNotFoundException) {
                 ProviderAvailability.NotInstalled
-            } catch (e: PlatformInternalException) {
-                if (e.isSamsungHealthOobeIncomplete()) {
-                    ProviderAvailability.OnboardingIncomplete
-                } else if (e.isSamsungHealthOldVersion()) {
-                    ProviderAvailability.NotSupportedSDK
-                } else {
-                    Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
-                    ProviderAvailability.NotInstalled
-                }
+            }
+        }
+
+        /**
+         * Whether Samsumg Health is available on this device.
+         *
+         * This suspend function reports:
+         * - Whether Samsung Health is installed or uninstalled on this device;
+         * - Whether the SDK is incompatible with the Samsung Health installation; and
+         * - Whether the SDK cannot be used yet due to incomplete Samsung Health onboarding experience.
+         */
+        @Suppress("unused")
+        suspend fun providerAvailability(context: Context): ProviderAvailability {
+            val installation = isAvailable(context)
+            if (installation != ProviderAvailability.Installed)
+                return installation
+
+            return try {
+                // Test if the Samsung Health SDK is usable.
+                HealthDataService.getStore(context).getDeviceManager().getLocalDevice()
+                ProviderAvailability.Installed
             } catch (e: Throwable) {
                 if (e.isSamsungHealthOobeIncomplete()) {
                     ProviderAvailability.OnboardingIncomplete
