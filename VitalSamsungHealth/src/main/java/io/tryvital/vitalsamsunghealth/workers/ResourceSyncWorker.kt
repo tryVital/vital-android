@@ -121,7 +121,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         VitalSamsungHealthManager.getOrCreate(applicationContext)
     }
     private val sharedPreferences: SharedPreferences get() = vitalClient.sharedPreferences
-    private val SamsungHealthClientProvider get() = manager.samsungHealthClientProvider
+    private val samsungHealthClientProvider get() = manager.samsungHealthClientProvider
     private val recordReader: RecordReader get() = manager.recordReader
     private val recordProcessor: RecordProcessor get() = manager.recordProcessor
     private val recordUploader: RecordUploader get() = manager.recordUploader
@@ -518,7 +518,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         pageToken: String?,
         changeTimeFilter: InstantTimeFilter?,
     ): DataResponse<Change<HealthDataPoint>> {
-        val store = SamsungHealthClientProvider.getHealthDataStore(applicationContext)
+        val store = samsungHealthClientProvider.getHealthDataStore(applicationContext)
         val builder = changedDataRequestBuilder(dataType)
             ?: throw IllegalStateException("${dataType.name} is not change-readable")
 
@@ -544,7 +544,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val requested = input.resource.wrapped.dataTypeChangesToTriggerSync().toSet()
         if (requested.isEmpty()) return emptySet()
 
-        val store = SamsungHealthClientProvider.getHealthDataStore(applicationContext)
+        val store = samsungHealthClientProvider.getHealthDataStore(applicationContext)
         val readPermissions = requested.mapTo(mutableSetOf()) { Permission.of(it, AccessType.READ) }
         val granted = store.getGrantedPermissions(readPermissions)
 

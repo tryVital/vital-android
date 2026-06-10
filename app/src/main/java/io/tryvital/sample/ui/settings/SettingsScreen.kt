@@ -135,13 +135,8 @@ fun SettingsScreen(store: AppSettingsStore, navController: NavHostController) {
                 Text("Generate User ID")
             }
             OutlinedButton(
-                onClick = {
-                    when (state.value.appSettings.authMode) {
-                        SettingsAuthMode.ApiKey -> viewModel.configureSDK(context)
-                        SettingsAuthMode.SignInTokenDemo -> viewModel.signInWithToken(context)
-                    }
-                },
-                enabled = state.value.canConfigureSDK
+                onClick = { viewModel.configureSDK(context) },
+                enabled = state.value.canConfigureSDK,
             ) {
                 when (state.value.appSettings.authMode) {
                     SettingsAuthMode.ApiKey -> Text("Configure SDK")

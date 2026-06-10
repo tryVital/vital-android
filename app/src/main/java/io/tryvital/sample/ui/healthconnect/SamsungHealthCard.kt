@@ -260,6 +260,33 @@ private fun SamsungAvailabilityInfo(availability: ProviderAvailability?) {
             )
         }
 
+        ProviderAvailability.OnboardingIncomplete -> {
+            Text(
+                "Open Samsung Health to finish onboarding.",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta,
+            )
+        }
+
+        ProviderAvailability.AppNotAllowed -> {
+            Text(
+                "Samsung Health is installed, but your app is not allowlisted by Samsung. For testing, make sure you have enabled Samsung Health Developer Mode.",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta,
+            )
+        }
+
+        ProviderAvailability.ServiceUnavailable -> {
+            Text(
+                "Samsung Health is installed, but the app has trouble connecting to it. Please close and relaunch the app.",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta,
+            )
+        }
+
         null -> {
             CircularProgressIndicator()
         }

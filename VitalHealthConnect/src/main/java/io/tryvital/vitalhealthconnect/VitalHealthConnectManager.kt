@@ -675,7 +675,10 @@ class VitalHealthConnectManager private constructor(
         @Suppress("unused")
         fun openHealthConnectIntent(context: Context): Intent? {
             return when (isAvailable(context)) {
-                ProviderAvailability.NotSupportedSDK -> null
+                ProviderAvailability.NotSupportedSDK,
+                ProviderAvailability.OnboardingIncomplete,
+                ProviderAvailability.AppNotAllowed,
+                ProviderAvailability.ServiceUnavailable -> null
                 ProviderAvailability.NotInstalled -> {
                     Intent(Intent.ACTION_VIEW).apply {
                         data = Uri.parse("https://play.google.com/store/apps/details?id=com.google.android.apps.healthdata")

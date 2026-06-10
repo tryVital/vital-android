@@ -302,6 +302,19 @@ private fun AvailabilityInfo(availability: ProviderAvailability?) {
                 color = Color.Magenta
             )
         }
+        ProviderAvailability.OnboardingIncomplete, ProviderAvailability.AppNotAllowed, ProviderAvailability.ServiceUnavailable -> Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "Illegal availability state for Health Connect: $availability",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta
+            )
+        }
         null -> Box(
             modifier = Modifier
                 .fillMaxWidth()
