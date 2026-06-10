@@ -9,7 +9,7 @@ import org.gradle.api.tasks.compile.JavaCompile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 group = "io.tryvital"
-version = "5.0.0"
+version = "5.0.1"
 
 repositories {
     gradlePluginPortal()
@@ -75,7 +75,7 @@ publishing {
             artifactId = "shealth-plugins"
         }
 
-        version = "5.0.0"
+        version = "5.0.1"
 
         pom {
             name.set(
