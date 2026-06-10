@@ -204,15 +204,17 @@ class VitalSamsungHealthManager private constructor(
         val lastKnownGrantedResources = resourcesWithReadPermission()
         val currentGrants = try {
             getGrantedPermissions(context, samsungHealthClientProvider)
-        } catch (_: AuthorizationException) {
-            return Triple(emptySet<VitalResource>(), emptySet<VitalResource>(), emptySet())
         } catch (e: Throwable) {
-            if (e.isSamsungHealthPlatformUnavailableForPermissions()) {
-                clearReadPermissionCache()
-                vitalLogger.info { "Samsung Health platform is unavailable; permissions unavailable" }
-                return Triple(emptySet<VitalResource>(), emptySet<VitalResource>(), emptySet())
+            when (val code = e.samsungHealthErrorCode()) {
+                APP_NOT_ALLOWED, OLD_VERSION, OOBE_INCOMPLETE -> {
+                    clearReadPermissionCache()
+                    vitalLogger.info { "SH HealthDataStore unavailable: $code" }
+                }
+                else -> {
+                    vitalLogger.info { "SH HealthDataStore unknown error: ${e.javaClass.name} ${e.message}" }
+                }
             }
-            throw e
+            return Triple(emptySet<VitalResource>(), emptySet<VitalResource>(), emptySet())
         }
 
         val readResourcesByStatus = VitalResource.values().groupBy { resource ->
@@ -256,13 +258,16 @@ class VitalSamsungHealthManager private constructor(
             val healthDataStore = samsungHealthClientProvider.getHealthDataStore(activity)
             healthDataStore.requestPermissions(requested, activity)
         } catch (e: Throwable) {
-            if (e.isSamsungHealthPlatformUnavailableForPermissions()) {
-                clearReadPermissionCache()
-                vitalLogger.info { "Samsung Health platform is unavailable; permission request unavailable" }
-                null
-            } else {
-                throw e
+            when (val code = e.samsungHealthErrorCode()) {
+                APP_NOT_ALLOWED, OLD_VERSION, OOBE_INCOMPLETE -> {
+                    clearReadPermissionCache()
+                    vitalLogger.info { "SH HealthDataStore unavailable: $code" }
+                }
+                else -> {
+                    vitalLogger.info { "SH HealthDataStore unknown error: ${e.javaClass.name} ${e.message}" }
+                }
             }
+            null
         }
     }
 
@@ -313,6 +318,7 @@ class VitalSamsungHealthManager private constructor(
         vitalLogger.enabled = logsEnabled
 
         localSyncStateManager.setConnectionPolicy(connectionPolicy)
+
         sharedPreferences.edit()
             .putBoolean(UnSecurePrefKeys.loggerEnabledKey, logsEnabled)
             .putBoolean(UnSecurePrefKeys.syncOnAppStartKey, syncOnAppStart)
@@ -687,13 +693,14 @@ class VitalSamsungHealthManager private constructor(
                 HealthDataService.getStore(context).getDeviceManager().getLocalDevice()
                 ProviderAvailability.Installed
             } catch (e: Throwable) {
-                if (e.isSamsungHealthOobeIncomplete()) {
-                    ProviderAvailability.OnboardingIncomplete
-                } else if (e.isSamsungHealthOldVersion()) {
-                    ProviderAvailability.NotSupportedSDK
-                } else {
-                    Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
-                    ProviderAvailability.NotInstalled
+                when (e.samsungHealthErrorCode()) {
+                    APP_NOT_ALLOWED -> ProviderAvailability.AppNotAllowed
+                    OOBE_INCOMPLETE -> ProviderAvailability.OnboardingIncomplete
+                    OLD_VERSION -> ProviderAvailability.NotSupportedSDK
+                    else -> {
+                        Log.e("VitalSamsungHealthManager", "unexpected sdk error", e)
+                        ProviderAvailability.NotInstalled
+                        }
                 }
             }
         }
@@ -709,6 +716,7 @@ class VitalSamsungHealthManager private constructor(
                     }
                 }
                 ProviderAvailability.OnboardingIncomplete,
+                ProviderAvailability.AppNotAllowed,
                 ProviderAvailability.Installed -> {
                     context.packageManager.getLaunchIntentForPackage(samsungHealthPackageName)
                 }
@@ -779,11 +787,12 @@ private fun Throwable.samsungHealthErrorCode(): Int? {
         .firstOrNull()
 }
 
-private fun Throwable.isSamsungHealthOldVersion(): Boolean =
-    samsungHealthErrorCode() == 3001
-
-private fun Throwable.isSamsungHealthOobeIncomplete(): Boolean =
-    samsungHealthErrorCode() == 3003
+private const val APP_NOT_ALLOWED = 2003
+private const val OLD_VERSION = 3001
+private const val OOBE_INCOMPLETE = 3003
 
 private fun Throwable.isSamsungHealthPlatformUnavailableForPermissions(): Boolean =
-    isSamsungHealthOldVersion() || isSamsungHealthOobeIncomplete()
+    when (samsungHealthErrorCode()) {
+        APP_NOT_ALLOWED, OLD_VERSION, OOBE_INCOMPLETE -> true
+        else -> false
+    }

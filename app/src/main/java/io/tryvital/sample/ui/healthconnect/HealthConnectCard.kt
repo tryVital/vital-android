@@ -302,14 +302,14 @@ private fun AvailabilityInfo(availability: ProviderAvailability?) {
                 color = Color.Magenta
             )
         }
-        ProviderAvailability.OnboardingIncomplete -> Box(
+        ProviderAvailability.OnboardingIncomplete, ProviderAvailability.AppNotAllowed -> Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "Health Connect onboarding is incomplete.",
+                "Illegal availability state for Health Connect: $availability",
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = Color.Magenta

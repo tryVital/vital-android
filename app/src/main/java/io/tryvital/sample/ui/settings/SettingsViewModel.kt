@@ -1,6 +1,7 @@
 package io.tryvital.sample.ui.settings
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -117,41 +118,7 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
     }
 
     fun configureSDK(context: Context) {
-        val state = uiState.value
-
-        // Emulate an external user ID by taking SHA1(userId)[0:10]
-        // This should normally be a unique identifier from your own identity provider.
-        // e.g., your own user primary key, or a stable ID from IdP such as Firebase Auth or Auth0.
-        val shortHash = state.appSettings.userId.encodeUtf8().sha1().hex().substring(0, 10)
-        val externalUserId = "externalUserId:${shortHash}"
-
-        viewModelScope.launch {
-            VitalClient.identifyExternalUser(context, externalUserId) {
-                AuthenticateRequest.APIKey(
-                    userId = state.appSettings.userId,
-                    key = state.appSettings.apiKey,
-                    environment = state.appSettings.environment,
-                    region = state.appSettings.region
-                )
-            }
-
-            VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
-                logsEnabled = true,
-                connectionPolicy = state.appSettings.connectionPolicy,
-            )
-
-            VitalSamsungHealthManager.getOrCreate(context).configureSamsungHealthClient(
-                logsEnabled = true,
-                connectionPolicy = state.appSettings.connectionPolicy,
-            )
-
-            store.syncWithSDKStatus(context)
-        }
-    }
-
-    fun signInWithToken(context: Context) {
         val settings = uiState.value.appSettings
-        val service = VitalClient.controlPlane(context, settings.environment, settings.region, settings.apiKey)
 
         viewModelScope.launch {
             try {
@@ -165,15 +132,38 @@ class SettingsViewModel(private val store: AppSettingsStore): ViewModel() {
                 val externalUserId = "externalUserId:${shortHash}"
 
                 VitalClient.identifyExternalUser(context, externalUserId) {
+                    when (settings.authMode) {
+                        SettingsAuthMode.ApiKey -> {
+                            AuthenticateRequest.APIKey(
+                                userId = settings.userId,
+                                key = settings.apiKey,
+                                environment = settings.environment,
+                                region = settings.region
+                            )
+                        }
+                        SettingsAuthMode.SignInTokenDemo -> {
+                            val service = VitalClient.controlPlane(
+                                context,
+                                settings.environment,
+                                settings.region,
+                                settings.apiKey
+                            )
 
-                    // Emulate a backend-created Vital Sign-In Token.
-                    val response = service.createSignInToken(settings.userId)
-                    check(response.userId == settings.userId)
+                            // Emulate a backend-created Vital Sign-In Token.
+                            val response = service.createSignInToken(settings.userId)
+                            check(response.userId == settings.userId)
 
-                    AuthenticateRequest.SignInToken(response.signInToken)
+                            AuthenticateRequest.SignInToken(response.signInToken)
+                        }
+                    }
                 }
 
                 VitalHealthConnectManager.getOrCreate(context).configureHealthConnectClient(
+                    logsEnabled = true,
+                    connectionPolicy = settings.connectionPolicy,
+                )
+
+                VitalSamsungHealthManager.getOrCreate(context).configureSamsungHealthClient(
                     logsEnabled = true,
                     connectionPolicy = settings.connectionPolicy,
                 )

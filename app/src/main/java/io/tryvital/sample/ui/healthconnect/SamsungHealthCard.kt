@@ -269,6 +269,15 @@ private fun SamsungAvailabilityInfo(availability: ProviderAvailability?) {
             )
         }
 
+        ProviderAvailability.AppNotAllowed -> {
+            Text(
+                "Samsung Health is installed, but your app is not allowlisted by Samsung. For testing, make sure you have enabled Samsung Health Developer Mode.",
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color.Magenta,
+            )
+        }
+
         null -> {
             CircularProgressIndicator()
         }

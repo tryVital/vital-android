@@ -29,4 +29,15 @@ enum class ProviderAvailability {
      * So all the SDK methods are blocked.
      */
     OnboardingIncomplete,
+
+    /**
+     * Samsung Health only.
+     *
+     * Samsung Health has been installed. But your App Package ID has not yet been allowlisted
+     * by Samsung. Contact Samsumg Developer Support.
+     *
+     * If you are testing on your device, you can enable Samsung Health developer mode.
+     * See https://developer.samsung.com/health/data/guide/developer-mode.html for the instructions.
+     */
+    AppNotAllowed,
 }
