@@ -564,7 +564,7 @@ class VitalHealthConnectManager private constructor(
 
         val workManager = WorkManager.getInstance(context)
         val work = workManager.beginUniqueWork(
-            "ResourceSyncStarter",
+            WorkNames.resourceSyncStarter,
             ExistingWorkPolicy.KEEP,
             workRequest
         )
@@ -575,12 +575,12 @@ class VitalHealthConnectManager private constructor(
 
     private fun cancelSyncWorker(): Operation {
         return WorkManager.getInstance(context)
-            .cancelUniqueWork("ResourceSyncStarter")
+            .cancelUniqueWork(WorkNames.resourceSyncStarter)
     }
 
     private suspend fun isSyncWorkerActive(): Boolean {
         val work = WorkManager.getInstance(context)
-            .getWorkInfosForUniqueWorkLiveData("ResourceSyncStarter")
+            .getWorkInfosForUniqueWorkLiveData(WorkNames.resourceSyncStarter)
             .asFlow()
             .first()
 
@@ -589,7 +589,7 @@ class VitalHealthConnectManager private constructor(
 
     internal suspend fun observeSyncWorkerCompleted() {
         WorkManager.getInstance(context)
-            .getWorkInfosForUniqueWorkLiveData("ResourceSyncStarter")
+            .getWorkInfosForUniqueWorkLiveData(WorkNames.resourceSyncStarter)
             .asFlow()
             .takeWhile { it.hasActiveWork() }
             .collect()
@@ -598,7 +598,7 @@ class VitalHealthConnectManager private constructor(
     @OptIn(DelicateCoroutinesApi::class)
     private fun setupSyncWorkerObservation() {
         WorkManager.getInstance(context)
-            .getWorkInfosForUniqueWorkLiveData("ResourceSyncStarter")
+            .getWorkInfosForUniqueWorkLiveData(WorkNames.resourceSyncStarter)
             .asFlow()
             // There should only be one [ResourceSyncStarter] at any given time.
             .mapNotNull { it.singleOrNull() }

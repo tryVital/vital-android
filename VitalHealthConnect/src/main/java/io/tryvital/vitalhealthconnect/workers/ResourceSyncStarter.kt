@@ -160,7 +160,7 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
                 .build()
 
             val workManager = WorkManager.getInstance(applicationContext)
-            val workName = "ResourceSyncWorker.${resource}"
+            val workName = WorkNames.resourceSyncWorker(resource)
             val work = workManager.beginUniqueWork(
                 workName,
                 ExistingWorkPolicy.REPLACE,
