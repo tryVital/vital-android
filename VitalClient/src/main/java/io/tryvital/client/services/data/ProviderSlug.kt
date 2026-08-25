@@ -79,6 +79,7 @@ enum class ProviderSlug {
     @Json(name = "eight_sleep") EightSleep,
     @Json(name = "withings") Withings,
     @Json(name = "google_fit") GoogleFit,
+    @Json(name = "google_health") GoogleHealth,
     @Json(name = "hammerhead") Hammerhead,
     @Json(name = "dexcom") Dexcom,
     @Json(name = "my_fitness_pal") MyFitnessPal,
