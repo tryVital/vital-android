@@ -39,6 +39,7 @@ enum class OAuthProviderSlug {
     @Json(name = "oura") Oura,
     @Json(name = "garmin") Garmin,
     @Json(name = "google_fit") GoogleFit,
+    @Json(name = "google_health") GoogleHealth,
     @Json(name = "strava") Strava,
     @Json(name = "wahoo") Wahoo,
     @Json(name = "withings") Withings,
