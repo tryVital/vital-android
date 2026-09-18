@@ -5,9 +5,9 @@ import android.content.SharedPreferences
 import androidx.work.CoroutineWorker
 import androidx.work.Data
 import androidx.work.WorkerParameters
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 import com.squareup.moshi.Moshi
-import com.squareup.moshi.Types
 import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.samsung.android.sdk.health.data.data.Change
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
@@ -82,9 +82,12 @@ internal sealed class ResourceSyncState {
     }
 
     @JsonClass(generateAdapter = true)
-    data class Incremental(val changesToken: String?, val lastSync: Instant) : ResourceSyncState() {
+    data class Incremental(
+        @Json(name = "lastSync") val lastRecordSync: Instant,
+        val lastChangeSync: Instant? = null,
+    ) : ResourceSyncState() {
         override fun toString(): String =
-            "incremental($changesToken; lastSync=${lastSync})"
+            "incremental(lastRecordSync=$lastRecordSync; lastChangeSync=$lastChangeSync)"
     }
 
     companion object {
@@ -100,12 +103,21 @@ internal sealed class SyncInstruction {
         override fun toString(): String = "doHistorical(${start} ..< ${end})"
     }
 
-    data class DoIncremental(val changesToken: String?, val lastSync: Instant, val start: Instant, val end: Instant? = null) :
+    data class DoIncremental(
+        val lastRecordSync: Instant,
+        val lastChangeSync: Instant?,
+        val start: Instant,
+        val end: Instant? = null,
+    ) :
         SyncInstruction() {
         override fun toString(): String =
-            "doIncremental($changesToken at ${lastSync}; start = ${start}; end = ${end})"
+            "doIncremental(lastRecordSync=$lastRecordSync; lastChangeSync=$lastChangeSync; start=$start; end=$end)"
     }
 }
+
+private class RetryableChangeSyncException(cause: Throwable) : Exception(cause)
+
+private const val MAX_CHANGE_SYNC_ATTEMPTS = 3
 
 internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParameters) :
     CoroutineWorker(appContext, workerParams) {
@@ -166,6 +178,18 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             )
             throw exc
 
+        } catch (exc: RetryableChangeSyncException) {
+            syncProgressStore.recordSync(
+                syncID,
+                SyncProgress.SyncStatus.error,
+                errorDetails = exc.stackTraceToString()
+            )
+            return if (runAttemptCount + 1 < MAX_CHANGE_SYNC_ATTEMPTS) {
+                Result.retry()
+            } else {
+                Result.failure()
+            }
+
         } catch (exc: Throwable) {
             syncProgressStore.recordSync(
                 syncID,
@@ -188,13 +212,11 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
      * resource types not needed by the customers, permissions not having been requested, or user
      * having revoked the permission).
      *
-     * ## Generic Backfill process
-     * generic_backfill(data_stage, start, end)
-     * 1. Fetch initial changes token T_0.
-     * 2. Fetch data given `[start, end)`
-     * 3. Fetch any changes since T_0, and receive a new token T_1.
-     * 4. Upload all fetched data with `stage=${data_stage}`
-     * 5. Store (end, token T_1) as ResourceSyncState.Incremental.
+     * Historical and incremental record ranges use the data point's event-time axis. Samsung
+     * Health changes use a separate change-time axis. Before a historical read begins, capture a
+     * change-time anchor. Once the historical upload succeeds, that anchor becomes the starting
+     * watermark for the next change query, so writes concurrent with the historical read are not
+     * lost.
      *
      * ## Historical stage
      * i.e. state is ResourceSyncState.Historical
@@ -204,15 +226,11 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
      * ## Daily/Incremental stage
      * i.e. state is ResourceSyncState.Incremental
      *
-     * 1. Fetch any changes since `state.changesToken`.
+     * 1. Fetch changes in `[state.lastChangeSync, changeTimeEnd)`.
      * 2. If fetch is successful:
      *     a. Upload all fetched data with `stage=daily`
-     *     b. Store (now, token T_n) as ResourceSyncState.Incremental.
-     * 3. If fetch has failed because e.g., token has expired:
-     *    https://developer.android.com/guide/health-and-fitness/health-connect/data-and-data-types/differential-changes-api#integrating_with_the_differential_changes_api
-     *    https://developer.android.com/guide/health-and-fitness/health-connect/common-workflows/sync-data#practical_considerations
-     *     a. Fetch the maximum timestamp of the resource type as `max`.
-     *     b. `generic_backfill(stage="daily", start=max(), end=now())`
+     *     b. Store `changeTimeEnd` as the next change watermark.
+     * 3. If the change query fails, retain the old watermark and retry the worker.
      */
     private suspend fun doActualWork(): Result {
         val timeZone = TimeZone.getDefault()
@@ -251,8 +269,8 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
 
         val instruction = when (resourceSyncState) {
             is ResourceSyncState.Incremental -> SyncInstruction.DoIncremental(
-                changesToken = resourceSyncState.changesToken,
-                lastSync = resourceSyncState.lastSync,
+                lastRecordSync = resourceSyncState.lastRecordSync,
+                lastChangeSync = resourceSyncState.lastChangeSync,
                 start = reconciledStart,
                 end = reconciledEnd,
             )
@@ -274,10 +292,12 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         timeZone: TimeZone,
         processorOptions: ProcessorOptions,
     ) {
+        val changeTimeAnchor = if (useRecordChangesForIncrementalBackfill) Instant.now() else null
         genericBackfill(
             stage = DataStage.Historical,
             start = state.start,
             end = state.end,
+            lastChangeSync = changeTimeAnchor,
             timeZone = timeZone,
             processorOptions = processorOptions,
         )
@@ -288,51 +308,50 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         timeZone: TimeZone,
         processorOptions: ProcessorOptions,
     ) {
-        val end = minOf(Instant.now(), state.end ?: Instant.now())
+        val now = Instant.now()
+        val recordTimeEnd = minOf(now, state.end ?: now)
         val monitoredTypes = dataTypesToMonitor()
 
         // No change-readable data types mapped for this resource, fall back to range-based sync.
         if (!useRecordChangesForIncrementalBackfill || monitoredTypes.isEmpty()) {
             return genericBackfill(
                 stage = DataStage.Daily,
-                start = state.lastSync,
-                end = end,
+                start = state.lastRecordSync,
+                end = recordTimeEnd,
+                lastChangeSync = state.lastChangeSync,
                 timeZone = timeZone,
                 processorOptions = processorOptions,
             )
         }
 
-        val monitoredTypeNames = monitoredTypes.mapTo(mutableSetOf()) { it.name }
-        val monitoredTypesInState = monitoringDataTypes()
-        val tokenByType = decodeChangesTokenMap(state.changesToken)
-
-        val isStateCompatible = monitoredTypeNames == monitoredTypesInState &&
-            monitoredTypeNames.all { tokenByType.containsKey(it) }
-
-        if (!isStateCompatible) {
-            vitalLogger.info { "${input.resource}: incompatible change token state; fallback to generic backfill" }
+        val lastChangeSync = state.lastChangeSync
+        if (lastChangeSync == null) {
+            vitalLogger.info { "${input.resource}: missing change-time watermark; fallback to historical backfill" }
+            val changeTimeAnchor = Instant.now()
             return genericBackfill(
-                stage = DataStage.Daily,
-                start = state.lastSync,
-                end = end,
+                stage = DataStage.Historical,
+                start = state.start,
+                end = recordTimeEnd,
+                lastChangeSync = changeTimeAnchor,
                 timeZone = timeZone,
                 processorOptions = processorOptions,
             )
         }
 
+        val changeTimeEnd = Instant.now()
+        val changeTimeFilter = InstantTimeFilter.of(lastChangeSync, changeTimeEnd)
         val userId = VitalClient.checkUserId()
         val allData = mutableListOf<ProcessedResourceData>()
-        val nextTokens = tokenByType.toMutableMap()
 
         try {
             monitoredTypes.forEach { dataType ->
-                var token = checkNotNull(nextTokens[dataType.name])
+                var pageToken: String? = null
 
                 while (true) {
                     val response = readChanges(
                         dataType = dataType,
-                        pageToken = token,
-                        changeTimeFilter = null
+                        pageToken = pageToken,
+                        changeTimeFilter = if (pageToken == null) changeTimeFilter else null,
                     )
 
                     val delta = processChangesResponse(
@@ -342,31 +361,25 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
                         reader = recordReader,
                         processor = recordProcessor,
                         processorOptions = processorOptions,
-                        end = state.end,
+                        end = recordTimeEnd,
                     )
                     if (delta != null) {
                         allData += delta
                     }
 
                     val nextToken = response.pageToken
-                    if (nextToken.isNullOrBlank() || nextToken == token) {
+                    if (nextToken.isNullOrBlank() || nextToken == pageToken) {
                         break
                     }
 
-                    token = nextToken
-                    nextTokens[dataType.name] = token
-                    setIncremental(token = encodeChangesTokenMap(nextTokens))
+                    pageToken = nextToken
                 }
             }
+        } catch (exc: CancellationException) {
+            throw exc
         } catch (t: Throwable) {
-            vitalLogger.info { "${input.resource}: readChanges failed, fallback to generic backfill: $t" }
-            return genericBackfill(
-                stage = DataStage.Daily,
-                start = state.lastSync,
-                end = end,
-                timeZone = timeZone,
-                processorOptions = processorOptions,
-            )
+            vitalLogger.info { "${input.resource}: readChanges failed; retain watermark and retry: $t" }
+            throw RetryableChangeSyncException(t)
         }
 
         val mergedData = if (allData.isNotEmpty()) allData.merged() else null
@@ -384,30 +397,18 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             syncProgressStore.recordSync(syncID, SyncProgress.SyncStatus.noData)
         }
 
-        setIncremental(token = encodeChangesTokenMap(nextTokens))
+        setIncremental(lastRecordSync = recordTimeEnd, lastChangeSync = changeTimeEnd)
     }
 
     private suspend fun genericBackfill(
         stage: DataStage,
         start: Instant,
         end: Instant,
+        lastChangeSync: Instant?,
         timeZone: TimeZone,
         processorOptions: ProcessorOptions,
     ) {
         val userId = VitalClient.checkUserId()
-        val monitoredTypes = dataTypesToMonitor()
-
-        val anchorTokens: Map<String, String> = if (useRecordChangesForIncrementalBackfill && monitoredTypes.isNotEmpty()) {
-            captureCurrentChangeTokens(monitoredTypes)
-        } else {
-            emptyMap()
-        }
-
-        if (anchorTokens.isNotEmpty()) {
-            sharedPreferences.edit()
-                .putStringSet(input.resource.wrapped.monitoringTypesKey, monitoredTypes.mapTo(mutableSetOf()) { it.name })
-                .apply()
-        }
 
         val (stageStart, stageEnd) = when (stage) {
             // Historical stage must pass the same start ..< end throughout all the chunks.
@@ -430,47 +431,6 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             processorOptions = processorOptions,
         )
 
-        // Capture writes that landed while the range request was in flight.
-        val tokenToStore: String? = if (anchorTokens.isNotEmpty()) {
-            val nextTokens = anchorTokens.toMutableMap()
-
-            monitoredTypes.forEach { dataType ->
-                var token = checkNotNull(nextTokens[dataType.name])
-
-                while (true) {
-                    val response = readChanges(
-                        dataType = dataType,
-                        pageToken = token,
-                        changeTimeFilter = null
-                    )
-
-                    val delta = processChangesResponse(
-                        resource = input.resource,
-                        changes = response.dataList,
-                        timeZone = timeZone,
-                        reader = recordReader,
-                        processor = recordProcessor,
-                        processorOptions = processorOptions,
-                    )
-                    if (delta != null) {
-                        allData += delta
-                    }
-
-                    val nextToken = response.pageToken
-                    if (nextToken.isNullOrBlank() || nextToken == token) {
-                        break
-                    }
-
-                    token = nextToken
-                    nextTokens[dataType.name] = token
-                }
-            }
-
-            encodeChangesTokenMap(nextTokens)
-        } else {
-            null
-        }
-
         val mergedData = allData.merged()
         // We always make a POST request in DataStage.Historical, even if there is no data, so that
         // the historical.data.*.created event is consistently triggered.
@@ -490,27 +450,7 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
             )
         }
 
-        setIncremental(token = tokenToStore)
-    }
-
-    private suspend fun captureCurrentChangeTokens(dataTypes: Set<DataType>): Map<String, String> {
-        val now = Instant.now()
-        val filter = InstantTimeFilter.of(now.minusMillis(1), now)
-
-        return dataTypes.mapNotNull { dataType ->
-            runCatching {
-                val pageToken = readChanges(
-                    dataType = dataType,
-                    pageToken = null,
-                    changeTimeFilter = filter
-                ).pageToken
-
-                if (pageToken.isNullOrBlank()) null else dataType.name to pageToken
-            }.getOrElse {
-                vitalLogger.info { "${input.resource}: failed to capture anchor token for ${dataType.name}: $it" }
-                null
-            }
-        }.toMap()
+        setIncremental(lastRecordSync = end, lastChangeSync = lastChangeSync)
     }
 
     private suspend fun readChanges(
@@ -551,32 +491,15 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         return requested.filterTo(mutableSetOf()) { Permission.of(it, AccessType.READ) in granted }
     }
 
-    private fun monitoringDataTypes(): Set<String> {
-        return sharedPreferences.getStringSet(input.resource.wrapped.monitoringTypesKey, null) ?: emptySet()
-    }
-
     private val useRecordChangesForIncrementalBackfill by lazy {
         input.resource.wrapped.dataTypeChangesToTriggerSync().isNotEmpty()
     }
 
-    private fun decodeChangesTokenMap(changesToken: String?): Map<String, String> {
-        if (changesToken.isNullOrBlank()) return emptyMap()
-
-        val mapType = Types.newParameterizedType(Map::class.java, String::class.java, String::class.java)
-        val adapter = moshi.adapter<Map<String, String>>(mapType)
-        return runCatching { adapter.fromJson(changesToken) }.getOrNull().orEmpty()
-    }
-
-    private fun encodeChangesTokenMap(tokenByType: Map<String, String>): String? {
-        if (tokenByType.isEmpty()) return null
-
-        val mapType = Types.newParameterizedType(Map::class.java, String::class.java, String::class.java)
-        val adapter = moshi.adapter<Map<String, String>>(mapType)
-        return adapter.toJson(tokenByType)
-    }
-
-    private fun setIncremental(token: String?) {
-        val newState = ResourceSyncState.Incremental(token, lastSync = Instant.now())
+    private fun setIncremental(lastRecordSync: Instant, lastChangeSync: Instant?) {
+        val newState = ResourceSyncState.Incremental(
+            lastRecordSync = lastRecordSync,
+            lastChangeSync = lastChangeSync,
+        )
 
         sharedPreferences.edit()
             .putJson<ResourceSyncState>(input.resource.wrapped.syncStateKey, newState)
@@ -605,4 +528,3 @@ internal inline fun <reified T : Any> SharedPreferences.Editor.putJson(
 }
 
 internal val VitalResource.syncStateKey get() = UnSecurePrefKeys.syncStateKey(this)
-internal val VitalResource.monitoringTypesKey get() = UnSecurePrefKeys.monitoringTypesKey(this)

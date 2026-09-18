@@ -3,8 +3,10 @@ package io.tryvital.vitalsamsunghealth.workers
 import com.samsung.android.sdk.health.data.data.Change
 import com.samsung.android.sdk.health.data.data.ChangeType
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
+import com.samsung.android.sdk.health.data.request.DataType
 import io.tryvital.client.services.data.DataStage
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
+import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalsamsunghealth.model.processedresource.ProcessedResourceData
 import io.tryvital.vitalsamsunghealth.records.ProcessorOptions
 import io.tryvital.vitalsamsunghealth.records.RecordProcessor
@@ -28,16 +30,59 @@ internal suspend fun processChangesResponse(
         .filter { it.changeType == ChangeType.UPSERT }
         .mapNotNull { it.upsertDataPoint }
         .filter { (it.endTime ?: it.startTime) <= endAdjusted }
+        .sortedBy { it.startTime }
         .toList()
 
     if (upsertedPoints.isEmpty()) {
         return null
     }
 
+    when (resource.wrapped) {
+        VitalResource.Water -> return processor.processWaterFromRecords(upsertedPoints)
+            .let(ProcessedResourceData::TimeSeries)
+        VitalResource.BasalEnergyBurned -> {
+            return processor.processBasalMetabolicRateRecords(upsertedPoints, processorOptions)
+                .let(ProcessedResourceData::TimeSeries)
+        }
+        VitalResource.Vo2Max -> return processor.processVo2MaxRecords(upsertedPoints, processorOptions)
+            .let(ProcessedResourceData::TimeSeries)
+        VitalResource.BloodOxygen -> return processor.processOxygenSaturationRecords(upsertedPoints)
+            .let(ProcessedResourceData::TimeSeries)
+        VitalResource.BloodPressure -> return processor.processBloodPressureFromRecords(upsertedPoints)
+            .let(ProcessedResourceData::TimeSeries)
+        VitalResource.Body -> return processor.processBodyFromRecords(upsertedPoints)
+            .let(ProcessedResourceData::Summary)
+        VitalResource.Glucose -> return processor.processGlucoseFromRecords(upsertedPoints)
+            .let(ProcessedResourceData::TimeSeries)
+        VitalResource.HeartRate -> return processor.processHeartRateFromRecords(upsertedPoints)
+            .let(ProcessedResourceData::TimeSeries)
+        VitalResource.Profile -> {
+            val heightPoints = upsertedPoints.filter {
+                it.getValue(DataType.BodyCompositionType.HEIGHT) != null
+            }
+            if (heightPoints.isEmpty()) return null
+            return processor.processProfileFromRecords(heightPoints).let(ProcessedResourceData::Summary)
+        }
+        VitalResource.Sleep -> {
+            val skinTemperature = reader.readSleepSkinTemperature(upsertedPoints.map { it.uid })
+            return processor.processSleepFromRecords(upsertedPoints, skinTemperature)
+                .let(ProcessedResourceData::Summary)
+        }
+        VitalResource.Workout -> return processor.processWorkoutsFromRecords(upsertedPoints)
+            .let(ProcessedResourceData::Summary)
+        VitalResource.Temperature -> return processor.processBodyTemperatureRecords(upsertedPoints)
+            .let(ProcessedResourceData::TimeSeries)
+        VitalResource.Meal -> return processor.processMealsFromRecords(upsertedPoints, timeZone)
+            .let(ProcessedResourceData::Summary)
+        else -> Unit
+    }
+
     val startTime = upsertedPoints.minOf { it.startTime }
     val maxEndTime = upsertedPoints.maxOf { it.endTime ?: it.startTime }
     val boundedEnd = minOf(maxEndTime, endAdjusted)
-    val endTime = if (boundedEnd.isAfter(startTime)) boundedEnd else startTime.plusMillis(1)
+    // Event-time filters are end-exclusive. Aggregated resources still require a range read, so
+    // advance by one millisecond (Samsung's timestamp precision) to include the changed record.
+    val endTime = boundedEnd.plusMillis(1)
 
     return readResourceByTimeRange(
         resource = resource,

@@ -94,4 +94,11 @@ class VitalResourceTests {
             claimedObjectTypes.addAll(requirements.required)
         }
     }
+
+    @Test
+    fun `Sleep includes skin temperature as supplementary data`() {
+        Assert.assertTrue(
+            SamsungRecordType.SkinTemperature in VitalResource.Sleep.recordTypeDependencies().supplementary
+        )
+    }
 }
