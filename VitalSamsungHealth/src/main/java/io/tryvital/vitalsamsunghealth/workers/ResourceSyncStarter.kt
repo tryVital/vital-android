@@ -20,6 +20,7 @@ import io.tryvital.vitalsamsunghealth.isConnectedToInternet
 import io.tryvital.vitalsamsunghealth.markAutoSyncSuccess
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
 import io.tryvital.vitalhealthcore.model.VitalResource
+import io.tryvital.vitalhealthcore.model.remapped
 import io.tryvital.vitalhealthcore.syncProgress.SyncProgress.SyncContextTag
 import io.tryvital.vitalhealthcore.syncProgress.SyncProgress
 import kotlinx.coroutines.CancellationException
@@ -141,7 +142,13 @@ internal class ResourceSyncStarter(appContext: Context, workerParams: WorkerPara
                 .apply()
         }
 
-        val prioritizedResources = input.resources.sortedBy { it.wrapped.priority }
+        // Refresh once for the whole sync. Child workers and record readers use the persisted
+        // raw permission snapshot instead of querying Samsung Health before each operation.
+        val grantedResources = manager.checkAndUpdatePermissions().first
+            .mapTo(mutableSetOf()) { it.remapped() }
+        val prioritizedResources = input.resources
+            .filter { it in grantedResources }
+            .sortedBy { it.wrapped.priority }
 
         for (resource in prioritizedResources) {
             val input = ResourceSyncWorkerInput(

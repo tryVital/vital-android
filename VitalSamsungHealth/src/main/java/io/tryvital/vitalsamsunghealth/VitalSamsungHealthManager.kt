@@ -235,6 +235,7 @@ class VitalSamsungHealthManager private constructor(
         val upToDateGrantedResources = readResourcesByStatus.getOrDefault(true, listOf()).toSet()
 
         sharedPreferences.edit().run {
+            putStringSet(UnSecurePrefKeys.grantedPermissionsKey, currentGrants)
             readResourcesByStatus.forEach { (hasGranted, resources) ->
                 resources.forEach { putBoolean(UnSecurePrefKeys.readResourceGrant(it), hasGranted) }
             }
@@ -246,6 +247,7 @@ class VitalSamsungHealthManager private constructor(
 
     private fun clearReadPermissionCache() {
         sharedPreferences.edit().run {
+            remove(UnSecurePrefKeys.grantedPermissionsKey)
             VitalResource.values()
                 .filter { it.supportedBySamsungDataApi() }
                 .forEach { remove(UnSecurePrefKeys.readResourceGrant(it)) }
@@ -522,6 +524,7 @@ class VitalSamsungHealthManager private constructor(
         require(resource.supportedBySamsungDataApi()) {
             "Resource ${resource.name} is not supported by Samsung Health Data API."
         }
+        checkAndUpdatePermissions()
         return readResourceByTimeRange(
             resource.remapped(),
             startTime = startTime,
@@ -742,6 +745,12 @@ class VitalSamsungHealthManager private constructor(
             if (instance == null) {
                 val coreClient = VitalClient.getOrCreate(appContext)
                 val samsungHealthClientProvider = SamsungHealthClientProvider()
+                val grantedPermissions = { coreClient.sharedPreferences.cachedGrantedPermissions() }
+                val recordReader = HealthConnectRecordReader(
+                    appContext,
+                    samsungHealthClientProvider,
+                    grantedPermissions,
+                )
 
                 val localSyncStateManager = LocalSyncStateManager(coreClient, VitalLogger.getOrCreate(), coreClient.sharedPreferences)
                 val syncProgressStore = SyncProgressStore.getOrCreate(appContext, ManualProviderSlug.SamsungHealth)
@@ -750,10 +759,15 @@ class VitalSamsungHealthManager private constructor(
                     appContext,
                     samsungHealthClientProvider,
                     coreClient,
-                    HealthConnectRecordReader(appContext, samsungHealthClientProvider),
+                    recordReader,
                     HealthConnectRecordProcessor(
-                        HealthConnectRecordReader(appContext, samsungHealthClientProvider),
-                        HealthConnectRecordAggregator(appContext, samsungHealthClientProvider),
+                        recordReader,
+                        HealthConnectRecordAggregator(
+                            appContext,
+                            samsungHealthClientProvider,
+                            grantedPermissions,
+                        ),
+                        SamsungSourceTypeResolver(appContext, samsungHealthClientProvider),
                     ),
                     VitalClientRecordUploader(coreClient),
                     localSyncStateManager,

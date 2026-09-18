@@ -23,6 +23,7 @@ object UnSecurePrefKeys {
     internal const val localSyncStateKey = "localSyncState.samsungHealth"
     internal const val connectionPolicyKey = "connectionPolicyKey.samsungHealth"
     internal const val changeTimeSyncStateMigrationVersionKey = "changeTimeSyncStateMigrationVersion.samsungHealth"
+    internal const val grantedPermissionsKey = "grantedPermissions.samsungHealth"
 
     internal const val currentAskRequest = "currentAskRequest.samsungHealth"
 
@@ -33,6 +34,9 @@ object UnSecurePrefKeys {
     internal fun readResourceGrant(resource: VitalResource) = "resource.read.samsungHealth.$resource"
     internal fun writeResourceGrant(resource: WritableVitalResource) = "resource.write.samsungHealth.$resource"
 }
+
+internal fun SharedPreferences.cachedGrantedPermissions(): Set<String> =
+    getStringSet(UnSecurePrefKeys.grantedPermissionsKey, emptySet())?.toSet() ?: emptySet()
 
 internal const val CHANGE_TIME_SYNC_STATE_MIGRATION_VERSION = 2
 

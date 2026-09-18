@@ -19,7 +19,7 @@ fun quantitySample(
         unit = unit,
         startDate = startDate,
         endDate = endDate,
-        type = sourceType ?: dataPoint?.inferredSourceType,
+        type = sourceType,
         sourceBundle = dataPoint?.dataSource?.appId,
         deviceModel = null,
         metadata = dataPoint?.dataSource?.deviceId?.let { deviceId ->
@@ -27,6 +27,3 @@ fun quantitySample(
         } ?: emptyMap()
     )
 }
-
-internal val HealthDataPoint.inferredSourceType: SourceType?
-    get() = if (dataSource?.deviceId.isNullOrBlank()) SourceType.App else SourceType.Watch

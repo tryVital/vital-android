@@ -17,7 +17,6 @@ import io.tryvital.client.services.data.LocalWorkout
 import io.tryvital.client.services.data.ManualMealCreation
 import io.tryvital.client.services.data.NutritionRecord
 import io.tryvital.client.services.data.SampleType
-import io.tryvital.vitalsamsunghealth.model.inferredSourceType
 import io.tryvital.vitalsamsunghealth.model.processedresource.SummaryData
 import io.tryvital.vitalsamsunghealth.model.processedresource.TimeSeriesData
 import io.tryvital.vitalsamsunghealth.model.quantitySample
@@ -47,7 +46,7 @@ interface RecordProcessor {
     suspend fun processBloodPressureFromRecords(readBloodPressure: List<HealthDataPoint>): TimeSeriesData.BloodPressure
     suspend fun processGlucoseFromRecords(readBloodGlucose: List<HealthDataPoint>): TimeSeriesData.QuantitySamples
     suspend fun processHeartRateFromRecords(heartRateRecords: List<HealthDataPoint>): TimeSeriesData.QuantitySamples
-    fun processWaterFromRecords(readHydration: List<HealthDataPoint>): TimeSeriesData.QuantitySamples
+    suspend fun processWaterFromRecords(readHydration: List<HealthDataPoint>): TimeSeriesData.QuantitySamples
     suspend fun processBodyFromRecords(records: List<HealthDataPoint>): SummaryData.Body
     suspend fun processProfileFromRecords(heightRecords: List<HealthDataPoint>): SummaryData.Profile
     suspend fun processWorkoutsFromRecords(exerciseRecords: List<HealthDataPoint>): SummaryData.Workouts
@@ -88,6 +87,7 @@ interface RecordProcessor {
 internal class HealthConnectRecordProcessor(
     private val recordReader: RecordReader,
     private val recordAggregator: RecordAggregator,
+    private val sourceTypeResolver: SourceTypeResolver = SourceTypeResolver { null },
 ) : RecordProcessor {
 
     override suspend fun processBloodPressureFromRecords(readBloodPressure: List<HealthDataPoint>): TimeSeriesData.BloodPressure {
@@ -158,7 +158,7 @@ internal class HealthConnectRecordProcessor(
         return TimeSeriesData.QuantitySamples(IngestibleTimeseriesResource.HeartRate, mapHeartRate(heartRateRecords))
     }
 
-    override fun processWaterFromRecords(readHydration: List<HealthDataPoint>): TimeSeriesData.QuantitySamples {
+    override suspend fun processWaterFromRecords(readHydration: List<HealthDataPoint>): TimeSeriesData.QuantitySamples {
         return TimeSeriesData.QuantitySamples(
             IngestibleTimeseriesResource.Water,
             readHydration.mapNotNull { point ->
@@ -199,7 +199,7 @@ internal class HealthConnectRecordProcessor(
                         heartRateZone5 = summary.heartRateZone5,
                         heartRateZone6 = summary.heartRateZone6,
                         sourceBundle = point.dataSource?.appId,
-                        sourceType = point.inferredSourceType,
+                        sourceType = sourceTypeResolver.resolve(point),
                         deviceModel = null,
                         metadata = point.dataSource?.deviceId?.let { deviceId ->
                             mapOf("_DID" to deviceId)
@@ -314,7 +314,7 @@ internal class HealthConnectRecordProcessor(
                 metadata = sleep.dataSource?.deviceId?.let { deviceId ->
                     mapOf("_DID" to deviceId)
                 } ?: emptyMap(),
-                sourceType = sleep.inferredSourceType,
+                sourceType = sourceTypeResolver.resolve(sleep),
                 score = score,
                 heartRateMean = statistics.heartRateMean,
                 heartRateMaximum = statistics.heartRateMaximum,
@@ -706,7 +706,7 @@ internal class HealthConnectRecordProcessor(
         )
     }
 
-    private fun stageSample(stageId: Int, startTime: Instant, endTime: Instant, point: HealthDataPoint): LocalQuantitySample {
+    private suspend fun stageSample(stageId: Int, startTime: Instant, endTime: Instant, point: HealthDataPoint): LocalQuantitySample {
         return quantitySample(
             value = stageId.toDouble(),
             unit = "stage",
@@ -716,7 +716,7 @@ internal class HealthConnectRecordProcessor(
         )
     }
 
-    private fun mapHeartRate(heartRateRecords: List<HealthDataPoint>): List<LocalQuantitySample> {
+    private suspend fun mapHeartRate(heartRateRecords: List<HealthDataPoint>): List<LocalQuantitySample> {
         return heartRateRecords.flatMap { point ->
             val series = point.getValue(DataType.HeartRateType.SERIES_DATA) ?: emptyList<HeartRate>()
             val collapsed = if (series.isNotEmpty()) {
@@ -738,6 +738,22 @@ internal class HealthConnectRecordProcessor(
             }
         }
     }
+
+    private suspend fun quantitySample(
+        value: Double,
+        unit: String,
+        startDate: Instant,
+        endDate: Instant,
+        dataPoint: HealthDataPoint? = null,
+        sourceType: io.tryvital.client.services.data.SourceType? = null,
+    ): LocalQuantitySample = io.tryvital.vitalsamsunghealth.model.quantitySample(
+        value = value,
+        unit = unit,
+        startDate = startDate,
+        endDate = endDate,
+        dataPoint = dataPoint,
+        sourceType = sourceType ?: dataPoint?.let { sourceTypeResolver.resolve(it) },
+    )
 }
 
 internal fun mealTypeToInt(mealType: MealType?): Int {
