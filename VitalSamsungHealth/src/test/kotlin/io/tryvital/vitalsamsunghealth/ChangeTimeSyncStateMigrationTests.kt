@@ -35,6 +35,7 @@ class ChangeTimeSyncStateMigrationTests {
             VitalResource.Sleep,
             VitalResource.Workout,
             VitalResource.Temperature,
+            VitalResource.Meal,
         )
 
         affectedResources.forEach { resource ->

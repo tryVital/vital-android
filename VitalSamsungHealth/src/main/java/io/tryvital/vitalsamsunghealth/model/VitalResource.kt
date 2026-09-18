@@ -106,14 +106,13 @@ internal fun VitalResource.supportedBySamsungDataApi(): Boolean = when (this) {
     VitalResource.HeartRateVariability -> false
     VitalResource.MenstrualCycle -> false
     VitalResource.RespiratoryRate -> false
-    VitalResource.Meal -> false
     else -> true
 }
 
 internal fun VitalResource.recordTypeChangesToTriggerSync(): List<SamsungRecordType> = when (this) {
     VitalResource.Water -> listOf(SamsungRecordType.Hydration)
     VitalResource.Activity -> emptyList()
-    VitalResource.Meal -> emptyList()
+    VitalResource.Meal -> listOf(SamsungRecordType.Nutrition)
     VitalResource.ActiveEnergyBurned -> listOf(SamsungRecordType.ActiveCaloriesBurned)
     VitalResource.BasalEnergyBurned -> listOf(SamsungRecordType.BasalMetabolicRate)
     VitalResource.DistanceWalkingRunning -> listOf(SamsungRecordType.Distance)
@@ -162,5 +161,5 @@ internal fun VitalResource.dataTypeChangesToTriggerSync(): List<DataType> = when
     VitalResource.RespiratoryRate -> emptyList()
     VitalResource.Temperature -> listOf(DataTypes.BODY_TEMPERATURE)
     VitalResource.Activity -> emptyList()
-    VitalResource.Meal -> emptyList()
+    VitalResource.Meal -> listOf(DataTypes.NUTRITION)
 }
