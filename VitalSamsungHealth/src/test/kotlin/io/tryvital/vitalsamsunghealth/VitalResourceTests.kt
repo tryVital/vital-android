@@ -1,10 +1,14 @@
 package io.tryvital.vitalsamsunghealth
 
+import com.samsung.android.sdk.health.data.request.DataTypes
 import io.tryvital.vitalhealthcore.model.VitalResource
 import io.tryvital.vitalhealthcore.model.remapped
 import io.tryvital.vitalsamsunghealth.model.RecordTypeRequirements
 import io.tryvital.vitalsamsunghealth.model.SamsungRecordType
+import io.tryvital.vitalsamsunghealth.model.dataTypeChangesToTriggerSync
+import io.tryvital.vitalsamsunghealth.model.recordTypeChangesToTriggerSync
 import io.tryvital.vitalsamsunghealth.model.recordTypeDependencies
+import io.tryvital.vitalsamsunghealth.model.supportedBySamsungDataApi
 import org.junit.Assert
 import org.junit.Test
 
@@ -99,6 +103,19 @@ class VitalResourceTests {
     fun `Sleep includes skin temperature as supplementary data`() {
         Assert.assertTrue(
             SamsungRecordType.SkinTemperature in VitalResource.Sleep.recordTypeDependencies().supplementary
+        )
+    }
+
+    @Test
+    fun `Meal is supported and observes nutrition changes`() {
+        Assert.assertTrue(VitalResource.Meal.supportedBySamsungDataApi())
+        Assert.assertEquals(
+            listOf(DataTypes.NUTRITION),
+            VitalResource.Meal.dataTypeChangesToTriggerSync(),
+        )
+        Assert.assertEquals(
+            listOf(SamsungRecordType.Nutrition),
+            VitalResource.Meal.recordTypeChangesToTriggerSync(),
         )
     }
 }

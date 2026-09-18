@@ -23,6 +23,9 @@ import io.tryvital.vitalsamsunghealth.model.processedresource.TimeSeriesData
 import io.tryvital.vitalsamsunghealth.model.quantitySample
 import kotlinx.coroutines.coroutineScope
 import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
 import java.util.TimeZone
@@ -615,7 +618,7 @@ internal class HealthConnectRecordProcessor(
             val end = point.endTime ?: start
 
             Triple(
-                Triple(sourceBundle, mealType, start.atZone(zoneOffset ?: zoneId).toLocalDate()),
+                mealGroupingKey(sourceBundle, mealType, start, zoneOffset, zoneId),
                 sourceBundle,
                 NutritionRecord(
                     startTime = start,
@@ -630,8 +633,8 @@ internal class HealthConnectRecordProcessor(
                     energy = point.getValue(DataType.NutritionType.CALORIES)?.toDouble(),
                     energyFromFat = null,
                     chloride = null,
-                    // SH: mg, JUNC: g
-                    cholesterol = point.getValue(DataType.NutritionType.CHOLESTEROL)?.toDouble()?.let { it * 1000 },
+                    // SH: mg, JUNC: mg
+                    cholesterol = point.getValue(DataType.NutritionType.CHOLESTEROL)?.toDouble(),
                     chromium = null,
                     copper = null,
                     // SH: g, JUNC: g
@@ -671,8 +674,8 @@ internal class HealthConnectRecordProcessor(
                     // SH: g, JUNC: g
                     transFat = point.getValue(DataType.NutritionType.TRANS_FAT)?.toDouble(),
                     unsaturatedFat = null,
-                    // SH: ug, JUNC: mg
-                    vitaminA = point.getValue(DataType.NutritionType.VITAMIN_A)?.toDouble()?.let { it * 1000 },
+                    // SH: ug, JUNC: ug
+                    vitaminA = point.getValue(DataType.NutritionType.VITAMIN_A)?.toDouble(),
                     vitaminB12 = null,
                     vitaminB6 = null,
                     // SH: mg, JUNC: mg
@@ -737,15 +740,27 @@ internal class HealthConnectRecordProcessor(
     }
 }
 
-private fun mealTypeToInt(mealType: MealType?): Int {
+internal fun mealTypeToInt(mealType: MealType?): Int {
     return when (mealType) {
         MealType.BREAKFAST -> 1
         MealType.LUNCH -> 2
         MealType.DINNER -> 3
-        MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK, MealType.EVENING_SNACK  -> 4
+        MealType.MORNING_SNACK, MealType.AFTERNOON_SNACK, MealType.EVENING_SNACK -> 4
         MealType.UNDEFINED, null -> 0
     }
 }
+
+internal fun mealGroupingKey(
+    sourceBundle: String?,
+    mealType: Int,
+    start: Instant,
+    zoneOffset: ZoneOffset?,
+    fallbackZoneId: ZoneId,
+): Triple<String?, Int, LocalDate> = Triple(
+    sourceBundle,
+    mealType,
+    start.atZone(zoneOffset ?: fallbackZoneId).toLocalDate(),
+)
 
 internal fun merge(
     discovered: List<LocalQuantitySample>,
