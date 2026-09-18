@@ -26,6 +26,7 @@ internal enum class SamsungRecordType {
     RespiratoryRate,
     RestingHeartRate,
     SexualActivity,
+    SkinTemperature,
     SleepSession,
     Speed,
     Steps,

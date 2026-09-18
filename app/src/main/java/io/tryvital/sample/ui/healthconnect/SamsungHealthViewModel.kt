@@ -17,7 +17,6 @@ import io.tryvital.vitalsamsunghealth.enableBackgroundSyncContract
 import io.tryvital.vitalsamsunghealth.isBackgroundSyncEnabled
 import io.tryvital.vitalhealthcore.model.ProviderAvailability
 import io.tryvital.vitalhealthcore.model.ConnectionStatus
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -62,8 +61,7 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
             }
         }
 
-        checkAvailability(context)
-        checkPermissions()
+        refreshAvailabilityAndPermissions(context)
     }
 
     fun createPermissionRequestContract() = manager.createPermissionRequestContract(
@@ -76,16 +74,26 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
     @OptIn(ExperimentalVitalApi::class)
     fun disableBackgroundSync() = manager.disableBackgroundSync()
 
-    fun checkAvailability(context: Context) {
-        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
-            viewModelState.update {
-                it.copy(available = VitalSamsungHealthManager.providerAvailability(context))
+    fun refreshAvailabilityAndPermissions(context: Context) {
+        viewModelScope.launch {
+            val availability = VitalSamsungHealthManager.providerAvailability(context)
+            viewModelState.update { it.copy(available = availability) }
+
+            if (availability == ProviderAvailability.Installed) {
+                updatePermissions()
+            } else {
+                viewModelState.update {
+                    it.copy(
+                        permissionsGranted = emptyList(),
+                        permissionsMissing = emptyList(),
+                    )
+                }
             }
         }
     }
 
     fun openSamsungHealth(context: Context) {
-        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+        viewModelScope.launch {
             openSamsungHealthIntent(context)?.let { context.startActivity(it) }
         }
     }
@@ -96,26 +104,29 @@ class SamsungHealthViewModel(context: Context) : ViewModel() {
 
     fun checkPermissions() {
         viewModelScope.launch {
-            val state = viewModelState.value
-            if (state.available != ProviderAvailability.Installed) {
-                return@launch
+            if (viewModelState.value.available == ProviderAvailability.Installed) {
+                updatePermissions()
             }
+        }
+    }
 
-            val allResources = VitalResource.values().filter(::isSupportedBySamsungDataApi)
-            val permissionStatusMap = manager.permissionStatus(allResources)
+    private suspend fun updatePermissions() {
+        manager.reloadPermissions()
 
-            val permissionsGranted = permissionStatusMap
-                .filter { it.value == PermissionStatus.Asked }
-                .keys
-                .toSet()
-            val permissionsMissing = allResources.toSet() - permissionsGranted
+        val allResources = VitalResource.values().filter(::isSupportedBySamsungDataApi)
+        val permissionStatusMap = manager.permissionStatus(allResources)
 
-            viewModelState.update {
-                it.copy(
-                    permissionsGranted = permissionsGranted.sortedBy(VitalResource::name),
-                    permissionsMissing = permissionsMissing.sortedBy(VitalResource::name),
-                )
-            }
+        val permissionsGranted = permissionStatusMap
+            .filter { it.value == PermissionStatus.Asked }
+            .keys
+            .toSet()
+        val permissionsMissing = allResources.toSet() - permissionsGranted
+
+        viewModelState.update {
+            it.copy(
+                permissionsGranted = permissionsGranted.sortedBy(VitalResource::name),
+                permissionsMissing = permissionsMissing.sortedBy(VitalResource::name),
+            )
         }
     }
 

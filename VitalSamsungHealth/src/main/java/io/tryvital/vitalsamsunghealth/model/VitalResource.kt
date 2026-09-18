@@ -71,6 +71,7 @@ internal fun VitalResource.recordTypeDependencies(): RecordTypeRequirements = wh
         required = listOf(SamsungRecordType.SleepSession),
         optional = emptyList(),
         supplementary = listOf(
+            SamsungRecordType.SkinTemperature,
             SamsungRecordType.HeartRate,
             SamsungRecordType.HeartRateVariabilityRmssd,
             SamsungRecordType.RespiratoryRate,
