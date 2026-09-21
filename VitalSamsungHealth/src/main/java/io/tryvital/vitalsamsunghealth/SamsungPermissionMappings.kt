@@ -27,6 +27,7 @@ internal fun recordTypeToSamsungDataType(recordType: SamsungRecordType): DataTyp
     SamsungRecordType.BodyFat -> DataTypes.BODY_COMPOSITION
 
     SamsungRecordType.BodyTemperature -> DataTypes.BODY_TEMPERATURE
+    SamsungRecordType.SkinTemperature -> DataTypes.SKIN_TEMPERATURE
 
     SamsungRecordType.SleepSession -> DataTypes.SLEEP
     SamsungRecordType.ExerciseSession -> DataTypes.EXERCISE

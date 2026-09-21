@@ -18,10 +18,11 @@ class ResourceSyncStateTests {
     )
     private val historicalJsonStub = """{"type":"historical","start":"2023-01-23T12:34:56Z","end":"2023-01-25T23:54:32Z"}"""
     private val incrementalStub = ResourceSyncState.Incremental(
-        changesToken = "this-is-not-a-token",
-        lastSync = Instant.parse("2023-01-25T23:54:32Z")
+        lastRecordSync = Instant.parse("2023-01-25T23:54:32Z"),
+        lastChangeSync = Instant.parse("2023-01-25T23:55:00Z"),
     )
-    private val incrementalJsonStub = """{"type":"incremental","changesToken":"this-is-not-a-token","lastSync":"2023-01-25T23:54:32Z"}"""
+    private val incrementalJsonStub = """{"type":"incremental","lastSync":"2023-01-25T23:54:32Z","lastChangeSync":"2023-01-25T23:55:00Z"}"""
+    private val legacyIncrementalJsonStub = """{"type":"incremental","changesToken":"this-is-not-a-token","lastSync":"2023-01-25T23:54:32Z"}"""
     private val adapter: JsonAdapter<ResourceSyncState> = moshi.adapter(ResourceSyncState::class.java)
 
     @Test
@@ -40,5 +41,16 @@ class ResourceSyncStateTests {
     @Test
     fun `Deserialize Incremental State`() = runTest {
         Assert.assertEquals(incrementalStub, adapter.fromJson(incrementalJsonStub))
+    }
+
+    @Test
+    fun `Deserialize Legacy Incremental State`() = runTest {
+        Assert.assertEquals(
+            ResourceSyncState.Incremental(
+                lastRecordSync = Instant.parse("2023-01-25T23:54:32Z"),
+                lastChangeSync = null,
+            ),
+            adapter.fromJson(legacyIncrementalJsonStub),
+        )
     }
 }

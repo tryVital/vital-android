@@ -51,6 +51,7 @@ interface RecordProcessor {
     suspend fun processSleepFromRecords(sleepSessionRecords: List<HealthDataPoint>, skinTemperature: Map<String, List<HealthDataPoint>>): SummaryData.Sleeps
     suspend fun processActivities(lastSynced: Instant?, timeZone: TimeZone): SummaryData.Activities
     suspend fun processMeals(lastSynced: Instant?, timeZone: TimeZone): SummaryData.Meals
+    suspend fun processMealsFromRecords(nutritionRecords: List<HealthDataPoint>, timeZone: TimeZone): SummaryData.Meals
     suspend fun processActiveCaloriesBurnedRecords(
         activeEnergyBurned: TimeRangeOrRecords<AggregatedData<Float>>,
         options: ProcessorOptions,
@@ -596,6 +597,15 @@ internal class HealthConnectRecordProcessor(
         ).truncatedTo(ChronoUnit.DAYS).toInstant()
 
         val nutritionRecords = recordReader.readNutritionRecords(startInstant, now.toInstant())
+
+        return processMealsFromRecords(nutritionRecords, timeZone)
+    }
+
+    override suspend fun processMealsFromRecords(
+        nutritionRecords: List<HealthDataPoint>,
+        timeZone: TimeZone,
+    ): SummaryData.Meals {
+        val zoneId = timeZone.toZoneId()
 
         val meals = nutritionRecords.map { point ->
             val sourceBundle = point.dataSource?.appId

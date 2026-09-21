@@ -123,6 +123,8 @@ class VitalSamsungHealthManager private constructor(
         vitalLogger.logI("VitalSamsungHealthManager initialized")
         _status.tryEmit(SyncStatus.Unknown)
 
+        sharedPreferences.migrateChangeTimeSyncState()
+
         taskScope.launch(Dispatchers.Main.immediate) {
             processLifecycleObserver = processLifecycleObserver(this@VitalSamsungHealthManager)
                 .also { ProcessLifecycleOwner.get().lifecycle.addObserver(it) }
