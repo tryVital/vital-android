@@ -6,6 +6,6 @@ internal fun Device.toMetadataMap(): Map<String, String> {
     val metadata = mutableMapOf<String, String>()
     model?.let { metadata["_DMO"] = it }
     manufacturer?.let { metadata["_DMA"] = it }
-    metadata["_DTY"] = sourceType.rawValue
+    sourceType?.rawValue?.let { metadata["_DTY"] = it }
     return metadata
 }
