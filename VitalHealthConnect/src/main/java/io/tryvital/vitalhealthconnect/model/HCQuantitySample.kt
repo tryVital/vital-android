@@ -47,5 +47,6 @@ internal val Device.sourceType get() = when (this.type) {
     Device.TYPE_RING -> SourceType.Ring
     Device.TYPE_SCALE -> SourceType.Scale
     Device.TYPE_FITNESS_BAND -> SourceType.Watch
-    else -> SourceType.Unknown
+    // Delegate unsupported and unknown device types to backend inference.
+    else -> null
 }
