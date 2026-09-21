@@ -126,7 +126,7 @@ class VitalClient internal constructor(context: Context) {
     }
 
     companion object {
-        const val sdkVersion = "5.0.3"
+        const val sdkVersion = "5.0.5"
 
         private var sharedInstance: VitalClient? = null
         private val identifyMutex = Mutex()
