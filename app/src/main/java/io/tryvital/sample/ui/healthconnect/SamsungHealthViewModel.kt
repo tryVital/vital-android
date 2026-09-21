@@ -190,7 +190,6 @@ private fun isSupportedBySamsungDataApi(resource: VitalResource): Boolean = when
     VitalResource.HeartRateVariability -> false
     VitalResource.MenstrualCycle -> false
     VitalResource.RespiratoryRate -> false
-    VitalResource.Meal -> false
     else -> true
 }
 
