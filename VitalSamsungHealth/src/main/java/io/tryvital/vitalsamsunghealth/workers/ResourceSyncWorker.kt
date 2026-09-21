@@ -12,7 +12,6 @@ import com.squareup.moshi.adapters.PolymorphicJsonAdapterFactory
 import com.samsung.android.sdk.health.data.data.Change
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
 import com.samsung.android.sdk.health.data.permission.AccessType
-import com.samsung.android.sdk.health.data.permission.Permission
 import com.samsung.android.sdk.health.data.request.ChangedDataRequest
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.InstantTimeFilter
@@ -23,6 +22,8 @@ import io.tryvital.client.utils.InstantJsonAdapter
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalsamsunghealth.UnSecurePrefKeys
 import io.tryvital.vitalsamsunghealth.VitalSamsungHealthManager
+import io.tryvital.vitalsamsunghealth.cachedGrantedPermissions
+import io.tryvital.vitalsamsunghealth.permissionKey
 import io.tryvital.vitalhealthcore.exceptions.ConnectionDestroyed
 import io.tryvital.vitalhealthcore.exceptions.ConnectionPaused
 import io.tryvital.vitalhealthcore.model.RemappedVitalResource
@@ -484,11 +485,11 @@ internal class ResourceSyncWorker(appContext: Context, workerParams: WorkerParam
         val requested = input.resource.wrapped.dataTypeChangesToTriggerSync().toSet()
         if (requested.isEmpty()) return emptySet()
 
-        val store = samsungHealthClientProvider.getHealthDataStore(applicationContext)
-        val readPermissions = requested.mapTo(mutableSetOf()) { Permission.of(it, AccessType.READ) }
-        val granted = store.getGrantedPermissions(readPermissions)
+        val granted = sharedPreferences.cachedGrantedPermissions()
 
-        return requested.filterTo(mutableSetOf()) { Permission.of(it, AccessType.READ) in granted }
+        return requested.filterTo(mutableSetOf()) { dataType ->
+            permissionKey(dataType, AccessType.READ) in granted
+        }
     }
 
     private val useRecordChangesForIncrementalBackfill by lazy {

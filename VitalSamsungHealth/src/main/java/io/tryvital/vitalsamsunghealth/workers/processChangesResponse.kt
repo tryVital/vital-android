@@ -37,6 +37,11 @@ internal suspend fun processChangesResponse(
         return null
     }
 
+    // Most resources can turn the upserted points returned by readChanges() directly into Vital
+    // data. Each matching branch returns from this function, avoiding a second Samsung Health
+    // read. Aggregate-backed resources cannot do that: a changed point only identifies the
+    // event-time interval whose aggregate may have changed. Those resources fall through and
+    // recompute the affected interval with readResourceByTimeRange() below.
     when (resource.wrapped) {
         VitalResource.Water -> return processor.processWaterFromRecords(upsertedPoints)
             .let(ProcessedResourceData::TimeSeries)

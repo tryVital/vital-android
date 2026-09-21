@@ -34,9 +34,14 @@ internal interface RecordAggregator {
 internal class HealthConnectRecordAggregator(
     context: Context,
     samsungHealthClientProvider: SamsungHealthClientProvider,
+    grantedPermissions: () -> Set<String>,
 ) : RecordAggregator {
 
-    private val reader: RecordReader = HealthConnectRecordReader(context, samsungHealthClientProvider)
+    private val reader: RecordReader = HealthConnectRecordReader(
+        context,
+        samsungHealthClientProvider,
+        grantedPermissions,
+    )
 
     override suspend fun aggregateSleepSummary(startTime: Instant, endTime: Instant): SHSleepSummary {
         val samples = heartRateSamples(reader.readHeartRate(startTime, endTime))

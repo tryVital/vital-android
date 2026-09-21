@@ -5,7 +5,6 @@ import com.samsung.android.sdk.health.data.data.AggregateOperation
 import com.samsung.android.sdk.health.data.data.AggregatedData
 import com.samsung.android.sdk.health.data.data.HealthDataPoint
 import com.samsung.android.sdk.health.data.permission.AccessType
-import com.samsung.android.sdk.health.data.permission.Permission
 import com.samsung.android.sdk.health.data.request.DataType
 import com.samsung.android.sdk.health.data.request.DataTypes
 import com.samsung.android.sdk.health.data.request.InstantTimeFilter
@@ -16,6 +15,7 @@ import com.samsung.android.sdk.health.data.request.Ordering
 import io.tryvital.client.utils.VitalLogger
 import io.tryvital.vitalsamsunghealth.SamsungHealthClientProvider
 import io.tryvital.vitalsamsunghealth.ext.returnEmptyIfException
+import io.tryvital.vitalsamsunghealth.permissionKey
 import kotlinx.coroutines.CancellationException
 import java.time.Instant
 import java.time.ZoneId
@@ -44,6 +44,7 @@ internal interface RecordReader {
 internal class HealthConnectRecordReader(
     private val context: Context,
     private val samsungHealthClientProvider: SamsungHealthClientProvider,
+    private val grantedPermissions: () -> Set<String>,
 ) : RecordReader {
 
     private val healthDataStore by lazy {
@@ -259,8 +260,6 @@ internal class HealthConnectRecordReader(
         }
     }
 
-    private suspend fun hasReadPermission(dataType: DataType): Boolean {
-        val permission = Permission.of(dataType, AccessType.READ)
-        return permission in healthDataStore.getGrantedPermissions(setOf(permission))
-    }
+    private fun hasReadPermission(dataType: DataType): Boolean =
+        permissionKey(dataType, AccessType.READ) in grantedPermissions()
 }
