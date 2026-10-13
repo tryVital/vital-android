@@ -65,6 +65,7 @@ enum class ProviderSlug {
     Unrecognized,
 
     // Cloud
+    @Json(name = "ultrahuman") Ultrahuman,
     @Json(name = "beurer_api") Beurer,
     @Json(name = "ihealth") IHealth,
     @Json(name = "freestyle_libre") Libre,
