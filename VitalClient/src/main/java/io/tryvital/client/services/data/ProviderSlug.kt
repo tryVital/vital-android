@@ -35,6 +35,7 @@ enum class ManualProviderSlug {
 @JsonClass(generateAdapter = false)
 enum class OAuthProviderSlug {
     // Enum names here should match ProviderSlug.
+    @Json(name = "ultrahuman") Ultrahuman,
     @Json(name = "fitbit") Fitbit,
     @Json(name = "oura") Oura,
     @Json(name = "garmin") Garmin,
@@ -65,6 +66,7 @@ enum class ProviderSlug {
     Unrecognized,
 
     // Cloud
+    @Json(name = "ultrahuman") Ultrahuman,
     @Json(name = "beurer_api") Beurer,
     @Json(name = "ihealth") IHealth,
     @Json(name = "freestyle_libre") Libre,
