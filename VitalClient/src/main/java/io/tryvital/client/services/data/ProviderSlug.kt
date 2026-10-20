@@ -35,6 +35,7 @@ enum class ManualProviderSlug {
 @JsonClass(generateAdapter = false)
 enum class OAuthProviderSlug {
     // Enum names here should match ProviderSlug.
+    @Json(name = "ultrahuman") Ultrahuman,
     @Json(name = "fitbit") Fitbit,
     @Json(name = "oura") Oura,
     @Json(name = "garmin") Garmin,
@@ -46,7 +47,11 @@ enum class OAuthProviderSlug {
     @Json(name = "ihealth") IHealth,
     @Json(name = "dexcom_v3") DexcomV3,
     @Json(name = "polar") Polar,
-    @Json(name = "cronometer") Cronometer;
+    @Json(name = "cronometer") Cronometer,
+    @Json(name = "omron") Omron,
+    @Json(name = "whoop_v2") WhoopV2,
+    @Json(name = "my_fitness_pal_v2") MyFitnessPalV2,
+    @Json(name = "runkeeper") Runkeeper;
 
     // Use the Json name also when converting to string.
     // This is intended for Retrofit request parameter serialization.
@@ -65,6 +70,7 @@ enum class ProviderSlug {
     Unrecognized,
 
     // Cloud
+    @Json(name = "ultrahuman") Ultrahuman,
     @Json(name = "beurer_api") Beurer,
     @Json(name = "ihealth") IHealth,
     @Json(name = "freestyle_libre") Libre,
@@ -87,6 +93,14 @@ enum class ProviderSlug {
     @Json(name = "dexcom_v3") DexcomV3,
     @Json(name = "polar") Polar,
     @Json(name = "cronometer") Cronometer,
+    @Json(name = "abbott_libreview") AbbottLibreView,
+    @Json(name = "tandem_source") TandemSource,
+    @Json(name = "omron") Omron,
+    @Json(name = "kardia") Kardia,
+    @Json(name = "whoop_v2") WhoopV2,
+    @Json(name = "my_fitness_pal_v2") MyFitnessPalV2,
+    @Json(name = "map_my_fitness") MapMyFitness,
+    @Json(name = "runkeeper") Runkeeper,
 
     // Manual
     @Json(name = "beurer_ble") BeurerBLE,
